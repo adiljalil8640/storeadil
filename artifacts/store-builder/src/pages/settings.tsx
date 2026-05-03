@@ -107,10 +107,81 @@ export default function SettingsPage() {
   const ogPreviewUrl = store ? `${window.location.origin}${basePath}/api/og/${store.slug}` : "";
 
   const [previewPlatform, setPreviewPlatform] = useState<"whatsapp" | "slack" | "twitter">("whatsapp");
-  const previewName = form.watch("metaTitle") || form.watch("name") || store?.name || "Your Store";
-  const previewDesc = form.watch("metaDescription") || form.watch("description") || store?.description || "";
+  const rawMetaTitle = form.watch("metaTitle") ?? "";
+  const rawMetaDescription = form.watch("metaDescription") ?? "";
+  const previewName = rawMetaTitle || form.watch("name") || store?.name || "Your Store";
+  const previewDesc = rawMetaDescription || form.watch("description") || store?.description || "";
   const previewLogo = store?.logoUrl ?? null;
   const previewDomain = store ? window.location.hostname : "zappstore.app";
+
+  // --- SEO score (live, 0–100) ---
+  const seoChecks = (() => {
+    const titleLen = rawMetaTitle.length;
+    const descLen = rawMetaDescription.length;
+    const hasTitle = titleLen > 0;
+    const titleOptimal = titleLen >= 50 && titleLen <= 60;
+    const titleGood = titleLen >= 30 && titleLen < 50;
+    const hasDesc = descLen > 0;
+    const descOptimal = descLen >= 120 && descLen <= 160;
+    const descGood = descLen >= 50 && descLen < 120;
+    const hasLogo = !!store?.logoUrl;
+    const hasPhone = !!(store?.whatsappNumber);
+    const hasCat = !!(store?.category);
+
+    const criteria: { label: string; hint: string; pts: number; earned: number }[] = [
+      {
+        label: "SEO title set",
+        hint: "Add a custom SEO title above",
+        pts: 15,
+        earned: hasTitle ? 15 : 0,
+      },
+      {
+        label: `Title length ${titleLen > 0 ? `(${titleLen} chars)` : ""}`,
+        hint: "Aim for 50–60 characters",
+        pts: 15,
+        earned: titleOptimal ? 15 : titleGood ? 7 : hasTitle ? 2 : 0,
+      },
+      {
+        label: "SEO description set",
+        hint: "Add a custom SEO description above",
+        pts: 15,
+        earned: hasDesc ? 15 : 0,
+      },
+      {
+        label: `Description length ${descLen > 0 ? `(${descLen} chars)` : ""}`,
+        hint: "Aim for 120–160 characters",
+        pts: 15,
+        earned: descOptimal ? 15 : descGood ? 7 : hasDesc ? 2 : 0,
+      },
+      {
+        label: "Logo uploaded",
+        hint: "Upload a logo in General Information",
+        pts: 20,
+        earned: hasLogo ? 20 : 0,
+      },
+      {
+        label: "WhatsApp number set",
+        hint: "Add your number in Contact & Localization",
+        pts: 10,
+        earned: hasPhone ? 10 : 0,
+      },
+      {
+        label: "Store category chosen",
+        hint: "Pick a category in General Information",
+        pts: 10,
+        earned: hasCat ? 10 : 0,
+      },
+    ];
+
+    const score = criteria.reduce((s, c) => s + c.earned, 0);
+    return { score, criteria };
+  })();
+  const { score: seoScore, criteria: seoCriteria } = seoChecks;
+  const seoColor = seoScore >= 75 ? "#16a34a" : seoScore >= 50 ? "#d97706" : "#dc2626";
+  const seoLabel = seoScore >= 75 ? "Great" : seoScore >= 50 ? "Good" : "Needs work";
+  const ringR = 38;
+  const ringCircumference = 2 * Math.PI * ringR;
+  const ringOffset = ringCircumference * (1 - seoScore / 100);
 
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
   const [verifying, setVerifying] = useState(false);
@@ -845,6 +916,68 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* SEO Score ring */}
+                <div className="rounded-xl border bg-muted/20 px-5 py-4 flex items-start gap-5">
+                  {/* Ring */}
+                  <div className="shrink-0 flex flex-col items-center gap-1">
+                    <svg width="90" height="90" viewBox="0 0 90 90">
+                      {/* Track */}
+                      <circle
+                        cx="45" cy="45" r={ringR}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="7"
+                        className="text-muted/40"
+                      />
+                      {/* Progress */}
+                      <circle
+                        cx="45" cy="45" r={ringR}
+                        fill="none"
+                        stroke={seoColor}
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                        strokeDasharray={ringCircumference}
+                        strokeDashoffset={ringOffset}
+                        transform="rotate(-90 45 45)"
+                        style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.3s ease" }}
+                      />
+                      <text x="45" y="42" textAnchor="middle" dominantBaseline="middle"
+                        fill={seoColor} fontSize="18" fontWeight="700" fontFamily="inherit">
+                        {seoScore}
+                      </text>
+                      <text x="45" y="57" textAnchor="middle" dominantBaseline="middle"
+                        fill={seoColor} fontSize="9" fontWeight="500" fontFamily="inherit">
+                        {seoLabel}
+                      </text>
+                    </svg>
+                    <span className="text-[10px] text-muted-foreground">out of 100</span>
+                  </div>
+                  {/* Criteria */}
+                  <div className="flex-1 min-w-0 space-y-1.5 pt-1">
+                    <p className="text-xs font-semibold text-foreground mb-2">SEO Score Breakdown</p>
+                    {seoCriteria.map((c) => {
+                      const full = c.earned === c.pts;
+                      const partial = c.earned > 0 && c.earned < c.pts;
+                      return (
+                        <div key={c.label} className="flex items-center gap-2 text-xs">
+                          <span className={`shrink-0 w-3.5 h-3.5 flex items-center justify-center rounded-full text-[9px] font-bold
+                            ${full ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                              partial ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                              "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}>
+                            {full ? "✓" : partial ? "~" : "✕"}
+                          </span>
+                          <span className={`flex-1 truncate ${full ? "text-foreground" : "text-muted-foreground"}`}>
+                            {full ? c.label : c.hint}
+                          </span>
+                          <span className={`tabular-nums font-medium shrink-0 ${full ? "text-green-600 dark:text-green-400" : partial ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                            {c.earned}/{c.pts}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="metaTitle"
