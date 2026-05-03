@@ -1,5 +1,6 @@
 import { Router } from "express";
 import OpenAI from "openai";
+import { logger } from "../lib/logger";
 import { GenerateStoreBody, GenerateProductDescriptionBody, SuggestProductPriceBody } from "@workspace/api-zod";
 import { validate } from "../middlewares/validate";
 import { db } from "@workspace/db";
@@ -23,8 +24,8 @@ async function getAiClient(): Promise<{ client: OpenAI; model: string }> {
         model: provider.defaultModel,
       };
     }
-  } catch {
-    // fall through to env fallback
+  } catch (err) {
+    logger.warn({ err }, "getAiClient: DB provider lookup failed — falling back to env AI provider");
   }
 
   return {

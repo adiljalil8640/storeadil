@@ -150,7 +150,7 @@ router.post("/dev/seed", requireAuth, async (req: any, res) => {
           { productId: p3.id, name: p3.name, price: Number(p3.price), qty: 3 },
         ] as any,
         total: (Number(p3.price) * 3).toFixed(2),
-        status: "delivered",
+        status: "completed",
         deliveryType: "delivery",
       },
     ]);

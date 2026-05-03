@@ -1,3 +1,5 @@
+import { logger } from "../lib/logger";
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.EMAIL_FROM || "orders@zappstore.app";
 
@@ -13,11 +15,11 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
       body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
     });
     if (!res.ok) {
-      const err = await res.text();
-      console.error("[email] Resend error:", err);
+      const body = await res.text();
+      logger.error({ status: res.status, body }, "email: Resend API returned an error");
     }
   } catch (err) {
-    console.error("[email] Failed to send email:", err);
+    logger.error({ err }, "email: Failed to send via Resend");
   }
 }
 

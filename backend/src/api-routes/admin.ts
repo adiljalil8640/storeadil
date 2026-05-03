@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { checkDb, getPoolStats } from "../lib/health";
@@ -9,6 +10,15 @@ import { getCurrentMonth } from "../services/usage";
 import OpenAI from "openai";
 
 const router = Router();
+
+// Tight rate limit — admin routes are low-volume by nature
+router.use(rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many admin requests. Please slow down." },
+}));
 
 const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? "").split(",").map(s => s.trim()).filter(Boolean);
 

@@ -48,7 +48,26 @@ app.use(
 app.use(injectReqId);
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(cors({ credentials: true, origin: true }));
+// In production, only allow origins listed in ALLOWED_ORIGINS.
+// In development, all origins are permitted so the Vite dev server works freely.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",").map(s => s.trim()).filter(Boolean);
+
+app.use(cors({
+  credentials: true,
+  origin: (origin, cb) => {
+    // No Origin header = same-origin, curl, mobile — always allow
+    if (!origin) return cb(null, true);
+    // Dev: allow everything
+    if (process.env.NODE_ENV !== "production") return cb(null, true);
+    // Prod: require an explicit allowlist
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    if (ALLOWED_ORIGINS.length === 0) {
+      logger.warn({ origin }, "CORS: ALLOWED_ORIGINS is not set — blocked request in production");
+    }
+    return cb(new Error(`CORS: ${origin} is not in the allowlist`), false);
+  },
+}));
 
 // Health check and version — registered before Clerk so they are always reachable
 app.get("/api/healthz", async (_req, res) => {

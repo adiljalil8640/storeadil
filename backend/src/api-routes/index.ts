@@ -17,7 +17,11 @@ import devSeedRouter from "./dev-seed";
 
 const router: IRouter = Router();
 
-router.use(devSeedRouter);
+// Dev-only: only register the seed route in development so it is never
+// reachable in production even if someone bypasses the NODE_ENV guard inside.
+if (process.env.NODE_ENV === "development") {
+  router.use(devSeedRouter);
+}
 router.use(ogRouter);
 router.use(storesRouter);
 router.use(couponsRouter);

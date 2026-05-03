@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import { db } from "@workspace/db";
 import { plansTable, subscriptionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -79,10 +80,8 @@ export async function getPlanByName(name: string) {
   return plan ?? null;
 }
 
-export function getStripeClient() {
+export function getStripeClient(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Stripe = require("stripe");
   return new Stripe(key, { apiVersion: "2024-06-20" });
 }

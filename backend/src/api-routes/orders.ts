@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, couponsTable } from "@workspace/db";
-import { eq, and, desc, sql, ilike, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, or, desc, sql, ilike, gte, lte, inArray } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody, UpdateOrderNoteBody, BulkUpdateOrderStatusBody } from "@workspace/api-zod";
 import { validate } from "../middlewares/validate";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
@@ -38,7 +38,7 @@ router.get("/orders", requireAuth, requireStore, async (req: any, res) => {
   try {
     const storeId = req.storeId;
 
-    const { status, limit } = req.query;
+    const { status, limit, offset } = req.query;
     const conditions: any[] = [eq(ordersTable.storeId, storeId)];
     if (status) conditions.push(eq(ordersTable.status, status as string));
 
@@ -47,7 +47,8 @@ router.get("/orders", requireAuth, requireStore, async (req: any, res) => {
       .from(ordersTable)
       .where(and(...conditions))
       .orderBy(desc(ordersTable.createdAt))
-      .limit(parseInt(limit as string) || 50);
+      .limit(parseInt(limit as string) || 50)
+      .offset(parseInt(offset as string) || 0);
 
     res.json(orders);
   } catch (err) {
@@ -432,44 +433,37 @@ router.get("/orders/customer-history", requireAuth, requireStore, async (req: an
     return res.status(400).json({ error: "Provide phone or email" });
   }
 
-  try {
-    const storeId = req.storeId;
+  const storeId = req.storeId;
+  const customerFilters: ReturnType<typeof eq>[] = [];
+  if (phone) customerFilters.push(eq(ordersTable.customerPhone, phone));
+  if (email) customerFilters.push(eq(ordersTable.customerEmail, email));
 
-    const allOrders = await db
-      .select()
-      .from(ordersTable)
-      .where(eq(ordersTable.storeId, storeId))
-      .orderBy(desc(ordersTable.createdAt));
+  const customerOrders = await db
+    .select()
+    .from(ordersTable)
+    .where(and(eq(ordersTable.storeId, storeId), or(...customerFilters)))
+    .orderBy(desc(ordersTable.createdAt));
 
-    const customerOrders = allOrders.filter((o) => {
-      if (phone && o.customerPhone === phone) return true;
-      if (email && o.customerEmail === email) return true;
-      return false;
-    });
-
-    if (customerOrders.length === 0) {
-      return res.status(404).json({ error: "No orders found for this customer" });
-    }
-
-    const first = customerOrders[0];
-    const totalSpend = customerOrders.reduce((sum, o) => sum + Number(o.total), 0);
-
-    return res.json({
-      customer: {
-        name: first.customerName ?? null,
-        phone: first.customerPhone ?? null,
-        email: first.customerEmail ?? null,
-      },
-      orders: customerOrders,
-      stats: {
-        totalOrders: customerOrders.length,
-        totalSpend,
-        avgOrderValue: totalSpend / customerOrders.length,
-      },
-    });
-  } catch (err) {
-    throw err;
+  if (customerOrders.length === 0) {
+    return res.status(404).json({ error: "No orders found for this customer" });
   }
+
+  const first = customerOrders[0];
+  const totalSpend = customerOrders.reduce((sum, o) => sum + Number(o.total), 0);
+
+  return res.json({
+    customer: {
+      name: first.customerName ?? null,
+      phone: first.customerPhone ?? null,
+      email: first.customerEmail ?? null,
+    },
+    orders: customerOrders,
+    stats: {
+      totalOrders: customerOrders.length,
+      totalSpend,
+      avgOrderValue: totalSpend / customerOrders.length,
+    },
+  });
 });
 
 // PATCH /orders/:id/note — set or clear the owner-only internal note

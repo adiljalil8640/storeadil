@@ -78,34 +78,15 @@ The fallback `JSON.parse(req.body)` path (no signature verification) was removed
 
 ---
 
-### ISSUE-03 — CORS is set to reflect any origin
+### ~~ISSUE-03 — CORS is set to reflect any origin~~ ✅ FIXED
 
-**File:** `backend/src/app.ts`, line 51  
-**Severity:** HIGH — Security
+**File:** `backend/src/app.ts`  
+**Severity:** HIGH — Security  
+**Status:** Fixed 2026-05-03
 
-```ts
-app.use(cors({ credentials: true, origin: true }));
-// "origin: true" reflects whatever Origin header the browser sends
-```
+In development, all origins are allowed so local dev works freely. In production, only origins listed in `ALLOWED_ORIGINS` are permitted. Requests from unlisted origins receive a CORS error and the blocked origin is logged as a warning.
 
-**Impact:** Any website can make credentialed cross-origin requests to your API. This is fine with Bearer token auth (cookies aren't used), but it is still bad practice and could enable some attack vectors.
-
-**Fix:** Lock CORS to your actual deployed domain.
-
-```ts
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
-  .split(",").map(s => s.trim()).filter(Boolean);
-
-app.use(cors({
-  credentials: true,
-  origin: (origin, cb) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error("Not allowed by CORS"));
-  },
-}));
-```
-
-Set `ALLOWED_ORIGINS=https://your-app.replit.app` in environment secrets.
+**Action still required:** Set `ALLOWED_ORIGINS=https://your-app.replit.app` in environment secrets before deploying.
 
 ---
 
@@ -150,60 +131,35 @@ The `aiProvidersTable.apiKey` column stores third-party API keys (OpenAI, Groq, 
 
 ---
 
-### ISSUE-07 — `customer-history` endpoint fetches all orders in memory
+### ~~ISSUE-07 — `customer-history` endpoint fetches all orders in memory~~ ✅ FIXED
 
-**File:** `backend/src/api-routes/orders.ts`, lines 428–470  
-**Severity:** MEDIUM — Performance
+**File:** `backend/src/api-routes/orders.ts`  
+**Severity:** MEDIUM — Performance  
+**Status:** Fixed 2026-05-03
 
-```ts
-// This fetches every single order for the store, then filters in JavaScript
-const allOrders = await db.select().from(ordersTable).where(eq(ordersTable.storeId, storeId));
-const customerOrders = allOrders.filter(o => o.customerPhone === phone || o.customerEmail === email);
-```
-
-**Impact:** A store with 10,000 orders will fetch all 10,000 rows from the DB and filter them in memory. This will be very slow and memory-intensive.
-
-**Fix:** Push the filter into SQL.
-
-```ts
-import { or } from "drizzle-orm";
-const conditions = [eq(ordersTable.storeId, storeId)];
-const customerFilter = [];
-if (phone) customerFilter.push(eq(ordersTable.customerPhone, phone));
-if (email) customerFilter.push(eq(ordersTable.customerEmail, email));
-conditions.push(or(...customerFilter)!);
-const customerOrders = await db.select().from(ordersTable).where(and(...conditions)).orderBy(desc(ordersTable.createdAt));
-```
+The JavaScript `.filter()` over all store orders was replaced with a SQL `WHERE storeId = ? AND (customerPhone = ? OR customerEmail = ?)` query. The database now does the filtering. `or` was added to the drizzle-orm imports.
 
 ---
 
-### ISSUE-08 — No rate limiting on admin routes
+### ~~ISSUE-08 — No rate limiting on admin routes~~ ✅ FIXED
 
 **File:** `backend/src/api-routes/admin.ts`  
-**Severity:** MEDIUM — Security
+**Severity:** MEDIUM — Security  
+**Status:** Fixed 2026-05-03
 
-Admin routes have no rate limiter. An authenticated admin can hammer `GET /admin/users` or `POST /admin/ai-providers/test` (which makes external API calls) indefinitely.
-
-**Fix:** Import and apply a rate limiter to all admin routes.
-
-```ts
-import { rateLimit } from "express-rate-limit";
-const adminLimiter = rateLimit({ windowMs: 60_000, limit: 60 });
-router.use(adminLimiter);
-```
+A router-level rate limiter (60 requests / minute) was added at the top of the admin router. All admin endpoints are now covered automatically.
 
 ---
 
 ## 5. Medium Issues (Fix Before Scale)
 
-### ISSUE-09 — `console.error` in email service instead of structured logger
+### ~~ISSUE-09 — `console.error` in email service instead of structured logger~~ ✅ FIXED
 
-**File:** `backend/src/services/email.ts`, lines 16–21  
-**Severity:** MEDIUM — Observability
+**File:** `backend/src/services/email.ts`  
+**Severity:** MEDIUM — Observability  
+**Status:** Fixed 2026-05-03
 
-The email service uses `console.error` instead of the pino logger. Email failures will not appear in structured logs or any log aggregation tool.
-
-**Fix:** Import `logger` from `../lib/logger` and replace `console.error(...)` with `logger.error({ err }, "...")`.
+Imported the pino `logger` and replaced both `console.error` calls with `logger.error(...)`. Email send failures and Resend API errors now appear in the structured JSON log stream.
 
 ---
 
@@ -236,72 +192,39 @@ RC packages are not stable. The Baileys library also causes the backend bundle t
 
 ---
 
-### ISSUE-12 — `dev/seed` route is registered in all environments
+### ~~ISSUE-12 — `dev/seed` route is registered in all environments~~ ✅ FIXED
 
-**File:** `backend/src/api-routes/dev-seed.ts`, line 18  
+**File:** `backend/src/api-routes/index.ts`  
+**Status:** Fixed 2026-05-03
 
-The route is correctly guarded at request time (`if (process.env.NODE_ENV !== "development") return 404`), but it still appears in the route table in production. This is not a security issue but is sloppy.
-
-**Fix:** Conditionally register the router in `index.ts`.
-
-```ts
-// In backend/src/api-routes/index.ts
-if (process.env.NODE_ENV === "development") {
-  router.use(devSeedRouter);
-}
-```
+The `devSeedRouter` is now only registered when `NODE_ENV === "development"`. In production the route does not exist in the route table at all.
 
 ---
 
-### ISSUE-13 — Order status `"delivered"` exists in seed data but not in valid status enum
+### ~~ISSUE-13 — Order status `"delivered"` exists in seed data but not in valid status enum~~ ✅ FIXED
 
-**File:** `backend/src/api-routes/dev-seed.ts`, line 152  
-**File:** `backend/src/api-routes/orders.ts`, line 501  
+**File:** `backend/src/api-routes/dev-seed.ts`  
+**Status:** Fixed 2026-05-03
 
-The dev seed creates an order with `status: "delivered"`, but the valid statuses enforced in `PATCH /orders/:id` are `["pending", "confirmed", "completed", "cancelled"]`. `"delivered"` is not a valid status.
-
-**Fix:** Change the seed data to use `"completed"` instead of `"delivered"`.
+Seed data updated — `status: "delivered"` changed to `status: "completed"` to match the valid status enum used everywhere else.
 
 ---
 
-### ISSUE-14 — `getAiClient()` silently falls back on DB errors
+### ~~ISSUE-14 — `getAiClient()` silently falls back on DB errors~~ ✅ FIXED
 
-**File:** `backend/src/ai-brain/index.ts`, lines 26–28
+**File:** `backend/src/ai-brain/index.ts`  
+**Status:** Fixed 2026-05-03
 
-```ts
-} catch {
-  // fall through to env fallback
-}
-```
-
-If the database is down or misconfigured, AI calls silently fall back to the env-based provider without logging anything. Administrators will not know the DB-configured provider is being bypassed.
-
-**Fix:** Log the error before falling through.
-
-```ts
-} catch (err) {
-  logger.warn({ err }, "getAiClient: DB provider lookup failed, falling back to env provider");
-}
-```
+The empty `catch` block now logs a `warn` with the error details before falling through to the env-based provider. Admins will see the warning in logs and know the DB-configured provider is not being used.
 
 ---
 
-### ISSUE-15 — `GET /orders` has no offset/cursor pagination
+### ~~ISSUE-15 — `GET /orders` has no offset/cursor pagination~~ ✅ FIXED
 
-**File:** `backend/src/api-routes/orders.ts`, line 50
+**File:** `backend/src/api-routes/orders.ts`  
+**Status:** Fixed 2026-05-03
 
-```ts
-.limit(parseInt(limit as string) || 50);
-```
-
-There is a `limit` param but no `offset` or cursor. The merchant dashboard cannot page through orders beyond the first 50. Stores with heavy order volume will always see a truncated view.
-
-**Fix:** Add `offset` query param support.
-
-```ts
-const offset = parseInt(req.query.offset as string) || 0;
-// ... .limit(parsedLimit).offset(offset)
-```
+Added `offset` query parameter support. Callers can now page through orders: `GET /orders?limit=50&offset=50` for page 2, `&offset=100` for page 3, etc.
 
 ---
 
@@ -327,21 +250,12 @@ Many handlers wrap everything in `try/catch` and rethrow, which is equivalent to
 
 ---
 
-### ISSUE-18 — `billing.ts` uses `require()` for Stripe inside a function
+### ~~ISSUE-18 — `billing.ts` uses `require()` for Stripe inside a function~~ ✅ FIXED
 
-**File:** `backend/src/services/billing.ts`, line 87
+**File:** `backend/src/services/billing.ts`  
+**Status:** Fixed 2026-05-03
 
-```ts
-const Stripe = require("stripe");
-```
-
-This uses CommonJS `require` inside an ES module. It works with the current esbuild setup, but it's inconsistent with the rest of the codebase which uses ES imports.
-
-**Fix:** Move the Stripe import to the top of the file.
-
-```ts
-import Stripe from "stripe";
-```
+`require("stripe")` replaced with a top-level ES import `import Stripe from "stripe"`. `getStripeClient()` return type is now `Stripe | null` instead of `any`.
 
 ---
 
@@ -516,7 +430,8 @@ pnpm --filter @workspace/api-spec run codegen
 
 | Priority | Issues | Action |
 |---|---|---|
-| ✅ Fixed | ISSUE-01, ISSUE-02 | Security holes — now patched in code |
-| Fix before launch | ISSUE-03, ISSUE-04, ISSUE-05, ISSUE-06 | Security and reliability risks |
-| Fix before scale | ISSUE-07, ISSUE-08, ISSUE-09, ISSUE-10 | Performance and observability |
-| Fix when time allows | ISSUE-11 through ISSUE-18 | Code quality and maintainability |
+| ✅ Fixed | ISSUE-01, 02, 03, 07, 08, 09, 12, 13, 14, 15, 18 | Patched in code |
+| Fix before launch — needs env vars | ISSUE-01 (set `ADMIN_USER_IDS`), ISSUE-02 (set `STRIPE_WEBHOOK_SECRET`), ISSUE-03 (set `ALLOWED_ORIGINS`) | Environment secrets to add |
+| Fix before launch — needs code | ISSUE-04, ISSUE-05, ISSUE-06 | Encryption + Clerk key mismatch |
+| Fix before scale | ISSUE-10 | WhatsApp session persistence |
+| Fix when time allows | ISSUE-11, ISSUE-16, ISSUE-17 | RC dep, `req: any`, redundant try/catch |
