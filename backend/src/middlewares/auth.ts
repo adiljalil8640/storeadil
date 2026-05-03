@@ -3,7 +3,6 @@ import type { Request, Response, NextFunction } from "express";
 import { db } from "@workspace/db";
 import { storesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { logger } from "../lib/logger";
 
 export interface AuthedRequest extends Request {
   userId: string;
@@ -16,11 +15,6 @@ export interface StoreRequest extends AuthedRequest {
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = getAuth(req);
   const userId = auth?.userId;
-  logger.info({
-    hasAuthHeader: !!req.headers.authorization,
-    authStatus: auth?.status,
-    userId: userId ?? null,
-  }, "requireAuth");
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;

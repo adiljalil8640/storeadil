@@ -353,12 +353,9 @@ export async function customFetch<T = unknown>(
   // Authorization header has been explicitly provided.
   if (_authTokenGetter && !headers.has("authorization")) {
     const token = await _authTokenGetter();
-    console.log("[customFetch] authTokenGetter result:", token ? "GOT_TOKEN" : "NULL", "url:", resolveUrl(input));
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
-  } else {
-    console.log("[customFetch] no authTokenGetter set, hasAuthHeader:", headers.has("authorization"), "url:", resolveUrl(input));
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

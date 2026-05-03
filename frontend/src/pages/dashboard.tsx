@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import QRCode from "qrcode";
 import {
   useGetAnalyticsSummary,
   useGetRecentOrders,
@@ -22,8 +23,11 @@ import { Progress } from "@/components/ui/progress";
 import {
   DollarSign, ShoppingBag, ShoppingCart, Clock, Star, Tag,
   Users, Target, Pencil, Check, X, MessageCircle, AlertTriangle, TrendingUp,
-  Copy, ExternalLink,
+  Copy, ExternalLink, QrCode, Download,
 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   AreaChart, Area, CartesianGrid,
@@ -78,6 +82,8 @@ export default function Dashboard() {
   const [goalInput, setGoalInput] = useState("");
   const [copied, setCopied] = useState(false);
   const [stockAlertDismissed, setStockAlertDismissed] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const storeUrl = store?.slug
     ? `${window.location.origin}/store/${store.slug}`
@@ -89,6 +95,29 @@ export default function Dashboard() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  const generateQr = useCallback(async (url: string) => {
+    const dataUrl = await QRCode.toDataURL(url, {
+      width: 320,
+      margin: 2,
+      color: { dark: "#111827", light: "#ffffff" },
+    });
+    setQrDataUrl(dataUrl);
+  }, []);
+
+  useEffect(() => {
+    if (qrOpen && storeUrl) {
+      generateQr(storeUrl);
+    }
+  }, [qrOpen, storeUrl, generateQr]);
+
+  function downloadQr() {
+    if (!qrDataUrl || !store?.slug) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `${store.slug}-qr-code.png`;
+    a.click();
   }
 
   const updateGoal = useUpdateRevenueGoal({
@@ -147,6 +176,15 @@ export default function Dashboard() {
                 ) : (
                   <><Copy className="h-3.5 w-3.5" /> Copy store link</>
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQrOpen(true)}
+                className="gap-1.5"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                QR Code
               </Button>
               <Button
                 variant="ghost"
@@ -615,6 +653,56 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-primary" />
+              Store QR Code
+            </DialogTitle>
+            <DialogDescription>
+              Customers can scan this to visit your store instantly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt="Store QR Code"
+                className="rounded-xl border shadow-sm w-56 h-56"
+              />
+            ) : (
+              <div className="w-56 h-56 rounded-xl border bg-muted flex items-center justify-center">
+                <QrCode className="h-10 w-10 text-muted-foreground animate-pulse" />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground text-center break-all px-2">{storeUrl}</p>
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                className="flex-1 gap-1.5"
+                onClick={copyStoreLink}
+              >
+                {copied ? (
+                  <><Check className="h-4 w-4 text-emerald-600" /> Copied!</>
+                ) : (
+                  <><Copy className="h-4 w-4" /> Copy link</>
+                )}
+              </Button>
+              <Button
+                className="flex-1 gap-1.5"
+                onClick={downloadQr}
+                disabled={!qrDataUrl}
+              >
+                <Download className="h-4 w-4" />
+                Download PNG
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
