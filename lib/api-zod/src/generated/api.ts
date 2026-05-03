@@ -2193,6 +2193,17 @@ export const GetTopCustomersResponseItem = zod.object({
 export const GetTopCustomersResponse = zod.array(GetTopCustomersResponseItem);
 
 /**
+ * @summary Get daily revenue totals for the last 7 days
+ */
+export const GetAnalyticsRevenueTrendResponseItem = zod.object({
+  date: zod.coerce.date().describe("YYYY-MM-DD date string"),
+  revenue: zod.number().describe("Total revenue for that day"),
+});
+export const GetAnalyticsRevenueTrendResponse = zod.array(
+  GetAnalyticsRevenueTrendResponseItem,
+);
+
+/**
  * @summary Get all available plans
  */
 export const GetBillingPlansResponseItem = zod.object({

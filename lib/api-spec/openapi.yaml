@@ -1138,6 +1138,23 @@ paths:
                 items:
                   $ref: "#/components/schemas/TopCustomerItem"
 
+  /analytics/revenue-trend:
+    get:
+      operationId: getAnalyticsRevenueTrend
+      tags: [analytics]
+      summary: Get daily revenue totals for the last 7 days
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daily revenue trend data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueTrendItem"
+
   # Billing endpoints
   /billing/plans:
     get:
@@ -2667,6 +2684,18 @@ components:
         - activeProducts
         - revenueThisMonth
         - ordersThisMonth
+
+    RevenueTrendItem:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: YYYY-MM-DD date string
+        revenue:
+          type: number
+          description: Total revenue for that day
+      required: [date, revenue]
 
     OrdersPerDayItem:
       type: object

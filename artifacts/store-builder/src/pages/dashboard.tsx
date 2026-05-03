@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts, useGetTopCustomers, useGetMyStore, useUpdateRevenueGoal, getGetMyStoreQueryKey } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts, useGetTopCustomers, useGetMyStore, useUpdateRevenueGoal, getGetMyStoreQueryKey, useGetAnalyticsRevenueTrend } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag, AlertTriangle, Users, Target, Pencil, Check, X } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from "recharts";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
 import { motion } from "framer-motion";
@@ -18,6 +18,7 @@ export default function Dashboard() {
   const { data: allProducts = [], isLoading: stockLoading } = useListProducts();
   const { data: topCustomers = [], isLoading: customersLoading } = useGetTopCustomers({ limit: 8 });
   const { data: store } = useGetMyStore();
+  const { data: revenueTrend = [] } = useGetAnalyticsRevenueTrend();
   const queryClient = useQueryClient();
 
   const [editingGoal, setEditingGoal] = useState(false);
@@ -79,9 +80,58 @@ export default function Dashboard() {
                 <div className="text-2xl font-bold">
                   {analyticsLoading ? "..." : formatCurrency(analytics?.totalRevenue || 0)}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mb-3">
                   {analyticsLoading ? "..." : formatCurrency(analytics?.revenueThisMonth || 0)} this month
                 </p>
+                {revenueTrend.length > 0 && (() => {
+                  const allZero = revenueTrend.every((d) => d.revenue === 0);
+                  const trendUp =
+                    !allZero &&
+                    revenueTrend[revenueTrend.length - 1].revenue >=
+                      revenueTrend[0].revenue;
+                  const color = allZero
+                    ? "hsl(var(--muted-foreground))"
+                    : trendUp
+                    ? "hsl(var(--primary))"
+                    : "#f43f5e";
+                  return (
+                    <div className="-mx-1">
+                      <ResponsiveContainer width="100%" height={44}>
+                        <AreaChart data={revenueTrend} margin={{ top: 2, right: 4, left: 4, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+                              <stop offset="95%" stopColor={color} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <Tooltip
+                            content={({ active, payload }) =>
+                              active && payload?.length ? (
+                                <div className="rounded-md border bg-popover px-2 py-1 text-xs shadow-sm">
+                                  <span className="font-medium">{formatCurrency(payload[0].value as number)}</span>
+                                  <span className="ml-1 text-muted-foreground">{payload[0].payload.date}</span>
+                                </div>
+                              ) : null
+                            }
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="revenue"
+                            stroke={color}
+                            strokeWidth={1.5}
+                            fill="url(#revGrad)"
+                            dot={false}
+                            isAnimationActive={true}
+                            animationDuration={900}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                      <p className="text-[10px] text-muted-foreground text-right mt-0.5 pr-1">
+                        {allZero ? "No orders this week" : trendUp ? "↑ trending up" : "↓ trending down"}
+                      </p>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </motion.div>

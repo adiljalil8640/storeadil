@@ -698,6 +698,13 @@ export interface AnalyticsSummary {
   ordersThisMonth: number;
 }
 
+export interface RevenueTrendItem {
+  /** YYYY-MM-DD date string */
+  date: string;
+  /** Total revenue for that day */
+  revenue: number;
+}
+
 export interface OrdersPerDayItem {
   date: string;
   orders: number;

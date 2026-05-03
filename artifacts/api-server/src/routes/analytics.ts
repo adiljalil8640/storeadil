@@ -344,4 +344,41 @@ router.get("/analytics/coupon-performance", requireAuth, async (req: any, res) =
   }
 });
 
+// GET /analytics/revenue-trend
+router.get("/analytics/revenue-trend", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const days = 7;
+    const since = new Date();
+    since.setDate(since.getDate() - days + 1);
+    since.setHours(0, 0, 0, 0);
+
+    const rows = await db
+      .select({
+        date: sql<string>`TO_CHAR(DATE_TRUNC('day', ${ordersTable.createdAt}), 'YYYY-MM-DD')`,
+        revenue: sql<number>`COALESCE(SUM(CAST(${ordersTable.total} AS DECIMAL)), 0)`,
+      })
+      .from(ordersTable)
+      .where(and(eq(ordersTable.storeId, storeId), gte(ordersTable.createdAt, since)))
+      .groupBy(sql`DATE_TRUNC('day', ${ordersTable.createdAt})`)
+      .orderBy(sql`DATE_TRUNC('day', ${ordersTable.createdAt})`);
+
+    const map = new Map(rows.map((r) => [r.date, Number(r.revenue)]));
+    const result: { date: string; revenue: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      result.push({ date: key, revenue: map.get(key) ?? 0 });
+    }
+
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

@@ -75,6 +75,7 @@ import type {
   ReferralInfo,
   ReferralPreview,
   ReplyToReviewBody,
+  RevenueTrendItem,
   Review,
   ShareMessage,
   SlugCheckResult,
@@ -4412,6 +4413,82 @@ export function useGetTopCustomers<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTopCustomersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get daily revenue totals for the last 7 days
+ */
+export const getGetAnalyticsRevenueTrendUrl = () => {
+  return `/api/analytics/revenue-trend`;
+};
+
+export const getAnalyticsRevenueTrend = async (
+  options?: RequestInit,
+): Promise<RevenueTrendItem[]> => {
+  return customFetch<RevenueTrendItem[]>(getGetAnalyticsRevenueTrendUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalyticsRevenueTrendQueryKey = () => {
+  return [`/api/analytics/revenue-trend`] as const;
+};
+
+export const getGetAnalyticsRevenueTrendQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAnalyticsRevenueTrendQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>
+  > = ({ signal }) => getAnalyticsRevenueTrend({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalyticsRevenueTrendQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>
+>;
+export type GetAnalyticsRevenueTrendQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get daily revenue totals for the last 7 days
+ */
+
+export function useGetAnalyticsRevenueTrend<
+  TData = Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalyticsRevenueTrend>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalyticsRevenueTrendQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -88,6 +88,7 @@ export * from "./publicStore";
 export * from "./referralInfo";
 export * from "./referralPreview";
 export * from "./replyToReviewBody";
+export * from "./revenueTrendItem";
 export * from "./review";
 export * from "./shareMessage";
 export * from "./slugCheckResult";
