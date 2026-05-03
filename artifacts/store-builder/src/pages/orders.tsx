@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
+import React, { useState } from "react";
+import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download } from "lucide-react";
+import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download, StickyNote } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, formatDistanceToNow } from "date-fns";
@@ -130,6 +131,8 @@ export default function OrdersPage() {
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("completed");
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [noteText, setNoteText] = useState("");
   const queryClient = useQueryClient();
 
   const { data: rawOrders, isLoading } = useListOrders({
@@ -166,6 +169,26 @@ export default function OrdersPage() {
       }
     }
   });
+
+  const updateNote = useUpdateOrderNote({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        setEditingNoteId(null);
+        toast.success("Note saved");
+      },
+      onError: () => toast.error("Failed to save note"),
+    },
+  });
+
+  const openNoteEditor = (order: any) => {
+    setNoteText(order.ownerNote ?? "");
+    setEditingNoteId(order.id);
+  };
+
+  const saveNote = (orderId: number) => {
+    updateNote.mutate({ id: orderId, data: { ownerNote: noteText.trim() || null } });
+  };
 
   const bulkUpdate = useBulkUpdateOrderStatus({
     mutation: {
@@ -391,8 +414,8 @@ export default function OrdersPage() {
                     </TableHeader>
                     <TableBody>
                       {orders?.map((order) => (
+                        <React.Fragment key={order.id}>
                         <TableRow
-                          key={order.id}
                           data-selected={selectedIds.has(order.id)}
                           className={selectedIds.has(order.id) ? "bg-primary/5" : ""}
                         >
@@ -403,7 +426,17 @@ export default function OrdersPage() {
                               aria-label={`Select order #${order.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">#{order.id}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col gap-0.5">
+                              <span>#{order.id}</span>
+                              {order.ownerNote && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground max-w-[120px] truncate" title={order.ownerNote}>
+                                  <StickyNote className="h-3 w-3 shrink-0" />
+                                  {order.ownerNote}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{format(new Date(order.createdAt), "MMM d, yyyy")}</TableCell>
                           <TableCell>
                             <div>
@@ -444,6 +477,12 @@ export default function OrdersPage() {
                                   Cancelled
                                 </DropdownMenuItem>
 
+                                <div className="h-px bg-border my-1" />
+                                <DropdownMenuItem onClick={() => openNoteEditor(order)}>
+                                  <StickyNote className="w-4 h-4 mr-2" />
+                                  {order.ownerNote ? "Edit note" : "Add note"}
+                                </DropdownMenuItem>
+
                                 {order.customerPhone && (
                                   <>
                                     <div className="h-px bg-border my-1" />
@@ -459,6 +498,44 @@ export default function OrdersPage() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
+
+                        {/* Inline note editor row */}
+                        {editingNoteId === order.id && (
+                          <TableRow className="bg-muted/30">
+                            <TableCell colSpan={9} className="py-3 px-5">
+                              <div className="flex flex-col gap-2 max-w-xl">
+                                <p className="text-xs font-medium text-muted-foreground">Internal note for order #{order.id} (not visible to customer)</p>
+                                <Textarea
+                                  autoFocus
+                                  rows={2}
+                                  placeholder="e.g. Paid via bank transfer, priority shipping…"
+                                  value={noteText}
+                                  onChange={(e) => setNoteText(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveNote(order.id);
+                                    if (e.key === "Escape") setEditingNoteId(null);
+                                  }}
+                                  className="resize-none text-sm"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <Button size="sm" className="h-7 text-xs" onClick={() => saveNote(order.id)} disabled={updateNote.isPending}>
+                                    {updateNote.isPending ? "Saving…" : "Save note"}
+                                  </Button>
+                                  {noteText.trim() && (
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => { setNoteText(""); saveNote(order.id); }}>
+                                      Clear note
+                                    </Button>
+                                  )}
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingNoteId(null)}>
+                                    Cancel
+                                  </Button>
+                                  <span className="text-xs text-muted-foreground ml-auto hidden sm:block">⌘ Enter to save · Esc to cancel</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>

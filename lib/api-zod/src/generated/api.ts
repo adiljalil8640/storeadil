@@ -1737,6 +1737,7 @@ export const ListOrdersResponseItem = zod.object({
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
   trackingToken: zod.string(),
+  ownerNote: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
@@ -1819,6 +1820,7 @@ export const GetOrderResponse = zod.object({
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
   trackingToken: zod.string(),
+  ownerNote: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -1853,6 +1855,42 @@ export const UpdateOrderStatusResponse = zod.object({
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
   trackingToken: zod.string(),
+  ownerNote: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Set or clear the owner-only internal note on an order
+ */
+export const UpdateOrderNoteParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateOrderNoteBody = zod.object({
+  ownerNote: zod.string().nullable(),
+});
+
+export const UpdateOrderNoteResponse = zod.object({
+  id: zod.number(),
+  storeId: zod.number(),
+  customerName: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
+  customerNote: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      price: zod.number(),
+      selectedVariants: zod.record(zod.string(), zod.string()).optional(),
+    }),
+  ),
+  total: zod.number(),
+  status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
+  deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+  trackingToken: zod.string(),
+  ownerNote: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -1979,6 +2017,7 @@ export const GetRecentOrdersResponseItem = zod.object({
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
   trackingToken: zod.string(),
+  ownerNote: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const GetRecentOrdersResponse = zod.array(GetRecentOrdersResponseItem);

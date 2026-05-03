@@ -448,6 +448,31 @@ router.patch("/orders/:id", requireAuth, async (req: any, res) => {
   }
 });
 
+// PATCH /orders/:id/note — set or clear the owner-only internal note
+router.patch("/orders/:id/note", requireAuth, async (req: any, res) => {
+  const orderId = Number(req.params.id);
+  const { ownerNote } = req.body;
+
+  if (isNaN(orderId)) return res.status(400).json({ error: "Invalid order id" });
+
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const [order] = await db
+      .update(ordersTable)
+      .set({ ownerNote: ownerNote ?? null, updatedAt: new Date() })
+      .where(and(eq(ordersTable.id, orderId), eq(ordersTable.storeId, storeId)))
+      .returning();
+
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    return res.json(order);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /orders/bulk-status — update status for multiple orders at once
 router.post("/orders/bulk-status", requireAuth, async (req: any, res) => {
   const { orderIds, status } = req.body;

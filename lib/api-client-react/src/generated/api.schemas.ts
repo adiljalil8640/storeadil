@@ -503,6 +503,7 @@ export interface Order {
   status: OrderStatus;
   deliveryType?: OrderDeliveryType;
   trackingToken: string;
+  ownerNote?: string | null;
   createdAt: string;
 }
 
@@ -553,6 +554,10 @@ export interface CreateOrderBody {
 export interface OrderWithWhatsApp {
   order: Order;
   whatsappUrl: string;
+}
+
+export interface UpdateOrderNoteBody {
+  ownerNote: string | null;
 }
 
 export type UpdateOrderStatusBodyStatus =

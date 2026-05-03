@@ -15,7 +15,9 @@ export const ordersTable = pgTable("orders", {
   status: text("status").notNull().default("pending"),
   deliveryType: text("delivery_type"),
   trackingToken: uuid("tracking_token").notNull().defaultRandom(),
+  ownerNote: text("owner_note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({

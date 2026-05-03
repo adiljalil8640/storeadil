@@ -83,6 +83,7 @@ import type {
   UpdateCouponBody,
   UpdateMyStoreHolidaysBody,
   UpdateMyStoreTempClosedBody,
+  UpdateOrderNoteBody,
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdateRevenueGoalBody,
@@ -3147,6 +3148,93 @@ export const useUpdateOrderStatus = <
   TContext
 > => {
   return useMutation(getUpdateOrderStatusMutationOptions(options));
+};
+
+/**
+ * @summary Set or clear the owner-only internal note on an order
+ */
+export const getUpdateOrderNoteUrl = (id: number) => {
+  return `/api/orders/${id}/note`;
+};
+
+export const updateOrderNote = async (
+  id: number,
+  updateOrderNoteBody: UpdateOrderNoteBody,
+  options?: RequestInit,
+): Promise<Order> => {
+  return customFetch<Order>(getUpdateOrderNoteUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateOrderNoteBody),
+  });
+};
+
+export const getUpdateOrderNoteMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOrderNote>>,
+    TError,
+    { id: number; data: BodyType<UpdateOrderNoteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateOrderNote>>,
+  TError,
+  { id: number; data: BodyType<UpdateOrderNoteBody> },
+  TContext
+> => {
+  const mutationKey = ["updateOrderNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateOrderNote>>,
+    { id: number; data: BodyType<UpdateOrderNoteBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateOrderNote(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateOrderNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateOrderNote>>
+>;
+export type UpdateOrderNoteMutationBody = BodyType<UpdateOrderNoteBody>;
+export type UpdateOrderNoteMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set or clear the owner-only internal note on an order
+ */
+export const useUpdateOrderNote = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOrderNote>>,
+    TError,
+    { id: number; data: BodyType<UpdateOrderNoteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateOrderNote>>,
+  TError,
+  { id: number; data: BodyType<UpdateOrderNoteBody> },
+  TContext
+> => {
+  return useMutation(getUpdateOrderNoteMutationOptions(options));
 };
 
 /**

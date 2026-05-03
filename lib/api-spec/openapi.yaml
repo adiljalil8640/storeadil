@@ -821,6 +821,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /orders/{id}/note:
+    patch:
+      operationId: updateOrderNote
+      tags: [orders]
+      summary: Set or clear the owner-only internal note on an order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderNoteBody"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
   /orders/bulk-status:
     post:
       operationId: bulkUpdateOrderStatus
@@ -2244,6 +2271,9 @@ components:
           nullable: true
         trackingToken:
           type: string
+        ownerNote:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -2336,6 +2366,14 @@ components:
         whatsappUrl:
           type: string
       required: [order, whatsappUrl]
+
+    UpdateOrderNoteBody:
+      type: object
+      properties:
+        ownerNote:
+          type: string
+          nullable: true
+      required: [ownerNote]
 
     UpdateOrderStatusBody:
       type: object

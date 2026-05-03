@@ -21,5 +21,6 @@ export interface Order {
   status: OrderStatus;
   deliveryType?: OrderDeliveryType;
   trackingToken: string;
+  ownerNote?: string | null;
   createdAt: Date;
 }

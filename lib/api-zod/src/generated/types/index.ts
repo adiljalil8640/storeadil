@@ -93,6 +93,7 @@ export * from "./updateCouponBody";
 export * from "./updateCouponBodyType";
 export * from "./updateMyStoreHolidaysBody";
 export * from "./updateMyStoreTempClosedBody";
+export * from "./updateOrderNoteBody";
 export * from "./updateOrderStatusBody";
 export * from "./updateOrderStatusBodyStatus";
 export * from "./updateProductBody";
