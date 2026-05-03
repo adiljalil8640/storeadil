@@ -4,6 +4,478 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+export interface HealthCheckResponse {
+  status: string;
+}
+
+/**
+ * @nullable
+ */
+export type StoreStoreHours = { [key: string]: unknown } | null;
+
+export interface Store {
+  id: number;
+  userId: string;
+  name: string;
+  slug: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  whatsappNumber?: string | null;
+  currency: string;
+  /** @nullable */
+  logoUrl?: string | null;
+  theme: string;
+  deliveryEnabled: boolean;
+  pickupEnabled: boolean;
+  /** @nullable */
+  shippingNote?: string | null;
+  /** @nullable */
+  notificationEmail?: string | null;
+  /** @nullable */
+  digestFrequency?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  metaTitle?: string | null;
+  /** @nullable */
+  metaDescription?: string | null;
+  /** @nullable */
+  customDomain?: string | null;
+  /** @nullable */
+  storeHours?: StoreStoreHours;
+  /** @nullable */
+  holidayClosures?: string[] | null;
+  /** @nullable */
+  temporarilyClosed?: boolean | null;
+  /** @nullable */
+  temporaryClosedMessage?: string | null;
+  /** @nullable */
+  monthlyRevenueGoal?: string | null;
+  /** @nullable */
+  waMode?: string | null;
+  /** @nullable */
+  waBizPhoneId?: string | null;
+  /** @nullable */
+  waBizAccessToken?: string | null;
+  /** @nullable */
+  waBizVerifyToken?: string | null;
+  /** @nullable */
+  waAutoReply?: boolean | null;
+  /** @nullable */
+  waReplyPrompt?: string | null;
+  /** @nullable */
+  orderCount?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateStoreBody {
+  name: string;
+  slug: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  whatsappNumber?: string | null;
+  currency?: string;
+  /** @nullable */
+  logoUrl?: string | null;
+  theme?: string;
+  deliveryEnabled?: boolean;
+  pickupEnabled?: boolean;
+  /** @nullable */
+  shippingNote?: string | null;
+  /** @nullable */
+  notificationEmail?: string | null;
+  /** @nullable */
+  digestFrequency?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  metaTitle?: string | null;
+  /** @nullable */
+  metaDescription?: string | null;
+}
+
+export interface UpdateMyStoreBody {
+  name?: string;
+  slug?: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  whatsappNumber?: string | null;
+  currency?: string;
+  /** @nullable */
+  logoUrl?: string | null;
+  theme?: string;
+  deliveryEnabled?: boolean;
+  pickupEnabled?: boolean;
+  /** @nullable */
+  shippingNote?: string | null;
+  /** @nullable */
+  notificationEmail?: string | null;
+  /** @nullable */
+  digestFrequency?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  metaTitle?: string | null;
+  /** @nullable */
+  metaDescription?: string | null;
+}
+
+export type ProductVariantsItem = { [key: string]: unknown };
+
+export interface Product {
+  id: number;
+  storeId: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  price: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  category?: string | null;
+  isActive: boolean;
+  /** @nullable */
+  stock?: number | null;
+  /** @nullable */
+  lowStockThreshold?: number | null;
+  variants: ProductVariantsItem[];
+  createdAt: string;
+}
+
+export type CreateProductBodyVariantsItem = { [key: string]: unknown };
+
+export interface CreateProductBody {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  price: number;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  category?: string | null;
+  isActive?: boolean;
+  /** @nullable */
+  stock?: number | null;
+  /** @nullable */
+  lowStockThreshold?: number | null;
+  variants?: CreateProductBodyVariantsItem[];
+}
+
+export type UpdateProductBodyVariantsItem = { [key: string]: unknown };
+
+export interface UpdateProductBody {
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  price?: number;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  category?: string | null;
+  isActive?: boolean;
+  /** @nullable */
+  stock?: number | null;
+  /** @nullable */
+  lowStockThreshold?: number | null;
+  variants?: UpdateProductBodyVariantsItem[];
+}
+
+/**
+ * @nullable
+ */
+export type OrderItemSelectedVariants = { [key: string]: unknown } | null;
+
+export interface OrderItem {
+  productId?: number;
+  productName: string;
+  price: number;
+  quantity: number;
+  /** @nullable */
+  selectedVariants?: OrderItemSelectedVariants;
+}
+
+export interface Order {
+  id: number;
+  storeId: number;
+  trackingToken: string;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @nullable */
+  customerNote?: string | null;
+  /** @nullable */
+  ownerNote?: string | null;
+  items: OrderItem[];
+  total: string;
+  status: string;
+  /** @nullable */
+  deliveryType?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrderBody {
+  storeId: number;
+  items: OrderItem[];
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @nullable */
+  customerNote?: string | null;
+  /** @nullable */
+  deliveryType?: string | null;
+  /** @nullable */
+  couponCode?: string | null;
+}
+
+export interface UpdateOrderStatusBody {
+  status: string;
+}
+
+export interface Coupon {
+  id: number;
+  storeId: number;
+  code: string;
+  type: string;
+  value: string;
+  /** @nullable */
+  minOrderAmount?: string | null;
+  /** @nullable */
+  maxUses?: number | null;
+  usedCount: number;
+  isActive: boolean;
+  /** @nullable */
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
+export interface Review {
+  id: number;
+  storeId: number;
+  orderId: number;
+  productId: number;
+  /** @nullable */
+  productName?: string | null;
+  /** @nullable */
+  customerName?: string | null;
+  rating: number;
+  /** @nullable */
+  comment?: string | null;
+  /** @nullable */
+  merchantReply?: string | null;
+  /** @nullable */
+  repliedAt?: string | null;
+  createdAt: string;
+}
+
+export interface AnalyticsSummary {
+  totalRevenue: number;
+  totalOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+  revenueThisMonth: number;
+  ordersThisMonth: number;
+  totalProducts: number;
+  activeProducts: number;
+  /** @nullable */
+  revenueGrowth?: number | null;
+}
+
+export interface TopProduct {
+  id: number;
+  name: string;
+  price: number;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  category?: string | null;
+  orderCount: number;
+  totalRevenue: number;
+}
+
+export interface TopCustomer {
+  key: string;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  orderCount: number;
+  totalSpend: number;
+}
+
+export interface RevenueTrendItem {
+  date: string;
+  revenue: number;
+}
+
+export interface CouponPerformance {
+  id: number;
+  code: string;
+  type: string;
+  value: number;
+  usedCount: number;
+  isActive: boolean;
+  expired: boolean;
+  maxedOut: boolean;
+  /** @nullable */
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
+export interface BillingPlan {
+  id: number;
+  name: string;
+  displayName: string;
+  priceMonthly: number;
+  /** @nullable */
+  ordersPerMonth?: number | null;
+  /** @nullable */
+  productsLimit?: number | null;
+  /** @nullable */
+  isUnlimited?: boolean | null;
+  features: string[];
+}
+
+export interface BillingStatus {
+  plan: BillingPlan;
+  status: string;
+  ordersUsed: number;
+  /** @nullable */
+  ordersLimit?: number | null;
+  productsUsed?: number;
+  /** @nullable */
+  productsLimit?: number | null;
+  usagePercent: number;
+  isNearLimit: boolean;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+}
+
+export interface ReferralInfo {
+  referralCode: string;
+  referralLink: string;
+  referredCount: number;
+  bonusOrdersEarned: number;
+}
+
+export interface WaitlistEntry {
+  id: number;
+  productId: number;
+  productName: string;
+  email: string;
+  /** @nullable */
+  name?: string | null;
+  createdAt: string;
+}
+
+export interface ShareMessage {
+  message: string;
+  whatsappUrl: string;
+  storeUrl: string;
+  ogUrl: string;
+}
+
+export interface GenerateStoreBody {
+  description: string;
+}
+
+export type AdminStatsPlanBreakdown = { [key: string]: number };
+
+export interface AdminStats {
+  totalUsers: number;
+  totalStores: number;
+  totalOrders: number;
+  totalRevenue: number;
+  planBreakdown: AdminStatsPlanBreakdown;
+}
+
+export interface AdminUser {
+  userId: string;
+  /** @nullable */
+  storeName?: string | null;
+  /** @nullable */
+  storeSlug?: string | null;
+  planName: string;
+  planDisplayName: string;
+  subscriptionStatus: string;
+  ordersThisMonth: number;
+  totalOrders: number;
+  createdAt: string;
+}
+
+export interface AiProvider {
+  id: number;
+  name: string;
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  defaultModel: string;
+  isActive: boolean;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AiProviderBodyProvider =
+  (typeof AiProviderBodyProvider)[keyof typeof AiProviderBodyProvider];
+
+export const AiProviderBodyProvider = {
+  openai: "openai",
+  gemini: "gemini",
+  groq: "groq",
+  openrouter: "openrouter",
+  deepseek: "deepseek",
+  custom: "custom",
+} as const;
+
+export interface AiProviderBody {
+  name: string;
+  provider: AiProviderBodyProvider;
+  baseUrl: string;
+  apiKey: string;
+  defaultModel: string;
+  isActive?: boolean;
+}
+
+export interface WhatsappConfig {
+  waMode: string;
+  waBizPhoneId: string;
+  waBizAccessToken: string;
+  waBizVerifyToken: string;
+  waAutoReply: boolean;
+  waReplyPrompt: string;
+}
+
+export interface WhatsappConfigBody {
+  waMode?: string;
+  waBizPhoneId?: string;
+  waBizAccessToken?: string;
+  waBizVerifyToken?: string;
+  waAutoReply?: boolean;
+  waReplyPrompt?: string;
+}
+
+export interface WhatsappStatus {
+  mode: string;
+  status: string;
+  /** @nullable */
+  qrCode?: string | null;
+  /** @nullable */
+  phone?: string | null;
+}
+
 export interface WhatsappMessage {
   id: number;
   storeId: number;
@@ -15,6 +487,265 @@ export interface WhatsappMessage {
   createdAt: string;
 }
 
+export type BrowseStoresParams = {
+  q?: string;
+  category?: string;
+  page?: number;
+};
+
+export type BrowseStores200 = {
+  stores: Store[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
+
+export type UpdateRevenueGoalBody = {
+  /** @nullable */
+  goal?: number | null;
+};
+
+export type GetMyStoreDigestPreview200 = { [key: string]: unknown };
+
+export type GetStoreReviewsParams = {
+  productId?: number;
+};
+
+export type UpdateWhatsappConfig200 = {
+  success?: boolean;
+};
+
+export type DisconnectWhatsapp200 = {
+  success?: boolean;
+};
+
 export type GetWhatsappMessagesParams = {
   limit?: number;
+};
+
+export type VerifyWhatsappWebhookParams = {
+  "hub.mode"?: string;
+  "hub.verify_token"?: string;
+  "hub.challenge"?: string;
+};
+
+export type HandleWhatsappWebhookBody = { [key: string]: unknown };
+
+export type GetRecentOrdersParams = {
+  limit?: number;
+};
+
+export type GetTopProductsParams = {
+  limit?: number;
+};
+
+export type GetTopCustomersParams = {
+  limit?: number;
+};
+
+export type GetOrdersPerDay200Item = {
+  date: string;
+  orders: number;
+  revenue: number;
+};
+
+export type GetOrderHeatmap200Item = {
+  dayOfWeek: number;
+  hour: number;
+  count: number;
+};
+
+export type GetCustomerInsights200 = { [key: string]: unknown };
+
+export type GetProductVelocity200Item = { [key: string]: unknown };
+
+export type GetRevenueByDay200Item = {
+  dayOfWeek: number;
+  day: string;
+  revenue: number;
+  orderCount: number;
+};
+
+export type ListOrdersParams = {
+  status?: string;
+  limit?: number;
+};
+
+export type CreateOrder201 = {
+  order: Order;
+  whatsappUrl: string;
+};
+
+export type BulkUpdateOrderStatusBody = {
+  orderIds: number[];
+  status: string;
+};
+
+export type BulkUpdateOrderStatus200 = {
+  updated?: number;
+};
+
+export type TrackOrder200 = { [key: string]: unknown };
+
+export type GetCustomerHistoryParams = {
+  phone?: string;
+  email?: string;
+};
+
+export type GetCustomerHistory200 = { [key: string]: unknown };
+
+export type UpdateOrderNoteBody = {
+  /** @nullable */
+  ownerNote?: string | null;
+};
+
+export type ListProductsParams = {
+  category?: string;
+  search?: string;
+};
+
+export type ImportProductsBody = {
+  csv: string;
+};
+
+export type ImportProducts200 = {
+  imported: number;
+  skipped: number;
+  errors: string[];
+};
+
+export type GetWaitlistCounts200Counts = { [key: string]: number };
+
+export type GetWaitlistCounts200 = {
+  counts: GetWaitlistCounts200Counts;
+};
+
+export type NotifyWaitlist200 = {
+  notified: number;
+};
+
+export type JoinWaitlistBody = {
+  productId: number;
+  email: string;
+  /** @nullable */
+  name?: string | null;
+};
+
+export type JoinWaitlist201 = {
+  message?: string;
+};
+
+export type CreateCouponBody = {
+  code: string;
+  type: string;
+  value: number;
+  /** @nullable */
+  minOrderAmount?: number | null;
+  /** @nullable */
+  maxUses?: number | null;
+  /** @nullable */
+  expiresAt?: string | null;
+  isActive?: boolean;
+};
+
+export type ValidateCouponBody = {
+  storeId: number;
+  code: string;
+  orderAmount: number;
+};
+
+export type ValidateCoupon200 = { [key: string]: unknown };
+
+export type UpdateCouponBody = { [key: string]: unknown };
+
+export type ListMerchantReviewsParams = {
+  rating?: number;
+};
+
+export type SubmitReviewBody = {
+  trackingToken: string;
+  productId: number;
+  rating: number;
+  /** @nullable */
+  comment?: string | null;
+};
+
+export type ReplyToReviewBody = {
+  /** @nullable */
+  reply?: string | null;
+};
+
+export type CreateCheckoutSessionBody = {
+  planName: string;
+};
+
+export type CreateCheckoutSession200 = {
+  url?: string;
+};
+
+export type GetReferralPreview200 = {
+  referralCode?: string;
+  /** @nullable */
+  referrerStoreName?: string | null;
+  bonusOrders?: number;
+};
+
+export type ApplyReferralCodeBody = {
+  code: string;
+};
+
+export type GenerateStore200 = { [key: string]: unknown };
+
+export type GenerateProductDescriptionBody = {
+  productName: string;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  price?: number | null;
+};
+
+export type GenerateProductDescription200 = {
+  description?: string;
+};
+
+export type SuggestProductPriceBody = {
+  productName: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  currency?: string | null;
+};
+
+export type SuggestProductPrice200 = {
+  suggestedPrice?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  reasoning?: string;
+};
+
+export type GetAdminUsersParams = {
+  limit?: number;
+  offset?: number;
+};
+
+export type ChangeUserPlanBody = {
+  planName: string;
+};
+
+export type TestAiProviderBody = {
+  baseUrl: string;
+  apiKey: string;
+  defaultModel: string;
+};
+
+export type TestAiProvider200 = {
+  success?: boolean;
+  message?: string;
+  model?: string;
+};
+
+export type DeleteAiProvider200 = {
+  success?: boolean;
 };

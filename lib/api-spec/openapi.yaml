@@ -1,31 +1,427 @@
 openapi: 3.0.0
 info:
-  title: WhatsApp Message API
+  title: Api
   version: 1.0.0
-paths:
-  /stores/me/whatsapp-messages:
-    get:
-      operationId: getWhatsappMessages
-      tags: [whatsapp]
-      summary: Get WhatsApp conversation history
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Message history
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/WhatsappMessage'
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    Store:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        whatsappNumber: { type: string, nullable: true }
+        currency: { type: string }
+        logoUrl: { type: string, nullable: true }
+        theme: { type: string }
+        deliveryEnabled: { type: boolean }
+        pickupEnabled: { type: boolean }
+        shippingNote: { type: string, nullable: true }
+        notificationEmail: { type: string, nullable: true }
+        digestFrequency: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        metaTitle: { type: string, nullable: true }
+        metaDescription: { type: string, nullable: true }
+        customDomain: { type: string, nullable: true }
+        storeHours: { type: object, nullable: true }
+        holidayClosures: { type: array, items: { type: string }, nullable: true }
+        temporarilyClosed: { type: boolean, nullable: true }
+        temporaryClosedMessage: { type: string, nullable: true }
+        monthlyRevenueGoal: { type: string, nullable: true }
+        waMode: { type: string, nullable: true }
+        waBizPhoneId: { type: string, nullable: true }
+        waBizAccessToken: { type: string, nullable: true }
+        waBizVerifyToken: { type: string, nullable: true }
+        waAutoReply: { type: boolean, nullable: true }
+        waReplyPrompt: { type: string, nullable: true }
+        orderCount: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, name, slug, currency, theme, deliveryEnabled, pickupEnabled, createdAt, updatedAt]
+
+    CreateStoreBody:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        whatsappNumber: { type: string, nullable: true }
+        currency: { type: string }
+        logoUrl: { type: string, nullable: true }
+        theme: { type: string }
+        deliveryEnabled: { type: boolean }
+        pickupEnabled: { type: boolean }
+        shippingNote: { type: string, nullable: true }
+        notificationEmail: { type: string, nullable: true }
+        digestFrequency: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        metaTitle: { type: string, nullable: true }
+        metaDescription: { type: string, nullable: true }
+      required: [name, slug]
+
+    UpdateMyStoreBody:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        whatsappNumber: { type: string, nullable: true }
+        currency: { type: string }
+        logoUrl: { type: string, nullable: true }
+        theme: { type: string }
+        deliveryEnabled: { type: boolean }
+        pickupEnabled: { type: boolean }
+        shippingNote: { type: string, nullable: true }
+        notificationEmail: { type: string, nullable: true }
+        digestFrequency: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        metaTitle: { type: string, nullable: true }
+        metaDescription: { type: string, nullable: true }
+
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        storeId: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        price: { type: string }
+        imageUrl: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        isActive: { type: boolean }
+        stock: { type: integer, nullable: true }
+        lowStockThreshold: { type: integer, nullable: true }
+        variants: { type: array, items: { type: object } }
+        createdAt: { type: string, format: date-time }
+      required: [id, storeId, name, price, isActive, variants, createdAt]
+
+    CreateProductBody:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        price: { type: number }
+        imageUrl: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        isActive: { type: boolean }
+        stock: { type: integer, nullable: true }
+        lowStockThreshold: { type: integer, nullable: true }
+        variants: { type: array, items: { type: object } }
+      required: [name, price]
+
+    UpdateProductBody:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        price: { type: number }
+        imageUrl: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        isActive: { type: boolean }
+        stock: { type: integer, nullable: true }
+        lowStockThreshold: { type: integer, nullable: true }
+        variants: { type: array, items: { type: object } }
+
+    OrderItem:
+      type: object
+      properties:
+        productId: { type: integer }
+        productName: { type: string }
+        price: { type: number }
+        quantity: { type: integer }
+        selectedVariants: { type: object, nullable: true }
+      required: [productName, price, quantity]
+
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        storeId: { type: integer }
+        trackingToken: { type: string }
+        customerName: { type: string, nullable: true }
+        customerEmail: { type: string, nullable: true }
+        customerPhone: { type: string, nullable: true }
+        customerNote: { type: string, nullable: true }
+        ownerNote: { type: string, nullable: true }
+        items: { type: array, items: { $ref: '#/components/schemas/OrderItem' } }
+        total: { type: string }
+        status: { type: string }
+        deliveryType: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, storeId, trackingToken, items, total, status, createdAt, updatedAt]
+
+    CreateOrderBody:
+      type: object
+      properties:
+        storeId: { type: integer }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        customerName: { type: string, nullable: true }
+        customerEmail: { type: string, nullable: true }
+        customerPhone: { type: string, nullable: true }
+        customerNote: { type: string, nullable: true }
+        deliveryType: { type: string, nullable: true }
+        couponCode: { type: string, nullable: true }
+      required: [storeId, items]
+
+    UpdateOrderStatusBody:
+      type: object
+      properties:
+        status: { type: string }
+      required: [status]
+
+    Coupon:
+      type: object
+      properties:
+        id: { type: integer }
+        storeId: { type: integer }
+        code: { type: string }
+        type: { type: string }
+        value: { type: string }
+        minOrderAmount: { type: string, nullable: true }
+        maxUses: { type: integer, nullable: true }
+        usedCount: { type: integer }
+        isActive: { type: boolean }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, storeId, code, type, value, usedCount, isActive, createdAt]
+
+    Review:
+      type: object
+      properties:
+        id: { type: integer }
+        storeId: { type: integer }
+        orderId: { type: integer }
+        productId: { type: integer }
+        productName: { type: string, nullable: true }
+        customerName: { type: string, nullable: true }
+        rating: { type: integer }
+        comment: { type: string, nullable: true }
+        merchantReply: { type: string, nullable: true }
+        repliedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, storeId, orderId, productId, rating, createdAt]
+
+    AnalyticsSummary:
+      type: object
+      properties:
+        totalRevenue: { type: number }
+        totalOrders: { type: number }
+        pendingOrders: { type: number }
+        completedOrders: { type: number }
+        revenueThisMonth: { type: number }
+        ordersThisMonth: { type: number }
+        totalProducts: { type: number }
+        activeProducts: { type: number }
+        revenueGrowth: { type: number, nullable: true }
+      required: [totalRevenue, totalOrders, pendingOrders, completedOrders, revenueThisMonth, ordersThisMonth, totalProducts, activeProducts]
+
+    TopProduct:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        price: { type: number }
+        imageUrl: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        orderCount: { type: number }
+        totalRevenue: { type: number }
+      required: [id, name, price, orderCount, totalRevenue]
+
+    TopCustomer:
+      type: object
+      properties:
+        key: { type: string }
+        name: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        orderCount: { type: number }
+        totalSpend: { type: number }
+      required: [key, orderCount, totalSpend]
+
+    RevenueTrendItem:
+      type: object
+      properties:
+        date: { type: string }
+        revenue: { type: number }
+      required: [date, revenue]
+
+    CouponPerformance:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        type: { type: string }
+        value: { type: number }
+        usedCount: { type: number }
+        isActive: { type: boolean }
+        expired: { type: boolean }
+        maxedOut: { type: boolean }
+        expiresAt: { type: string, nullable: true }
+        createdAt: { type: string }
+      required: [id, code, type, value, usedCount, isActive, expired, maxedOut, createdAt]
+
+    BillingPlan:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        displayName: { type: string }
+        priceMonthly: { type: number }
+        ordersPerMonth: { type: integer, nullable: true }
+        productsLimit: { type: integer, nullable: true }
+        isUnlimited: { type: boolean, nullable: true }
+        features: { type: array, items: { type: string } }
+      required: [id, name, displayName, priceMonthly, features]
+
+    BillingStatus:
+      type: object
+      properties:
+        plan:
+          $ref: '#/components/schemas/BillingPlan'
+        status: { type: string }
+        ordersUsed: { type: number }
+        ordersLimit: { type: number, nullable: true }
+        productsUsed: { type: number }
+        productsLimit: { type: number, nullable: true }
+        usagePercent: { type: number }
+        isNearLimit: { type: boolean }
+        currentPeriodEnd: { type: string, format: date-time, nullable: true }
+      required: [plan, status, ordersUsed, usagePercent, isNearLimit]
+
+    ReferralInfo:
+      type: object
+      properties:
+        referralCode: { type: string }
+        referralLink: { type: string }
+        referredCount: { type: number }
+        bonusOrdersEarned: { type: number }
+      required: [referralCode, referralLink, referredCount, bonusOrdersEarned]
+
+    WaitlistEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        productId: { type: integer }
+        productName: { type: string }
+        email: { type: string }
+        name: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, productId, productName, email, createdAt]
+
+    ShareMessage:
+      type: object
+      properties:
+        message: { type: string }
+        whatsappUrl: { type: string }
+        storeUrl: { type: string }
+        ogUrl: { type: string }
+      required: [message, whatsappUrl, storeUrl, ogUrl]
+
+    GenerateStoreBody:
+      type: object
+      properties:
+        description: { type: string }
+      required: [description]
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers: { type: integer }
+        totalStores: { type: integer }
+        totalOrders: { type: integer }
+        totalRevenue: { type: number }
+        planBreakdown: { type: object, additionalProperties: { type: integer } }
+      required: [totalUsers, totalStores, totalOrders, totalRevenue, planBreakdown]
+
+    AdminUser:
+      type: object
+      properties:
+        userId: { type: string }
+        storeName: { type: string, nullable: true }
+        storeSlug: { type: string, nullable: true }
+        planName: { type: string }
+        planDisplayName: { type: string }
+        subscriptionStatus: { type: string }
+        ordersThisMonth: { type: integer }
+        totalOrders: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [userId, planName, planDisplayName, subscriptionStatus, ordersThisMonth, totalOrders, createdAt]
+
+    AiProvider:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        provider: { type: string }
+        baseUrl: { type: string }
+        apiKey: { type: string }
+        defaultModel: { type: string }
+        isActive: { type: boolean }
+        isDefault: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, name, provider, baseUrl, apiKey, defaultModel, isActive, isDefault, createdAt, updatedAt]
+
+    AiProviderBody:
+      type: object
+      properties:
+        name: { type: string }
+        provider:
+          type: string
+          enum: [openai, gemini, groq, openrouter, deepseek, custom]
+        baseUrl: { type: string }
+        apiKey: { type: string }
+        defaultModel: { type: string }
+        isActive: { type: boolean }
+      required: [name, provider, baseUrl, apiKey, defaultModel]
+
+    WhatsappConfig:
+      type: object
+      properties:
+        waMode: { type: string }
+        waBizPhoneId: { type: string }
+        waBizAccessToken: { type: string }
+        waBizVerifyToken: { type: string }
+        waAutoReply: { type: boolean }
+        waReplyPrompt: { type: string }
+      required: [waMode, waBizPhoneId, waBizAccessToken, waBizVerifyToken, waAutoReply, waReplyPrompt]
+
+    WhatsappConfigBody:
+      type: object
+      properties:
+        waMode: { type: string }
+        waBizPhoneId: { type: string }
+        waBizAccessToken: { type: string }
+        waBizVerifyToken: { type: string }
+        waAutoReply: { type: boolean }
+        waReplyPrompt: { type: string }
+
+    WhatsappStatus:
+      type: object
+      properties:
+        mode: { type: string }
+        status: { type: string }
+        qrCode: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+      required: [mode, status]
+
     WhatsappMessage:
       type: object
       properties:
@@ -38,3 +434,1561 @@ components:
         source: { type: string }
         createdAt: { type: string, format: date-time }
       required: [id, storeId, mode, customerPhone, customerMessage, aiReply, source, createdAt]
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  /stores/me:
+    get:
+      operationId: getMyStore
+      tags: [stores]
+      summary: Get my store
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+    put:
+      operationId: updateMyStore
+      tags: [stores]
+      summary: Update my store
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMyStoreBody'
+      responses:
+        '200':
+          description: Updated store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /stores:
+    post:
+      operationId: createStore
+      tags: [stores]
+      summary: Create a store
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStoreBody'
+      responses:
+        '201':
+          description: Created store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /stores/browse:
+    get:
+      operationId: browseStores
+      tags: [stores]
+      summary: Browse stores publicly
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Paginated stores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stores: { type: array, items: { $ref: '#/components/schemas/Store' } }
+                  total: { type: integer }
+                  page: { type: integer }
+                  totalPages: { type: integer }
+                required: [stores, total, page, totalPages]
+
+  /stores/top:
+    get:
+      operationId: getTopStores
+      tags: [stores]
+      summary: Get top stores
+      responses:
+        '200':
+          description: Top stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Store'
+
+  /stores/public/{slug}:
+    get:
+      operationId: getPublicStore
+      tags: [stores]
+      summary: Get public store by slug
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Public store with products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /stores/me/revenue-goal:
+    patch:
+      operationId: updateRevenueGoal
+      tags: [stores]
+      summary: Set monthly revenue goal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                goal: { type: number, nullable: true }
+      responses:
+        '200':
+          description: Updated store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /stores/me/digest-preview:
+    get:
+      operationId: getMyStoreDigestPreview
+      tags: [stores]
+      summary: Preview digest email
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Digest preview
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stores/{slug}/reviews:
+    get:
+      operationId: getStoreReviews
+      tags: [reviews]
+      summary: Get reviews for a store (public)
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+        - in: query
+          name: productId
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+
+  /stores/me/whatsapp-config:
+    get:
+      operationId: getWhatsappConfig
+      tags: [whatsapp]
+      summary: Get WhatsApp config
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: WhatsApp config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsappConfig'
+    put:
+      operationId: updateWhatsappConfig
+      tags: [whatsapp]
+      summary: Update WhatsApp config
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsappConfigBody'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
+  /stores/me/whatsapp-status:
+    get:
+      operationId: getWhatsappStatus
+      tags: [whatsapp]
+      summary: Get WhatsApp session status
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: WhatsApp status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsappStatus'
+
+  /stores/me/whatsapp-connect:
+    post:
+      operationId: connectWhatsapp
+      tags: [whatsapp]
+      summary: Connect WhatsApp Web session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Connection initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsappStatus'
+
+  /stores/me/whatsapp-disconnect:
+    post:
+      operationId: disconnectWhatsapp
+      tags: [whatsapp]
+      summary: Disconnect WhatsApp Web session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
+  /stores/me/whatsapp-messages:
+    get:
+      operationId: getWhatsappMessages
+      tags: [whatsapp]
+      summary: Get WhatsApp conversation history
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Message history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WhatsappMessage'
+
+  /whatsapp/webhook:
+    get:
+      operationId: verifyWhatsappWebhook
+      tags: [whatsapp]
+      summary: Verify WhatsApp webhook
+      parameters:
+        - in: query
+          name: hub.mode
+          schema: { type: string }
+        - in: query
+          name: hub.verify_token
+          schema: { type: string }
+        - in: query
+          name: hub.challenge
+          schema: { type: string }
+      responses:
+        '200':
+          description: Challenge response
+          content:
+            text/plain:
+              schema: { type: string }
+    post:
+      operationId: handleWhatsappWebhook
+      tags: [whatsapp]
+      summary: Handle WhatsApp webhook event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Acknowledged
+
+  /analytics/summary:
+    get:
+      operationId: getAnalyticsSummary
+      tags: [analytics]
+      summary: Get analytics summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummary'
+
+  /analytics/recent-orders:
+    get:
+      operationId: getRecentOrders
+      tags: [analytics]
+      summary: Get recent orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Recent orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /analytics/top-products:
+    get:
+      operationId: getTopProducts
+      tags: [analytics]
+      summary: Get top products by orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Top products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopProduct'
+
+  /analytics/top-customers:
+    get:
+      operationId: getTopCustomers
+      tags: [analytics]
+      summary: Get top customers by spend
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Top customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopCustomer'
+
+  /analytics/revenue-trend:
+    get:
+      operationId: getAnalyticsRevenueTrend
+      tags: [analytics]
+      summary: Get 7-day revenue trend
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Revenue trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RevenueTrendItem'
+
+  /analytics/orders-per-day:
+    get:
+      operationId: getOrdersPerDay
+      tags: [analytics]
+      summary: Get orders per day for last 30 days
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Orders per day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string }
+                    orders: { type: number }
+                    revenue: { type: number }
+                  required: [date, orders, revenue]
+
+  /analytics/order-heatmap:
+    get:
+      operationId: getOrderHeatmap
+      tags: [analytics]
+      summary: Get order heatmap data
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Order heatmap
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    dayOfWeek: { type: number }
+                    hour: { type: number }
+                    count: { type: number }
+                  required: [dayOfWeek, hour, count]
+
+  /analytics/coupon-performance:
+    get:
+      operationId: getCouponPerformance
+      tags: [analytics]
+      summary: Get coupon performance stats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Coupon performance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CouponPerformance'
+
+  /analytics/customer-insights:
+    get:
+      operationId: getCustomerInsights
+      tags: [analytics]
+      summary: Get customer insights
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Customer insights
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /analytics/product-velocity:
+    get:
+      operationId: getProductVelocity
+      tags: [analytics]
+      summary: Get product velocity (14 days)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Product velocity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /analytics/revenue-by-day:
+    get:
+      operationId: getRevenueByDay
+      tags: [analytics]
+      summary: Get revenue by day of week
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Revenue by day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    dayOfWeek: { type: number }
+                    day: { type: string }
+                    revenue: { type: number }
+                    orderCount: { type: number }
+                  required: [dayOfWeek, day, revenue, orderCount]
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders for my store
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Place an order (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderBody'
+      responses:
+        '201':
+          description: Created order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '#/components/schemas/Order'
+                  whatsappUrl: { type: string }
+                required: [order, whatsappUrl]
+
+  /orders/bulk-status:
+    post:
+      operationId: bulkUpdateOrderStatus
+      tags: [orders]
+      summary: Bulk update order status
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderIds: { type: array, items: { type: integer } }
+                status: { type: string }
+              required: [orderIds, status]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated: { type: integer }
+
+  /orders/track/{token}:
+    get:
+      operationId: trackOrder
+      tags: [orders]
+      summary: Track an order by token (public)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Order tracking info
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /orders/customer-history:
+    get:
+      operationId: getCustomerHistory
+      tags: [orders]
+      summary: Get order history for a customer
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: phone
+          schema: { type: string }
+        - in: query
+          name: email
+          schema: { type: string }
+      responses:
+        '200':
+          description: Customer history
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get an order by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    patch:
+      operationId: updateOrderStatus
+      tags: [orders]
+      summary: Update order status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusBody'
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders/{id}/note:
+    patch:
+      operationId: updateOrderNote
+      tags: [orders]
+      summary: Set internal owner note on order
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ownerNote: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products for my store
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200':
+          description: Products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductBody'
+      responses:
+        '201':
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/import:
+    post:
+      operationId: importProducts
+      tags: [products]
+      summary: Bulk import products via CSV
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                csv: { type: string }
+              required: [csv]
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported: { type: integer }
+                  skipped: { type: integer }
+                  errors: { type: array, items: { type: string } }
+                required: [imported, skipped, errors]
+
+  /products/waitlist:
+    get:
+      operationId: listWaitlistEntries
+      tags: [products]
+      summary: List unnotified waitlist entries
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Waitlist entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WaitlistEntry'
+
+  /products/waitlist-counts:
+    get:
+      operationId: getWaitlistCounts
+      tags: [products]
+      summary: Get waitlist counts per product
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties: { type: integer }
+                required: [counts]
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductBody'
+      responses:
+        '200':
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Deleted
+
+  /products/{id}/waitlist/notify:
+    post:
+      operationId: notifyWaitlist
+      tags: [products]
+      summary: Manually notify waitlist for a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Notify result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notified: { type: integer }
+                required: [notified]
+
+  /stores/public/{slug}/waitlist:
+    post:
+      operationId: joinWaitlist
+      tags: [products]
+      summary: Join product waitlist (public)
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId: { type: integer }
+                email: { type: string }
+                name: { type: string, nullable: true }
+              required: [productId, email]
+      responses:
+        '201':
+          description: Joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  /coupons:
+    get:
+      operationId: listCoupons
+      tags: [coupons]
+      summary: List coupons for my store
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Coupons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Coupon'
+    post:
+      operationId: createCoupon
+      tags: [coupons]
+      summary: Create a coupon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                type: { type: string }
+                value: { type: number }
+                minOrderAmount: { type: number, nullable: true }
+                maxUses: { type: integer, nullable: true }
+                expiresAt: { type: string, nullable: true }
+                isActive: { type: boolean }
+              required: [code, type, value]
+      responses:
+        '201':
+          description: Created coupon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+
+  /coupons/validate:
+    post:
+      operationId: validateCoupon
+      tags: [coupons]
+      summary: Validate a coupon (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                storeId: { type: integer }
+                code: { type: string }
+                orderAmount: { type: number }
+              required: [storeId, code, orderAmount]
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /coupons/{id}:
+    put:
+      operationId: updateCoupon
+      tags: [coupons]
+      summary: Update a coupon
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated coupon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+    delete:
+      operationId: deleteCoupon
+      tags: [coupons]
+      summary: Delete a coupon
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Deleted
+
+  /reviews:
+    get:
+      operationId: listMerchantReviews
+      tags: [reviews]
+      summary: List reviews for my store
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: rating
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+    post:
+      operationId: submitReview
+      tags: [reviews]
+      summary: Submit a review (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trackingToken: { type: string }
+                productId: { type: integer }
+                rating: { type: integer }
+                comment: { type: string, nullable: true }
+              required: [trackingToken, productId, rating]
+      responses:
+        '201':
+          description: Created review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+
+  /reviews/{id}/reply:
+    patch:
+      operationId: replyToReview
+      tags: [reviews]
+      summary: Reply to a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reply: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Updated review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+
+  /billing/plans:
+    get:
+      operationId: getBillingPlans
+      tags: [billing]
+      summary: Get available billing plans
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BillingPlan'
+
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [billing]
+      summary: Get current billing status
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingStatus'
+
+  /billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: [billing]
+      summary: Create Stripe checkout session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planName: { type: string }
+              required: [planName]
+      responses:
+        '200':
+          description: Checkout URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+
+  /referral/me:
+    get:
+      operationId: getMyReferral
+      tags: [referral]
+      summary: Get my referral info
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Referral info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralInfo'
+
+  /referral/preview/{code}:
+    get:
+      operationId: getReferralPreview
+      tags: [referral]
+      summary: Preview referral code (public)
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Referral preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  referralCode: { type: string }
+                  referrerStoreName: { type: string, nullable: true }
+                  bonusOrders: { type: integer }
+
+  /referral/apply:
+    post:
+      operationId: applyReferralCode
+      tags: [referral]
+      summary: Apply a referral code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+              required: [code]
+      responses:
+        '200':
+          description: Referral applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralInfo'
+
+  /growth/share-message:
+    get:
+      operationId: getShareMessage
+      tags: [growth]
+      summary: Get store share message
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Share message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareMessage'
+
+  /growth/qr-code:
+    get:
+      operationId: getQrCode
+      tags: [growth]
+      summary: Download store QR code
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: QR code PNG
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+  /ai/generate-store:
+    post:
+      operationId: generateStore
+      tags: [ai]
+      summary: AI-generate store from description
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateStoreBody'
+      responses:
+        '200':
+          description: Generated store data
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /ai/generate-description:
+    post:
+      operationId: generateProductDescription
+      tags: [ai]
+      summary: AI-generate product description
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productName: { type: string }
+                category: { type: string, nullable: true }
+                price: { type: number, nullable: true }
+              required: [productName]
+      responses:
+        '200':
+          description: Generated description
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description: { type: string }
+
+  /ai/suggest-price:
+    post:
+      operationId: suggestProductPrice
+      tags: [ai]
+      summary: AI-suggest product price
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productName: { type: string }
+                description: { type: string, nullable: true }
+                category: { type: string, nullable: true }
+                currency: { type: string, nullable: true }
+              required: [productName]
+      responses:
+        '200':
+          description: Suggested price
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestedPrice: { type: number }
+                  minPrice: { type: number }
+                  maxPrice: { type: number }
+                  reasoning: { type: string }
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard stats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStats'
+
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: List all users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUser'
+
+  /admin/users/{userId}/plan:
+    patch:
+      operationId: changeUserPlan
+      tags: [admin]
+      summary: Change user plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planName: { type: string }
+              required: [planName]
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+
+  /admin/ai-providers:
+    get:
+      operationId: listAiProviders
+      tags: [admin]
+      summary: List AI providers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: AI providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiProvider'
+    post:
+      operationId: createAiProvider
+      tags: [admin]
+      summary: Create AI provider
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderBody'
+      responses:
+        '201':
+          description: Created provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProvider'
+
+  /admin/ai-providers/test:
+    post:
+      operationId: testAiProvider
+      tags: [admin]
+      summary: Test AI provider connection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseUrl: { type: string }
+                apiKey: { type: string }
+                defaultModel: { type: string }
+              required: [baseUrl, apiKey, defaultModel]
+      responses:
+        '200':
+          description: Test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  model: { type: string }
+
+  /admin/ai-providers/{id}:
+    put:
+      operationId: updateAiProvider
+      tags: [admin]
+      summary: Update AI provider
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderBody'
+      responses:
+        '200':
+          description: Updated provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProvider'
+    delete:
+      operationId: deleteAiProvider
+      tags: [admin]
+      summary: Delete AI provider
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
+  /admin/ai-providers/{id}/default:
+    patch:
+      operationId: setDefaultAiProvider
+      tags: [admin]
+      summary: Set AI provider as default
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Updated provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProvider'
