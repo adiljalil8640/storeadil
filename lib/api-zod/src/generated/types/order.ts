@@ -19,5 +19,6 @@ export interface Order {
   total: number;
   status: OrderStatus;
   deliveryType?: OrderDeliveryType;
+  trackingToken: string;
   createdAt: Date;
 }

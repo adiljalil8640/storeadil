@@ -5,23 +5,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Store, ShoppingCart, Plus, Minus, Send, Info, Package } from "lucide-react";
+import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 type CartItem = {
   product: any;
   quantity: number;
 };
 
+type OrderConfirmation = {
+  orderId: number;
+  trackingToken: string;
+  whatsappUrl: string;
+  storeName: string;
+};
+
 export default function StorefrontPage() {
   const { slug } = useParams<{ slug: string }>();
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("pickup");
   const [customerNote, setCustomerNote] = useState("");
+  const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
 
   const { data: store, isLoading, error } = useGetPublicStore(slug || "", {
     query: { enabled: !!slug, retry: false }
@@ -47,9 +57,9 @@ export default function StorefrontPage() {
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
-        return prev.map(item => 
-          item.product.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 } 
+        return prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
@@ -70,13 +80,13 @@ export default function StorefrontPage() {
   const cartTotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
   const formatCurrency = (amount: number) => {
-    const curr = store?.currency || 'USD';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: curr }).format(amount);
+    const curr = store?.currency || "USD";
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: curr }).format(amount);
   };
 
   const handleCheckout = async () => {
     if (!store || cart.length === 0) return;
-    
+
     try {
       const result = await createOrder.mutateAsync({
         data: {
@@ -93,12 +103,16 @@ export default function StorefrontPage() {
           }))
         }
       });
-      
-      if (result.whatsappUrl) {
-        window.location.href = result.whatsappUrl;
-      }
-    } catch (e) {
-      console.error("Checkout failed", e);
+
+      setConfirmation({
+        orderId: result.order.id,
+        trackingToken: result.order.trackingToken,
+        whatsappUrl: result.whatsappUrl,
+        storeName: store.name,
+      });
+    } catch (e: any) {
+      const msg = e?.response?.data?.error ?? "Something went wrong. Please try again.";
+      toast.error(msg);
     }
   };
 
@@ -116,11 +130,13 @@ export default function StorefrontPage() {
     );
   }
 
-  // Apply store theme dynamically
-  const isDark = store.theme === 'dark';
+  const isDark = store.theme === "dark";
+  const trackingUrl = confirmation
+    ? `${window.location.origin}${basePath}/track/${confirmation.trackingToken}`
+    : "";
 
   return (
-    <div className={`min-h-[100dvh] ${isDark ? 'dark bg-background text-foreground' : 'bg-gray-50'}`}>
+    <div className={`min-h-[100dvh] ${isDark ? "dark bg-background text-foreground" : "bg-gray-50"}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -149,105 +165,176 @@ export default function StorefrontPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col p-0">
               <DialogHeader className="p-6 pb-4 border-b">
-                <DialogTitle>Your Order</DialogTitle>
+                <DialogTitle>
+                  {confirmation ? "Order Placed! 🎉" : "Your Order"}
+                </DialogTitle>
               </DialogHeader>
-              
-              <div className="flex-1 overflow-y-auto p-6">
-                {cart.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">
-                    Your cart is empty.
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      {cart.map((item) => (
-                        <div key={item.product.id} className="flex gap-4">
-                          <div className="w-16 h-16 rounded bg-muted flex items-center justify-center shrink-0">
-                            {item.product.imageUrl ? (
-                              <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover rounded" />
-                            ) : (
-                              <Package className="w-6 h-6 text-muted-foreground/50" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm line-clamp-2">{item.product.name}</h4>
-                            <div className="text-sm font-semibold mt-1">{formatCurrency(item.product.price)}</div>
-                            <div className="flex items-center gap-3 mt-2">
-                              <Button variant="outline" size="icon" className="w-6 h-6 h-6 rounded-full" onClick={() => updateQuantity(item.product.id, -1)}>
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
-                              <Button variant="outline" size="icon" className="w-6 h-6 h-6 rounded-full" onClick={() => updateQuantity(item.product.id, 1)}>
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+
+              {/* Order Confirmation Screen */}
+              {confirmation ? (
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                  <div className="flex flex-col items-center text-center gap-3 py-2">
+                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="w-9 h-9 text-green-600" />
                     </div>
-
-                    <div className="border-t pt-4 space-y-4">
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>Total</span>
-                        <span>{formatCurrency(cartTotal)}</span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label>Delivery Method</Label>
-                        <RadioGroup value={deliveryType} onValueChange={(v: any) => setDeliveryType(v)} className="flex flex-col space-y-1">
-                          {store.pickupEnabled && (
-                            <div className="flex items-center space-x-2 border p-3 rounded-md">
-                              <RadioGroupItem value="pickup" id="pickup" />
-                              <Label htmlFor="pickup" className="cursor-pointer">Store Pickup</Label>
-                            </div>
-                          )}
-                          {store.deliveryEnabled && (
-                            <div className="flex items-center space-x-2 border p-3 rounded-md">
-                              <RadioGroupItem value="delivery" id="delivery" />
-                              <Label htmlFor="delivery" className="cursor-pointer">Delivery</Label>
-                            </div>
-                          )}
-                        </RadioGroup>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Your Name</Label>
-                        <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Jane Doe" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Your Phone (Optional)</Label>
-                        <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+1234567890" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Order Notes / Address</Label>
-                        <Textarea 
-                          value={customerNote} 
-                          onChange={(e) => setCustomerNote(e.target.value)} 
-                          placeholder={deliveryType === 'delivery' ? "Please provide your full delivery address..." : "Any special requests?"} 
-                          className="resize-none"
-                        />
-                      </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Order #{confirmation.orderId} Received</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        The store will review your order via WhatsApp. You can track the status anytime with your link below.
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {cart.length > 0 && (
-                <div className="p-4 border-t bg-muted/30">
-                  <Button 
-                    className="w-full h-12 text-base gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white" 
-                    onClick={handleCheckout}
-                    disabled={createOrder.isPending || !customerName || (deliveryType === 'delivery' && !customerNote)}
+                  <div className="bg-muted/50 rounded-xl p-4 space-y-3 border">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Tracking Link</p>
+                    <p className="text-sm font-mono break-all text-foreground leading-relaxed">
+                      {trackingUrl}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-1.5 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(trackingUrl);
+                          toast.success("Tracking link copied!");
+                        }}
+                      >
+                        <Copy className="w-3 h-3" /> Copy Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-1.5 text-xs"
+                        onClick={() => window.open(trackingUrl, "_blank")}
+                      >
+                        <ExternalLink className="w-3 h-3" /> Track Order
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full h-12 gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white"
+                    onClick={() => window.open(confirmation.whatsappUrl, "_blank")}
                   >
                     <Send className="w-5 h-5" />
-                    {createOrder.isPending ? "Preparing..." : "Send Order via WhatsApp"}
+                    Open WhatsApp to Confirm
                   </Button>
-                  {(deliveryType === 'delivery' && !customerNote) && (
-                    <p className="text-xs text-destructive text-center mt-2">Please provide a delivery address in the notes.</p>
-                  )}
+                  <Button
+                    variant="ghost"
+                    className="w-full text-sm text-muted-foreground"
+                    onClick={() => {
+                      setConfirmation(null);
+                      setCart([]);
+                      setCustomerName("");
+                      setCustomerPhone("");
+                      setCustomerNote("");
+                      setIsCartOpen(false);
+                    }}
+                  >
+                    Continue Shopping
+                  </Button>
                 </div>
+              ) : (
+                <>
+                  <div className="flex-1 overflow-y-auto p-6">
+                    {cart.length === 0 ? (
+                      <div className="text-center py-10 text-muted-foreground">
+                        Your cart is empty.
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="space-y-4">
+                          {cart.map((item) => (
+                            <div key={item.product.id} className="flex gap-4">
+                              <div className="w-16 h-16 rounded bg-muted flex items-center justify-center shrink-0">
+                                {item.product.imageUrl ? (
+                                  <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover rounded" />
+                                ) : (
+                                  <Package className="w-6 h-6 text-muted-foreground/50" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm line-clamp-2">{item.product.name}</h4>
+                                <div className="text-sm font-semibold mt-1">{formatCurrency(item.product.price)}</div>
+                                <div className="flex items-center gap-3 mt-2">
+                                  <Button variant="outline" size="icon" className="w-6 h-6 rounded-full" onClick={() => updateQuantity(item.product.id, -1)}>
+                                    <Minus className="w-3 h-3" />
+                                  </Button>
+                                  <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                                  <Button variant="outline" size="icon" className="w-6 h-6 rounded-full" onClick={() => updateQuantity(item.product.id, 1)}>
+                                    <Plus className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="border-t pt-4 space-y-4">
+                          <div className="flex justify-between font-bold text-lg">
+                            <span>Total</span>
+                            <span>{formatCurrency(cartTotal)}</span>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label>Delivery Method</Label>
+                            <RadioGroup value={deliveryType} onValueChange={(v: any) => setDeliveryType(v)} className="flex flex-col space-y-1">
+                              {store.pickupEnabled && (
+                                <div className="flex items-center space-x-2 border p-3 rounded-md">
+                                  <RadioGroupItem value="pickup" id="pickup" />
+                                  <Label htmlFor="pickup" className="cursor-pointer">Store Pickup</Label>
+                                </div>
+                              )}
+                              {store.deliveryEnabled && (
+                                <div className="flex items-center space-x-2 border p-3 rounded-md">
+                                  <RadioGroupItem value="delivery" id="delivery" />
+                                  <Label htmlFor="delivery" className="cursor-pointer">Delivery</Label>
+                                </div>
+                              )}
+                            </RadioGroup>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Your Name</Label>
+                            <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Jane Doe" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Your Phone (Optional)</Label>
+                            <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+1234567890" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Order Notes / Address</Label>
+                            <Textarea
+                              value={customerNote}
+                              onChange={(e) => setCustomerNote(e.target.value)}
+                              placeholder={deliveryType === "delivery" ? "Please provide your full delivery address..." : "Any special requests?"}
+                              className="resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {cart.length > 0 && (
+                    <div className="p-4 border-t bg-muted/30">
+                      <Button
+                        className="w-full h-12 text-base gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white"
+                        onClick={handleCheckout}
+                        disabled={createOrder.isPending || !customerName || (deliveryType === "delivery" && !customerNote)}
+                      >
+                        <Send className="w-5 h-5" />
+                        {createOrder.isPending ? "Placing Order…" : "Place Order"}
+                      </Button>
+                      {(deliveryType === "delivery" && !customerNote) && (
+                        <p className="text-xs text-destructive text-center mt-2">Please provide a delivery address in the notes.</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </DialogContent>
           </Dialog>
@@ -273,17 +360,17 @@ export default function StorefrontPage() {
         {/* Categories */}
         {categories.length > 1 && (
           <div className="flex overflow-x-auto pb-4 mb-6 gap-2 no-scrollbar">
-            <Button 
-              variant={activeCategory === "All" ? "default" : "outline"} 
+            <Button
+              variant={activeCategory === "All" ? "default" : "outline"}
               className="rounded-full"
               onClick={() => setActiveCategory("All")}
             >
               All
             </Button>
             {categories.filter(c => c !== "All").map(c => (
-              <Button 
+              <Button
                 key={c}
-                variant={activeCategory === c ? "default" : "outline"} 
+                variant={activeCategory === c ? "default" : "outline"}
                 className="rounded-full whitespace-nowrap"
                 onClick={() => setActiveCategory(c)}
               >
@@ -318,9 +405,9 @@ export default function StorefrontPage() {
                 )}
                 <div className="mt-auto pt-3 flex items-center justify-between">
                   <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-                  <Button 
-                    size="sm" 
-                    className="rounded-full h-8 px-3" 
+                  <Button
+                    size="sm"
+                    className="rounded-full h-8 px-3"
                     disabled={product.stock !== null && product.stock <= 0}
                     onClick={() => addToCart(product)}
                   >
@@ -330,7 +417,7 @@ export default function StorefrontPage() {
               </div>
             </div>
           ))}
-          
+
           {filteredProducts.length === 0 && (
             <div className="col-span-full py-20 text-center text-muted-foreground">
               No products available.

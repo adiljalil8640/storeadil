@@ -294,6 +294,7 @@ export const ListOrdersResponseItem = zod.object({
   total: zod.number(),
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+  trackingToken: zod.string(),
   createdAt: zod.coerce.date(),
 });
 export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
@@ -316,6 +317,35 @@ export const CreateOrderBody = zod.object({
     }),
   ),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+});
+
+/**
+ * @summary Track an order by its tracking token (public, no auth)
+ */
+export const TrackOrderParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const TrackOrderResponse = zod.object({
+  orderId: zod.number(),
+  trackingToken: zod.string(),
+  status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
+  customerName: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      price: zod.number(),
+      selectedVariants: zod.record(zod.string(), zod.string()).optional(),
+    }),
+  ),
+  total: zod.number(),
+  deliveryType: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  storeName: zod.string(),
+  storeSlug: zod.string(),
+  currency: zod.string(),
 });
 
 /**
@@ -343,6 +373,7 @@ export const GetOrderResponse = zod.object({
   total: zod.number(),
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+  trackingToken: zod.string(),
   createdAt: zod.coerce.date(),
 });
 
@@ -375,6 +406,7 @@ export const UpdateOrderStatusResponse = zod.object({
   total: zod.number(),
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+  trackingToken: zod.string(),
   createdAt: zod.coerce.date(),
 });
 
@@ -486,6 +518,7 @@ export const GetRecentOrdersResponseItem = zod.object({
   total: zod.number(),
   status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+  trackingToken: zod.string(),
   createdAt: zod.coerce.date(),
 });
 export const GetRecentOrdersResponse = zod.array(GetRecentOrdersResponseItem);

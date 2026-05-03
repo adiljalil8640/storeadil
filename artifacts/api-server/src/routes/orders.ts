@@ -121,6 +121,52 @@ router.post("/orders", async (req: any, res) => {
   }
 });
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// GET /orders/track/:token (public — customer order tracking)
+router.get("/orders/track/:token", async (req: any, res) => {
+  try {
+    const { token } = req.params;
+    if (!UUID_RE.test(token)) return res.status(404).json({ error: "Order not found" });
+    const [order] = await db
+      .select({
+        id: ordersTable.id,
+        trackingToken: ordersTable.trackingToken,
+        status: ordersTable.status,
+        customerName: ordersTable.customerName,
+        items: ordersTable.items,
+        total: ordersTable.total,
+        deliveryType: ordersTable.deliveryType,
+        createdAt: ordersTable.createdAt,
+        storeName: storesTable.name,
+        storeSlug: storesTable.slug,
+        currency: storesTable.currency,
+      })
+      .from(ordersTable)
+      .innerJoin(storesTable, eq(ordersTable.storeId, storesTable.id))
+      .where(eq(ordersTable.trackingToken, token));
+
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    res.json({
+      orderId: order.id,
+      trackingToken: order.trackingToken,
+      status: order.status,
+      customerName: order.customerName,
+      items: order.items,
+      total: Number(order.total),
+      deliveryType: order.deliveryType,
+      createdAt: order.createdAt,
+      storeName: order.storeName,
+      storeSlug: order.storeSlug,
+      currency: order.currency,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /orders/:id
 router.get("/orders/:id", requireAuth, async (req: any, res) => {
   try {

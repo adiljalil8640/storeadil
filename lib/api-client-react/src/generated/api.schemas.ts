@@ -200,7 +200,32 @@ export interface Order {
   total: number;
   status: OrderStatus;
   deliveryType?: OrderDeliveryType;
+  trackingToken: string;
   createdAt: string;
+}
+
+export type OrderTrackingInfoStatus =
+  (typeof OrderTrackingInfoStatus)[keyof typeof OrderTrackingInfoStatus];
+
+export const OrderTrackingInfoStatus = {
+  pending: "pending",
+  confirmed: "confirmed",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export interface OrderTrackingInfo {
+  orderId: number;
+  trackingToken: string;
+  status: OrderTrackingInfoStatus;
+  customerName?: string | null;
+  items: OrderItem[];
+  total: number;
+  deliveryType?: string | null;
+  createdAt: string;
+  storeName: string;
+  storeSlug: string;
+  currency: string;
 }
 
 export type CreateOrderBodyDeliveryType =

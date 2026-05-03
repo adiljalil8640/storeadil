@@ -42,6 +42,8 @@ export * from "./orderItem";
 export * from "./orderItemSelectedVariants";
 export * from "./ordersPerDayItem";
 export * from "./orderStatus";
+export * from "./orderTrackingInfo";
+export * from "./orderTrackingInfoStatus";
 export * from "./orderWithWhatsApp";
 export * from "./plan";
 export * from "./product";
