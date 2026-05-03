@@ -37,6 +37,16 @@ export const StoreTheme = {
   minimal: "minimal",
 } as const;
 
+export type StoreDigestFrequency =
+  | (typeof StoreDigestFrequency)[keyof typeof StoreDigestFrequency]
+  | null;
+
+export const StoreDigestFrequency = {
+  none: "none",
+  daily: "daily",
+  weekly: "weekly",
+} as const;
+
 export interface Store {
   id: number;
   userId: string;
@@ -51,6 +61,7 @@ export interface Store {
   pickupEnabled: boolean;
   shippingNote?: string | null;
   notificationEmail?: string | null;
+  digestFrequency?: StoreDigestFrequency;
   createdAt: string;
   updatedAt: string;
 }
@@ -119,6 +130,16 @@ export const UpdateStoreBodyTheme = {
   minimal: "minimal",
 } as const;
 
+export type UpdateStoreBodyDigestFrequency =
+  | (typeof UpdateStoreBodyDigestFrequency)[keyof typeof UpdateStoreBodyDigestFrequency]
+  | null;
+
+export const UpdateStoreBodyDigestFrequency = {
+  none: "none",
+  daily: "daily",
+  weekly: "weekly",
+} as const;
+
 export interface UpdateStoreBody {
   name?: string;
   description?: string | null;
@@ -130,6 +151,7 @@ export interface UpdateStoreBody {
   pickupEnabled?: boolean;
   shippingNote?: string | null;
   notificationEmail?: string | null;
+  digestFrequency?: UpdateStoreBodyDigestFrequency;
 }
 
 export interface CreateProductBody {

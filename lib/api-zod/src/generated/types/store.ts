@@ -5,6 +5,7 @@
  * WhatsApp Store Builder API
  * OpenAPI spec version: 0.1.0
  */
+import type { StoreDigestFrequency } from "./storeDigestFrequency";
 import type { StoreTheme } from "./storeTheme";
 
 export interface Store {
@@ -21,6 +22,7 @@ export interface Store {
   pickupEnabled: boolean;
   shippingNote?: string | null;
   notificationEmail?: string | null;
+  digestFrequency?: StoreDigestFrequency;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -82,6 +82,78 @@ function baseTemplate(content: string, storeName: string): string {
 </html>`;
 }
 
+export async function sendDigestEmail(params: {
+  to: string;
+  storeName: string;
+  currency: string;
+  periodLabel: string;
+  frequency: "daily" | "weekly";
+  totalOrders: number;
+  totalRevenue: number;
+  pendingCount: number;
+  confirmedCount: number;
+  completedCount: number;
+  topProducts: { name: string; qty: number; revenue: number }[];
+}): Promise<void> {
+  const { to, storeName, currency, periodLabel, frequency, totalOrders, totalRevenue, pendingCount, confirmedCount, completedCount, topProducts } = params;
+
+  const subject = frequency === "daily"
+    ? `Your daily sales summary — ${storeName}`
+    : `Your weekly sales summary — ${storeName}`;
+
+  const topProductsRows = topProducts.length
+    ? topProducts.map(p => `
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;">${p.name}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;text-align:center;font-size:14px;">${p.qty}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:14px;font-weight:600;">${currency} ${p.revenue.toFixed(2)}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="3" style="padding:16px 0;text-align:center;color:#9ca3af;font-size:14px;">No sales in this period</td></tr>`;
+
+  const statBox = (label: string, value: string | number, color: string) => `
+    <div style="flex:1;min-width:120px;padding:16px;background:${color};border-radius:10px;text-align:center;">
+      <div style="font-size:26px;font-weight:800;color:#111827;">${value}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;">${label}</div>
+    </div>`;
+
+  const content = `
+    <h2 style="margin:0 0 4px;font-size:22px;color:#111827;">
+      ${frequency === "daily" ? "📊 Daily" : "📈 Weekly"} Sales Summary
+    </h2>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:14px;">${periodLabel}</p>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;">
+      ${statBox("Total Orders", totalOrders, "#f0fdf4")}
+      ${statBox("Revenue", `${currency} ${totalRevenue.toFixed(2)}`, "#eff6ff")}
+      ${statBox("Completed", completedCount, "#f0fdf4")}
+    </div>
+
+    ${(pendingCount > 0 || confirmedCount > 0) ? `
+    <div style="margin-bottom:24px;padding:12px 16px;background:#fef9c3;border-radius:8px;border-left:4px solid #f59e0b;font-size:13px;color:#78350f;">
+      ⏳ <strong>${pendingCount + confirmedCount} order${pendingCount + confirmedCount !== 1 ? "s" : ""}</strong> still awaiting fulfilment
+      (${pendingCount} pending, ${confirmedCount} confirmed)
+    </div>` : ""}
+
+    <h3 style="margin:0 0 12px;font-size:15px;color:#111827;">Top Products</h3>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="color:#6b7280;font-size:12px;">
+          <th style="text-align:left;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Product</th>
+          <th style="text-align:center;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Units Sold</th>
+          <th style="text-align:right;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>${topProductsRows}</tbody>
+    </table>
+
+    ${totalOrders === 0 ? `
+    <div style="margin-top:24px;padding:20px;background:#f9fafb;border-radius:8px;text-align:center;color:#6b7280;font-size:14px;">
+      No orders were placed in this period. Keep sharing your store link! 🚀
+    </div>` : ""}`;
+
+  await sendEmail(to, subject, baseTemplate(content, storeName));
+}
+
 export async function sendNewOrderNotification(params: {
   to: string;
   orderId: number;

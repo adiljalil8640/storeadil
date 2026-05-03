@@ -25,6 +25,7 @@ const settingsSchema = z.object({
   pickupEnabled: z.boolean(),
   shippingNote: z.string().optional().nullable(),
   notificationEmail: z.string().email("Must be a valid email").optional().nullable().or(z.literal("")),
+  digestFrequency: z.enum(["none", "daily", "weekly"]).default("none"),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -58,6 +59,7 @@ export default function SettingsPage() {
       pickupEnabled: true,
       shippingNote: "",
       notificationEmail: "",
+      digestFrequency: "none" as const,
     },
   });
 
@@ -73,6 +75,7 @@ export default function SettingsPage() {
         pickupEnabled: store.pickupEnabled,
         shippingNote: store.shippingNote,
         notificationEmail: store.notificationEmail || "",
+        digestFrequency: (store.digestFrequency as any) || "none",
       });
     }
   }, [store, form]);
@@ -351,11 +354,11 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />
-                  Order Notifications
+                  Notifications &amp; Digest
                 </CardTitle>
-                <CardDescription>Get an email alert every time a customer places a new order.</CardDescription>
+                <CardDescription>Get instant order alerts and scheduled sales summaries by email.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
                   name="notificationEmail"
@@ -371,7 +374,32 @@ export default function SettingsPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Leave blank to disable email notifications. Requires <code className="text-xs bg-muted px-1 py-0.5 rounded">RESEND_API_KEY</code> to be set on the server.
+                        Receives instant new-order alerts and digest reports. Requires <code className="text-xs bg-muted px-1 py-0.5 rounded">RESEND_API_KEY</code> on the server.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="digestFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sales Digest</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Disabled</SelectItem>
+                          <SelectItem value="daily">Daily — every morning at 8 AM UTC</SelectItem>
+                          <SelectItem value="weekly">Weekly — every Monday at 8 AM UTC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Receive a summary of orders, revenue, and top products for the previous day or week.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

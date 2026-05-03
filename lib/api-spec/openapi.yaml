@@ -816,6 +816,10 @@ components:
         notificationEmail:
           type: string
           nullable: true
+        digestFrequency:
+          type: string
+          enum: [none, daily, weekly]
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -936,6 +940,10 @@ components:
           nullable: true
         notificationEmail:
           type: string
+          nullable: true
+        digestFrequency:
+          type: string
+          enum: [none, daily, weekly]
           nullable: true
 
     Product:
