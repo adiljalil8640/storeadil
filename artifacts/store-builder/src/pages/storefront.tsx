@@ -265,6 +265,7 @@ export default function StorefrontPage() {
   }, [store]);
 
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   const filteredProducts = useMemo(() => {
     if (!store?.products) return [];
@@ -743,7 +744,10 @@ export default function StorefrontPage() {
                 )}
               </div>
               <div className="p-4 flex flex-col flex-1">
-                <h3 className="font-semibold text-base leading-tight mb-1 line-clamp-2">{product.name}</h3>
+                <h3
+                  className="font-semibold text-base leading-tight mb-1 line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => setSelectedProduct(product)}
+                >{product.name}</h3>
                 {ratingsByProduct[product.id] && (
                   <a href="#reviews" className="flex items-center gap-1 mb-1 w-fit">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -833,6 +837,136 @@ export default function StorefrontPage() {
           </section>
         )}
       </main>
+
+      {/* Product detail dialog */}
+      {selectedProduct && (() => {
+        const pReviews = sortedReviews.filter(r => r.productId === selectedProduct.id);
+        const pAvg = pReviews.length
+          ? pReviews.reduce((s, r) => s + r.rating, 0) / pReviews.length
+          : 0;
+        const pByStars = [5, 4, 3, 2, 1].map(s => ({
+          star: s,
+          count: pReviews.filter(r => r.rating === s).length,
+        }));
+        const inCart = cart.find(i => i.product.id === selectedProduct.id);
+        const outOfStock = selectedProduct.stock !== null && selectedProduct.stock !== undefined && selectedProduct.stock <= 0;
+
+        return (
+          <Dialog open onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
+            <DialogContent className="max-w-md p-0 overflow-hidden flex flex-col max-h-[90dvh]">
+              <DialogTitle className="sr-only">{selectedProduct.name}</DialogTitle>
+
+              {/* Product image */}
+              <div className="aspect-video bg-muted shrink-0 relative">
+                {selectedProduct.imageUrl ? (
+                  <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="w-16 h-16 text-muted-foreground/30" />
+                  </div>
+                )}
+              </div>
+
+              {/* Scrollable body */}
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+                {/* Name + price + description */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="text-xl font-bold leading-tight">{selectedProduct.name}</h2>
+                    <span className="text-lg font-bold text-primary shrink-0">{formatCurrency(selectedProduct.price)}</span>
+                  </div>
+                  {selectedProduct.description && (
+                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{selectedProduct.description}</p>
+                  )}
+                </div>
+
+                {/* Rating summary */}
+                {pReviews.length > 0 && (
+                  <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-4xl font-bold leading-none">{pAvg.toFixed(1)}</p>
+                        <div className="flex gap-0.5 mt-1 justify-center">
+                          {[1, 2, 3, 4, 5].map(n => (
+                            <Star key={n} className={`w-4 h-4 ${n <= Math.round(pAvg) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{pReviews.length} review{pReviews.length !== 1 ? "s" : ""}</p>
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        {pByStars.map(({ star, count }) => (
+                          <div key={star} className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground w-3 text-right">{star}</span>
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full bg-amber-400 rounded-full"
+                                style={{ width: `${pReviews.length ? (count / pReviews.length) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground w-4 text-right">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Reviews list */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">
+                    {pReviews.length > 0 ? "Customer Reviews" : "No reviews yet"}
+                  </h3>
+                  {pReviews.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Be the first to review this product after your purchase.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {pReviews.map(review => (
+                        <div key={review.id} className="space-y-2 pb-4 border-b last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map(n => (
+                                <Star key={n} className={`w-3.5 h-3.5 ${n <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+                              ))}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {review.customerName || "Anonymous"} · {fmtDate(review.createdAt as unknown as string)}
+                            </span>
+                          </div>
+                          {review.comment && (
+                            <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+                          )}
+                          {review.merchantReply && (
+                            <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2.5 space-y-0.5">
+                              <p className="text-xs font-semibold text-primary">Reply from {store?.name}</p>
+                              <p className="text-sm text-foreground/80">{review.merchantReply}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sticky add-to-cart footer */}
+              <div className="px-5 py-4 border-t shrink-0">
+                {outOfStock ? (
+                  <WaitlistButton product={selectedProduct} slug={slug || ""} />
+                ) : (
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    {inCart ? `Add Another · ${inCart.quantity} in cart` : "Add to Cart"}
+                  </Button>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }
