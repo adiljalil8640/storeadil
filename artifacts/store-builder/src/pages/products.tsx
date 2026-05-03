@@ -14,11 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle, Send } from "lucide-react";
+import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle, Send, X, TriangleAlert } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const TEMPLATE_CSV = `name,price,description,category,stock,low_stock_threshold
 Red Sneakers,49.99,Comfortable running shoes for all occasions,Footwear,20,5
@@ -355,10 +355,17 @@ export default function ProductsPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [lowStockDismissed, setLowStockDismissed] = useState(false);
 
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useListProducts({ search: searchTerm || undefined });
+
+  const lowStockProducts = (products ?? []).filter((p) => {
+    if (p.stock === null || p.stock === undefined) return false;
+    const threshold = (p.lowStockThreshold !== null && p.lowStockThreshold !== undefined) ? p.lowStockThreshold : 10;
+    return p.stock <= threshold;
+  });
   const { data: waitlistData } = useGetWaitlistCounts();
   const waitlistCounts: Record<number, number> = waitlistData?.counts ?? {};
   const { data: velocityData = [] } = useGetProductVelocity();
@@ -601,6 +608,72 @@ export default function ProductsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        <AnimatePresence>
+          {!lowStockDismissed && lowStockProducts.length > 0 && (
+            <motion.div
+              key="low-stock-banner"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-semibold text-sm">
+                  <TriangleAlert className="w-4 h-4 shrink-0" />
+                  {lowStockProducts.length === 1
+                    ? "1 product is running low on stock"
+                    : `${lowStockProducts.length} products are running low on stock`}
+                </div>
+                <button
+                  onClick={() => setLowStockDismissed(true)}
+                  className="text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 transition-colors shrink-0 mt-0.5"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {lowStockProducts.map((product) => {
+                  const threshold = (product.lowStockThreshold !== null && product.lowStockThreshold !== undefined) ? product.lowStockThreshold : 10;
+                  return (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-amber-100/70 dark:bg-amber-900/30 px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.name} className="w-8 h-8 rounded object-cover shrink-0 border border-amber-200" />
+                        ) : (
+                          <div className="w-8 h-8 rounded bg-amber-200/60 dark:bg-amber-800/40 flex items-center justify-center shrink-0">
+                            <ImageIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-amber-900 dark:text-amber-200 truncate">{product.name}</p>
+                          <p className="text-xs text-amber-700 dark:text-amber-400">
+                            <span className="font-semibold">{product.stock}</span> left · threshold: {threshold}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 border-amber-400 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs h-7 px-2"
+                        onClick={() => handleEditClick(product)}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Restock
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading products...</div>
