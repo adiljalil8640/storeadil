@@ -67,6 +67,7 @@ export * from "./storeDigestFrequency";
 export * from "./storeTheme";
 export * from "./suggestPriceBody";
 export * from "./suggestPriceResponse";
+export * from "./topStore";
 export * from "./updateCouponBody";
 export * from "./updateCouponBodyType";
 export * from "./updateOrderStatusBody";

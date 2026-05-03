@@ -61,6 +61,7 @@ import type {
   Store,
   SuggestPriceBody,
   SuggestPriceResponse,
+  TopStore,
   UpdateCouponBody,
   UpdateOrderStatusBody,
   UpdateProductBody,
@@ -399,6 +400,81 @@ export const useCreateStore = <
 > => {
   return useMutation(getCreateStoreMutationOptions(options));
 };
+
+/**
+ * @summary Get top stores by order volume (public, no auth)
+ */
+export const getGetTopStoresUrl = () => {
+  return `/api/stores/top`;
+};
+
+export const getTopStores = async (
+  options?: RequestInit,
+): Promise<TopStore[]> => {
+  return customFetch<TopStore[]>(getGetTopStoresUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTopStoresQueryKey = () => {
+  return [`/api/stores/top`] as const;
+};
+
+export const getGetTopStoresQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTopStores>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTopStores>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTopStoresQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTopStores>>> = ({
+    signal,
+  }) => getTopStores({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTopStores>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTopStoresQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTopStores>>
+>;
+export type GetTopStoresQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get top stores by order volume (public, no auth)
+ */
+
+export function useGetTopStores<
+  TData = Awaited<ReturnType<typeof getTopStores>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTopStores>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTopStoresQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get a public store by slug (no auth required)

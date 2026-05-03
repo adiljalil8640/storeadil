@@ -1,9 +1,115 @@
 import { Link } from "wouter";
-import { Store, MessageCircle, Zap, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
+import { Store, MessageCircle, Zap, TrendingUp, CheckCircle2, ArrowRight, ShoppingBag, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useGetTopStores } from "@workspace/api-client-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function StoreInitials({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  const colors = [
+    "bg-emerald-500",
+    "bg-sky-500",
+    "bg-violet-500",
+    "bg-amber-500",
+    "bg-rose-500",
+    "bg-teal-500",
+  ];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  return (
+    <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center text-white font-bold text-lg shrink-0`}>
+      {initials}
+    </div>
+  );
+}
+
+function TopStoresSection() {
+  const { data: stores, isLoading } = useGetTopStores({
+    query: { staleTime: 5 * 60 * 1000 },
+  });
+
+  // Skeletons while loading
+  if (isLoading) {
+    return (
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border bg-card p-5 animate-pulse">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-muted shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-3 bg-muted/60 rounded w-1/2" />
+              </div>
+            </div>
+            <div className="h-3 bg-muted/40 rounded w-full mt-2" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stores || stores.length === 0) return null;
+
+  return (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {stores.map((store, i) => (
+        <motion.a
+          key={store.id}
+          href={`${basePath}/store/${store.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: i * 0.07 }}
+          className="group rounded-2xl border bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200 p-5 flex flex-col gap-3 cursor-pointer"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            {store.logoUrl ? (
+              <img
+                src={store.logoUrl}
+                alt={store.name}
+                className="w-12 h-12 rounded-xl object-cover shrink-0"
+              />
+            ) : (
+              <StoreInitials name={store.name} />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold text-sm truncate">{store.name}</p>
+                <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </div>
+              <p className="text-xs text-muted-foreground">@{store.slug}</p>
+            </div>
+          </div>
+
+          {/* Description */}
+          {store.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              {store.description}
+            </p>
+          )}
+
+          {/* Order count badge */}
+          <div className="flex items-center gap-1.5 mt-auto pt-1">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/8 border border-primary/15">
+              <ShoppingBag className="w-3 h-3 text-primary" />
+              <span className="text-xs font-semibold text-primary">
+                {store.orderCount.toLocaleString()}{" "}
+                {store.orderCount === 1 ? "order" : "orders"}
+              </span>
+            </div>
+          </div>
+        </motion.a>
+      ))}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   return (
@@ -58,6 +164,32 @@ export default function LandingPage() {
             </div>
             <p className="text-sm text-muted-foreground mt-4 hidden sm:block">No coding required • Setup in 3 minutes • Direct WhatsApp orders</p>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Top Stores Showcase */}
+      <section className="py-24 px-4 border-t">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              <TrendingUp className="w-4 h-4" /> Live on Zapp Store
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+              Merchants already selling
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Real stores, real orders — explore some of the businesses growing with Zapp Store today.
+            </p>
+          </div>
+          <TopStoresSection />
+          <div className="text-center mt-10">
+            <Link href={`${basePath}/sign-up`}>
+              <Button variant="outline" size="lg" className="h-12 px-6">
+                Join them — create your store free
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -139,7 +271,6 @@ export default function LandingPage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-3xl blur-3xl -z-10"></div>
               <div className="bg-card border rounded-3xl shadow-xl overflow-hidden aspect-[4/3] flex items-center justify-center p-8">
-                {/* Mockup representation */}
                 <div className="w-full max-w-sm bg-background border rounded-2xl shadow-lg overflow-hidden flex flex-col">
                   <div className="p-4 border-b bg-muted/50 flex items-center justify-between">
                     <div className="font-semibold text-sm">Store Preview</div>

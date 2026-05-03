@@ -221,6 +221,15 @@ export interface PublicStore {
   products: Product[];
 }
 
+export interface TopStore {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  orderCount: number;
+}
+
 export type CreateStoreBodyTheme =
   (typeof CreateStoreBodyTheme)[keyof typeof CreateStoreBodyTheme];
 

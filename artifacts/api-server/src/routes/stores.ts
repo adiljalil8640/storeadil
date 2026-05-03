@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { storesTable, ordersTable } from "@workspace/db";
+import { eq, sql, desc } from "drizzle-orm";
 import { CreateStoreBody, UpdateMyStoreBody } from "@workspace/api-zod";
 
 const router = Router();
@@ -65,6 +65,30 @@ router.post("/stores", requireAuth, async (req: any, res) => {
     if (err.code === "23505") {
       return res.status(409).json({ error: "Store slug already taken" });
     }
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /stores/top — public, no auth
+router.get("/stores/top", async (req: any, res) => {
+  try {
+    const rows = await db
+      .select({
+        id: storesTable.id,
+        name: storesTable.name,
+        slug: storesTable.slug,
+        description: storesTable.description,
+        logoUrl: storesTable.logoUrl,
+        orderCount: sql<number>`cast(count(${ordersTable.id}) as int)`,
+      })
+      .from(storesTable)
+      .leftJoin(ordersTable, eq(ordersTable.storeId, storesTable.id))
+      .groupBy(storesTable.id)
+      .orderBy(desc(sql`count(${ordersTable.id})`))
+      .limit(6);
+    res.json(rows);
+  } catch (err) {
+    req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

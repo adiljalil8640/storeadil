@@ -95,6 +95,19 @@ export const CreateStoreBody = zod.object({
 });
 
 /**
+ * @summary Get top stores by order volume (public, no auth)
+ */
+export const GetTopStoresResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  slug: zod.string(),
+  description: zod.string().nullish(),
+  logoUrl: zod.string().nullish(),
+  orderCount: zod.number(),
+});
+export const GetTopStoresResponse = zod.array(GetTopStoresResponseItem);
+
+/**
  * @summary Get a public store by slug (no auth required)
  */
 export const GetPublicStoreParams = zod.object({

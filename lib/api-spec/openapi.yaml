@@ -105,6 +105,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/Store"
 
+  /stores/top:
+    get:
+      operationId: getTopStores
+      tags: [stores]
+      summary: Get top stores by order volume (public, no auth)
+      responses:
+        "200":
+          description: List of top stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopStore"
+
   /stores/public/{slug}:
     get:
       operationId: getPublicStore
@@ -1292,6 +1307,25 @@ components:
         - deliveryEnabled
         - pickupEnabled
         - products
+
+    TopStore:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        orderCount:
+          type: integer
+      required: [id, name, slug, orderCount]
 
     CreateStoreBody:
       type: object
