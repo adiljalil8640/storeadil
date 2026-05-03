@@ -16,6 +16,7 @@ import {
   Shield,
   AlertCircle,
   Tag,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGetMyStore, useGetBillingStatus } from "@workspace/api-client-react";
@@ -44,6 +45,7 @@ export function AppLayout({ children }: LayoutProps) {
     { href: `${basePath}/products`, label: "Products", icon: Package },
     { href: `${basePath}/orders`, label: "Orders", icon: ShoppingCart },
     { href: `${basePath}/coupons`, label: "Coupons", icon: Tag },
+    { href: `${basePath}/waitlist`, label: "Waitlist", icon: Bell },
     { href: `${basePath}/analytics`, label: "Analytics", icon: TrendingUp },
     { href: `${basePath}/billing`, label: "Billing", icon: CreditCard },
     { href: `${basePath}/settings`, label: "Settings", icon: Settings },

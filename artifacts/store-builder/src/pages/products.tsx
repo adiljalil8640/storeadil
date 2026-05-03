@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts, useImportProducts } from "@workspace/api-client-react";
+import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts, useImportProducts, useNotifyWaitlist, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle, Send } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -391,6 +391,16 @@ export default function ProductsPage() {
     setEditingProduct(product);
   };
 
+  const notifyWaitlist = useNotifyWaitlist({
+    mutation: {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries({ queryKey: getGetWaitlistCountsQueryKey() });
+        toast.success(`Notified ${data.notified} customer${data.notified === 1 ? "" : "s"}`);
+      },
+      onError: () => toast.error("Failed to send notifications"),
+    },
+  });
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 
@@ -601,6 +611,15 @@ export default function ProductsPage() {
                           <DropdownMenuItem onClick={() => handleEditClick(product)}>
                             <Edit className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
+                          {waitlistCounts[product.id] > 0 && (
+                            <DropdownMenuItem
+                              onClick={() => notifyWaitlist.mutate({ id: product.id })}
+                              disabled={notifyWaitlist.isPending}
+                            >
+                              <Send className="w-4 h-4 mr-2 text-amber-600" />
+                              <span>Notify {waitlistCounts[product.id]} waiting</span>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => setDeletingId(product.id)}>
                             <Trash className="w-4 h-4 mr-2" /> Delete
                           </DropdownMenuItem>

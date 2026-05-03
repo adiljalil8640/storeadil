@@ -23,6 +23,7 @@ import AnalyticsPage from "@/pages/analytics";
 import AdminPage from "@/pages/admin";
 import TrackPage from "@/pages/track";
 import CouponsPage from "@/pages/coupons";
+import WaitlistPage from "@/pages/waitlist";
 import NotFound from "@/pages/not-found";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -169,6 +170,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/products"><ProtectedRoute component={ProductsPage} /></Route>
           <Route path="/orders"><ProtectedRoute component={OrdersPage} /></Route>
           <Route path="/coupons"><ProtectedRoute component={CouponsPage} /></Route>
+          <Route path="/waitlist"><ProtectedRoute component={WaitlistPage} /></Route>
           <Route path="/analytics"><ProtectedRoute component={AnalyticsPage} /></Route>
           <Route path="/billing"><ProtectedRoute component={BillingPage} /></Route>
           <Route path="/settings"><ProtectedRoute component={SettingsPage} /></Route>
