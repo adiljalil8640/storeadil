@@ -2342,6 +2342,161 @@ export const ApplyReferralCodeResponse = zod.object({
 });
 
 /**
+ * @summary List all AI providers
+ */
+export const ListAiProvidersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  provider: zod.enum([
+    "openai",
+    "gemini",
+    "groq",
+    "openrouter",
+    "deepseek",
+    "huggingface",
+    "custom",
+  ]),
+  baseUrl: zod.string(),
+  apiKey: zod.string(),
+  defaultModel: zod.string(),
+  isActive: zod.boolean(),
+  isDefault: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListAiProvidersResponse = zod.array(ListAiProvidersResponseItem);
+
+/**
+ * @summary Create a new AI provider
+ */
+export const CreateAiProviderBody = zod.object({
+  name: zod.string(),
+  provider: zod.enum([
+    "openai",
+    "gemini",
+    "groq",
+    "openrouter",
+    "deepseek",
+    "huggingface",
+    "custom",
+  ]),
+  baseUrl: zod.string(),
+  apiKey: zod.string(),
+  defaultModel: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update an AI provider
+ */
+export const UpdateAiProviderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateAiProviderBody = zod.object({
+  name: zod.string(),
+  provider: zod.enum([
+    "openai",
+    "gemini",
+    "groq",
+    "openrouter",
+    "deepseek",
+    "huggingface",
+    "custom",
+  ]),
+  baseUrl: zod.string(),
+  apiKey: zod.string(),
+  defaultModel: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateAiProviderResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  provider: zod.enum([
+    "openai",
+    "gemini",
+    "groq",
+    "openrouter",
+    "deepseek",
+    "huggingface",
+    "custom",
+  ]),
+  baseUrl: zod.string(),
+  apiKey: zod.string(),
+  defaultModel: zod.string(),
+  isActive: zod.boolean(),
+  isDefault: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete an AI provider
+ */
+export const DeleteAiProviderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteAiProviderResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Set a provider as the default
+ */
+export const SetDefaultAiProviderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SetDefaultAiProviderResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  provider: zod.enum([
+    "openai",
+    "gemini",
+    "groq",
+    "openrouter",
+    "deepseek",
+    "huggingface",
+    "custom",
+  ]),
+  baseUrl: zod.string(),
+  apiKey: zod.string(),
+  defaultModel: zod.string(),
+  isActive: zod.boolean(),
+  isDefault: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Test an AI provider connection
+ */
+export const TestAiProviderBody = zod.object({
+  name: zod.string(),
+  provider: zod.enum([
+    "openai",
+    "gemini",
+    "groq",
+    "openrouter",
+    "deepseek",
+    "huggingface",
+    "custom",
+  ]),
+  baseUrl: zod.string(),
+  apiKey: zod.string(),
+  defaultModel: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+
+export const TestAiProviderResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+  model: zod.string().optional(),
+});
+
+/**
  * @summary Get platform-wide admin stats
  */
 export const GetAdminStatsResponse = zod.object({

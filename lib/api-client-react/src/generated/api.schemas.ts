@@ -857,6 +857,64 @@ export interface ChangeUserPlanBody {
   planName: ChangeUserPlanBodyPlanName;
 }
 
+export type AiProviderProvider =
+  (typeof AiProviderProvider)[keyof typeof AiProviderProvider];
+
+export const AiProviderProvider = {
+  openai: "openai",
+  gemini: "gemini",
+  groq: "groq",
+  openrouter: "openrouter",
+  deepseek: "deepseek",
+  huggingface: "huggingface",
+  custom: "custom",
+} as const;
+
+export interface AiProvider {
+  id: number;
+  name: string;
+  provider: AiProviderProvider;
+  baseUrl: string;
+  apiKey: string;
+  defaultModel: string;
+  isActive: boolean;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AiProviderBodyProvider =
+  (typeof AiProviderBodyProvider)[keyof typeof AiProviderBodyProvider];
+
+export const AiProviderBodyProvider = {
+  openai: "openai",
+  gemini: "gemini",
+  groq: "groq",
+  openrouter: "openrouter",
+  deepseek: "deepseek",
+  huggingface: "huggingface",
+  custom: "custom",
+} as const;
+
+export interface AiProviderBody {
+  name: string;
+  provider: AiProviderBodyProvider;
+  baseUrl: string;
+  apiKey: string;
+  defaultModel: string;
+  isActive?: boolean;
+}
+
+export interface AiProviderTestResult {
+  success: boolean;
+  message: string;
+  model?: string;
+}
+
+export interface SuccessResponse {
+  success: boolean;
+}
+
 export interface ShareMessage {
   message: string;
   whatsappUrl: string;

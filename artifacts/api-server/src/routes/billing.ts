@@ -162,13 +162,30 @@ router.post("/billing/webhook", async (req: any, res) => {
         });
     }
 
-    if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+    if (event.type === "customer.subscription.updated") {
       const sub = event.data.object;
       const status = sub.status === "active" ? "active" : sub.status === "canceled" ? "canceled" : "past_due";
       await db
         .update(subscriptionsTable)
         .set({ status, currentPeriodEnd: new Date(sub.current_period_end * 1000), updatedAt: new Date() })
         .where(eq(subscriptionsTable.stripeSubscriptionId, sub.id));
+    }
+
+    if (event.type === "customer.subscription.deleted" || event.type === "invoice.payment_failed") {
+      const obj = event.data.object;
+      const stripeSubId = obj.subscription ?? obj.id;
+      const freePlan = await getPlanByName("free");
+      if (freePlan && stripeSubId) {
+        await db
+          .update(subscriptionsTable)
+          .set({
+            planId: freePlan.id,
+            status: "canceled",
+            stripeSubscriptionId: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(subscriptionsTable.stripeSubscriptionId, stripeSubId));
+      }
     }
 
     res.json({ status: "ok" });

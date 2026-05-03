@@ -19,6 +19,9 @@ import type {
 import type {
   AdminStats,
   AdminUser,
+  AiProvider,
+  AiProviderBody,
+  AiProviderTestResult,
   AnalyticsSummary,
   ApplyReferralBody,
   BillingStatus,
@@ -83,6 +86,7 @@ import type {
   SlugCheckResult,
   Store,
   StoreHoursMap,
+  SuccessResponse,
   SuggestPriceBody,
   SuggestPriceResponse,
   TopCustomerItem,
@@ -5294,6 +5298,508 @@ export const useApplyReferralCode = <
   TContext
 > => {
   return useMutation(getApplyReferralCodeMutationOptions(options));
+};
+
+/**
+ * @summary List all AI providers
+ */
+export const getListAiProvidersUrl = () => {
+  return `/api/admin/ai-providers`;
+};
+
+export const listAiProviders = async (
+  options?: RequestInit,
+): Promise<AiProvider[]> => {
+  return customFetch<AiProvider[]>(getListAiProvidersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAiProvidersQueryKey = () => {
+  return [`/api/admin/ai-providers`] as const;
+};
+
+export const getListAiProvidersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAiProviders>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAiProviders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAiProvidersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiProviders>>> = ({
+    signal,
+  }) => listAiProviders({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAiProviders>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAiProvidersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAiProviders>>
+>;
+export type ListAiProvidersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all AI providers
+ */
+
+export function useListAiProviders<
+  TData = Awaited<ReturnType<typeof listAiProviders>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAiProviders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAiProvidersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new AI provider
+ */
+export const getCreateAiProviderUrl = () => {
+  return `/api/admin/ai-providers`;
+};
+
+export const createAiProvider = async (
+  aiProviderBody: AiProviderBody,
+  options?: RequestInit,
+): Promise<AiProvider> => {
+  return customFetch<AiProvider>(getCreateAiProviderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiProviderBody),
+  });
+};
+
+export const getCreateAiProviderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAiProvider>>,
+    TError,
+    { data: BodyType<AiProviderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAiProvider>>,
+  TError,
+  { data: BodyType<AiProviderBody> },
+  TContext
+> => {
+  const mutationKey = ["createAiProvider"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAiProvider>>,
+    { data: BodyType<AiProviderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAiProvider(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAiProviderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAiProvider>>
+>;
+export type CreateAiProviderMutationBody = BodyType<AiProviderBody>;
+export type CreateAiProviderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new AI provider
+ */
+export const useCreateAiProvider = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAiProvider>>,
+    TError,
+    { data: BodyType<AiProviderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAiProvider>>,
+  TError,
+  { data: BodyType<AiProviderBody> },
+  TContext
+> => {
+  return useMutation(getCreateAiProviderMutationOptions(options));
+};
+
+/**
+ * @summary Update an AI provider
+ */
+export const getUpdateAiProviderUrl = (id: number) => {
+  return `/api/admin/ai-providers/${id}`;
+};
+
+export const updateAiProvider = async (
+  id: number,
+  aiProviderBody: AiProviderBody,
+  options?: RequestInit,
+): Promise<AiProvider> => {
+  return customFetch<AiProvider>(getUpdateAiProviderUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiProviderBody),
+  });
+};
+
+export const getUpdateAiProviderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAiProvider>>,
+    TError,
+    { id: number; data: BodyType<AiProviderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAiProvider>>,
+  TError,
+  { id: number; data: BodyType<AiProviderBody> },
+  TContext
+> => {
+  const mutationKey = ["updateAiProvider"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAiProvider>>,
+    { id: number; data: BodyType<AiProviderBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateAiProvider(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAiProviderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAiProvider>>
+>;
+export type UpdateAiProviderMutationBody = BodyType<AiProviderBody>;
+export type UpdateAiProviderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update an AI provider
+ */
+export const useUpdateAiProvider = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAiProvider>>,
+    TError,
+    { id: number; data: BodyType<AiProviderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAiProvider>>,
+  TError,
+  { id: number; data: BodyType<AiProviderBody> },
+  TContext
+> => {
+  return useMutation(getUpdateAiProviderMutationOptions(options));
+};
+
+/**
+ * @summary Delete an AI provider
+ */
+export const getDeleteAiProviderUrl = (id: number) => {
+  return `/api/admin/ai-providers/${id}`;
+};
+
+export const deleteAiProvider = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteAiProviderUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAiProviderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAiProvider>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAiProvider>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteAiProvider"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAiProvider>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteAiProvider(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAiProviderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAiProvider>>
+>;
+
+export type DeleteAiProviderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete an AI provider
+ */
+export const useDeleteAiProvider = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAiProvider>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAiProvider>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteAiProviderMutationOptions(options));
+};
+
+/**
+ * @summary Set a provider as the default
+ */
+export const getSetDefaultAiProviderUrl = (id: number) => {
+  return `/api/admin/ai-providers/${id}/default`;
+};
+
+export const setDefaultAiProvider = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AiProvider> => {
+  return customFetch<AiProvider>(getSetDefaultAiProviderUrl(id), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getSetDefaultAiProviderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDefaultAiProvider>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setDefaultAiProvider>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["setDefaultAiProvider"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setDefaultAiProvider>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return setDefaultAiProvider(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetDefaultAiProviderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setDefaultAiProvider>>
+>;
+
+export type SetDefaultAiProviderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set a provider as the default
+ */
+export const useSetDefaultAiProvider = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDefaultAiProvider>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setDefaultAiProvider>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getSetDefaultAiProviderMutationOptions(options));
+};
+
+/**
+ * @summary Test an AI provider connection
+ */
+export const getTestAiProviderUrl = () => {
+  return `/api/admin/ai-providers/test`;
+};
+
+export const testAiProvider = async (
+  aiProviderBody: AiProviderBody,
+  options?: RequestInit,
+): Promise<AiProviderTestResult> => {
+  return customFetch<AiProviderTestResult>(getTestAiProviderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiProviderBody),
+  });
+};
+
+export const getTestAiProviderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testAiProvider>>,
+    TError,
+    { data: BodyType<AiProviderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof testAiProvider>>,
+  TError,
+  { data: BodyType<AiProviderBody> },
+  TContext
+> => {
+  const mutationKey = ["testAiProvider"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof testAiProvider>>,
+    { data: BodyType<AiProviderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return testAiProvider(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TestAiProviderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof testAiProvider>>
+>;
+export type TestAiProviderMutationBody = BodyType<AiProviderBody>;
+export type TestAiProviderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Test an AI provider connection
+ */
+export const useTestAiProvider = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testAiProvider>>,
+    TError,
+    { data: BodyType<AiProviderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof testAiProvider>>,
+  TError,
+  { data: BodyType<AiProviderBody> },
+  TContext
+> => {
+  return useMutation(getTestAiProviderMutationOptions(options));
 };
 
 /**

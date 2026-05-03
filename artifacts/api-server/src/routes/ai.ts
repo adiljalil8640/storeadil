@@ -2,13 +2,11 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import OpenAI from "openai";
 import { GenerateStoreBody } from "@workspace/api-zod";
+import { db } from "@workspace/db";
+import { aiProvidersTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
-
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
 
 function requireAuth(req: any, res: any, next: any) {
   const auth = getAuth(req);
@@ -18,14 +16,42 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+async function getAiClient(): Promise<{ client: OpenAI; model: string }> {
+  try {
+    const [provider] = await db
+      .select()
+      .from(aiProvidersTable)
+      .where(and(eq(aiProvidersTable.isDefault, true), eq(aiProvidersTable.isActive, true)))
+      .limit(1);
+
+    if (provider) {
+      return {
+        client: new OpenAI({ baseURL: provider.baseUrl, apiKey: provider.apiKey }),
+        model: provider.defaultModel,
+      };
+    }
+  } catch {
+    // fall through to env fallback
+  }
+
+  return {
+    client: new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    }),
+    model: "gpt-4o-mini",
+  };
+}
+
 // POST /ai/generate-store
 router.post("/ai/generate-store", requireAuth, async (req: any, res) => {
   const parsed = GenerateStoreBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const { client, model } = await getAiClient();
+    const completion = await client.chat.completions.create({
+      model,
       messages: [
         {
           role: "system",
@@ -41,22 +67,16 @@ router.post("/ai/generate-store", requireAuth, async (req: any, res) => {
             - category: one of the categories
             - variants: array of {name, options} for size/color (or empty array)
           - whatsappNumber: null (user will set this later)
-          
           Return only valid JSON, no markdown.`,
         },
-        {
-          role: "user",
-          content: `Generate a store for this business: ${parsed.data.description}`,
-        },
+        { role: "user", content: `Generate a store for this business: ${parsed.data.description}` },
       ],
       response_format: { type: "json_object" },
     });
 
     const content = completion.choices[0]?.message?.content;
     if (!content) return res.status(500).json({ error: "AI generation failed" });
-
-    const generated = JSON.parse(content);
-    res.json(generated);
+    res.json(JSON.parse(content));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "AI generation failed" });
@@ -69,8 +89,9 @@ router.post("/ai/generate-description", requireAuth, async (req: any, res) => {
   if (!productName) return res.status(400).json({ error: "productName is required" });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const { client, model } = await getAiClient();
+    const completion = await client.chat.completions.create({
+      model,
       messages: [
         {
           role: "system",
@@ -97,8 +118,9 @@ router.post("/ai/suggest-price", requireAuth, async (req: any, res) => {
   if (!productName) return res.status(400).json({ error: "productName is required" });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const { client, model } = await getAiClient();
+    const completion = await client.chat.completions.create({
+      model,
       messages: [
         {
           role: "system",

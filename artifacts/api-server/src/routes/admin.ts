@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, ordersTable, plansTable, subscriptionsTable, usageTrackingTable } from "@workspace/db";
-import { eq, sql, count, desc } from "drizzle-orm";
+import { storesTable, ordersTable, plansTable, subscriptionsTable, usageTrackingTable, aiProvidersTable } from "@workspace/db";
+import { eq, sql, count, desc, and } from "drizzle-orm";
 import { getPlanByName } from "../services/billing";
 import { getCurrentMonth } from "../services/usage";
+import OpenAI from "openai";
 
 const router = Router();
 
@@ -38,9 +39,7 @@ router.get("/admin/stats", requireAdmin, async (req: any, res) => {
       .groupBy(plansTable.name);
 
     const planBreakdown: Record<string, number> = {};
-    for (const row of planRows) {
-      planBreakdown[row.planName] = Number(row.cnt);
-    }
+    for (const row of planRows) planBreakdown[row.planName] = Number(row.cnt);
 
     res.json({
       totalUsers: Number(totalUsers),
@@ -60,7 +59,6 @@ router.get("/admin/users", requireAdmin, async (req: any, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = parseInt(req.query.offset as string) || 0;
-    const month = getCurrentMonth();
 
     const rows = await db
       .select({
@@ -141,8 +139,6 @@ router.patch("/admin/users/:userId/plan", requireAdmin, async (req: any, res) =>
       });
 
     const [store] = await db.select().from(storesTable).where(eq(storesTable.userId, userId));
-    const totalOrders = 0;
-    const ordersThisMonth = 0;
 
     res.json({
       userId,
@@ -151,13 +147,127 @@ router.patch("/admin/users/:userId/plan", requireAdmin, async (req: any, res) =>
       planName: plan.name,
       planDisplayName: plan.displayName,
       subscriptionStatus: "active",
-      ordersThisMonth,
-      totalOrders,
+      ordersThisMonth: 0,
+      totalOrders: 0,
       createdAt: new Date(),
     });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── AI Provider Management ───────────────────────────────────────────────────
+
+// GET /admin/ai-providers
+router.get("/admin/ai-providers", requireAdmin, async (req: any, res) => {
+  try {
+    const providers = await db.select().from(aiProvidersTable).orderBy(desc(aiProvidersTable.isDefault), aiProvidersTable.createdAt);
+    res.json(providers);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /admin/ai-providers
+router.post("/admin/ai-providers", requireAdmin, async (req: any, res) => {
+  const { name, provider, baseUrl, apiKey, defaultModel, isActive } = req.body;
+
+  if (!name || !provider || !baseUrl || !apiKey || !defaultModel) {
+    return res.status(400).json({ error: "name, provider, baseUrl, apiKey, defaultModel are required" });
+  }
+
+  try {
+    const [created] = await db
+      .insert(aiProvidersTable)
+      .values({ name, provider, baseUrl, apiKey, defaultModel, isActive: isActive !== false, isDefault: false })
+      .returning();
+    res.status(201).json(created);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /admin/ai-providers/:id
+router.put("/admin/ai-providers/:id", requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+  const { name, provider, baseUrl, apiKey, defaultModel, isActive } = req.body;
+  if (!name || !provider || !baseUrl || !apiKey || !defaultModel) {
+    return res.status(400).json({ error: "name, provider, baseUrl, apiKey, defaultModel are required" });
+  }
+
+  try {
+    const [updated] = await db
+      .update(aiProvidersTable)
+      .set({ name, provider, baseUrl, apiKey, defaultModel, isActive: isActive !== false, updatedAt: new Date() })
+      .where(eq(aiProvidersTable.id, id))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Provider not found" });
+    res.json(updated);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /admin/ai-providers/:id
+router.delete("/admin/ai-providers/:id", requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+  try {
+    await db.delete(aiProvidersTable).where(eq(aiProvidersTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /admin/ai-providers/:id/default
+router.patch("/admin/ai-providers/:id/default", requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+  try {
+    await db.update(aiProvidersTable).set({ isDefault: false, updatedAt: new Date() });
+    const [updated] = await db
+      .update(aiProvidersTable)
+      .set({ isDefault: true, isActive: true, updatedAt: new Date() })
+      .where(eq(aiProvidersTable.id, id))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Provider not found" });
+    res.json(updated);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /admin/ai-providers/test
+router.post("/admin/ai-providers/test", requireAdmin, async (req: any, res) => {
+  const { baseUrl, apiKey, defaultModel } = req.body;
+  if (!baseUrl || !apiKey || !defaultModel) {
+    return res.status(400).json({ error: "baseUrl, apiKey, defaultModel are required" });
+  }
+
+  try {
+    const client = new OpenAI({ baseURL: baseUrl, apiKey });
+    const completion = await client.chat.completions.create({
+      model: defaultModel,
+      messages: [{ role: "user", content: "Reply with the single word: ok" }],
+      max_tokens: 10,
+    });
+    const reply = completion.choices[0]?.message?.content?.trim() ?? "";
+    res.json({ success: true, message: `Connected — model replied: "${reply}"`, model: defaultModel });
+  } catch (err: any) {
+    res.json({ success: false, message: err?.message ?? "Connection failed" });
   }
 });
 
