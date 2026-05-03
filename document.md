@@ -54,60 +54,27 @@ In **production**, the frontend is built as static files and served separately. 
 
 ## 4. Critical Issues (Must Fix Before Launch)
 
-### ISSUE-01 — Admin panel is open to ALL users when `ADMIN_USER_IDS` is not set
+### ~~ISSUE-01 — Admin panel is open to ALL users when `ADMIN_USER_IDS` is not set~~ ✅ FIXED
 
-**File:** `backend/src/api-routes/admin.ts`, line 13–24  
-**Severity:** CRITICAL — Security
+**File:** `backend/src/api-routes/admin.ts`  
+**Severity:** CRITICAL — Security  
+**Status:** Fixed 2026-05-03
 
-```ts
-// Current code
-const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? "").split(",").map(s => s.trim()).filter(Boolean);
+The guard logic was changed from `ADMIN_USER_IDS.length > 0 && !includes(userId)` to `ADMIN_USER_IDS.length === 0 || !includes(userId)`. Now if the env var is not set, **everyone is denied** rather than everyone being allowed.
 
-function requireAdmin(req, res, next) {
-  // If ADMIN_USER_IDS is empty, the second condition is always false
-  // → every signed-in user can access /admin
-  if (ADMIN_USER_IDS.length > 0 && !ADMIN_USER_IDS.includes(userId)) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-}
-```
-
-**Impact:** Any merchant can view all user data, override anyone's plan, and manage AI provider API keys.
-
-**Fix:** Change the logic — if the env var is not set, deny all access rather than allow all.
-
-```ts
-// Fixed logic
-if (ADMIN_USER_IDS.length === 0 || !ADMIN_USER_IDS.includes(userId)) {
-  return res.status(403).json({ error: "Forbidden" });
-}
-```
-
-Then set `ADMIN_USER_IDS=<your_clerk_user_id>` in environment secrets.
+**Action still required:** Set `ADMIN_USER_IDS=<your_clerk_user_id>` in environment secrets before deploying, otherwise no one (including you) can access the admin panel.
 
 ---
 
-### ISSUE-02 — Stripe webhook accepts unverified events when `STRIPE_WEBHOOK_SECRET` is not set
+### ~~ISSUE-02 — Stripe webhook accepts unverified events when `STRIPE_WEBHOOK_SECRET` is not set~~ ✅ FIXED
 
-**File:** `backend/src/api-routes/billing.ts`, lines 118–123  
-**Severity:** CRITICAL — Security
+**File:** `backend/src/api-routes/billing.ts`  
+**Severity:** CRITICAL — Security  
+**Status:** Fixed 2026-05-03
 
-```ts
-event = webhookSecret
-  ? stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
-  : JSON.parse(req.body);  // ← no verification!
-```
+The fallback `JSON.parse(req.body)` path (no signature verification) was removed. The webhook endpoint now returns HTTP 500 immediately if `STRIPE_WEBHOOK_SECRET` is not configured, and always calls `stripe.webhooks.constructEvent()` to verify the Stripe signature before processing any event.
 
-**Impact:** Without `STRIPE_WEBHOOK_SECRET`, anyone can send a fake `checkout.session.completed` event and upgrade any user's plan to Business for free.
-
-**Fix:** If Stripe is configured (`STRIPE_SECRET_KEY` is set), require the webhook secret too. Reject the request if the secret is missing.
-
-```ts
-if (!webhookSecret) {
-  return res.status(500).json({ error: "Webhook secret not configured" });
-}
-event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-```
+**Action still required:** Set `STRIPE_WEBHOOK_SECRET` in environment secrets. In the Stripe dashboard, create a webhook pointing to `https://your-app.replit.app/api/billing/webhook` and copy the signing secret it generates.
 
 ---
 
@@ -549,7 +516,7 @@ pnpm --filter @workspace/api-spec run codegen
 
 | Priority | Issues | Action |
 |---|---|---|
-| Fix immediately | ISSUE-01, ISSUE-02 | Security holes that allow privilege escalation |
+| ✅ Fixed | ISSUE-01, ISSUE-02 | Security holes — now patched in code |
 | Fix before launch | ISSUE-03, ISSUE-04, ISSUE-05, ISSUE-06 | Security and reliability risks |
 | Fix before scale | ISSUE-07, ISSUE-08, ISSUE-09, ISSUE-10 | Performance and observability |
 | Fix when time allows | ISSUE-11 through ISSUE-18 | Code quality and maintainability |

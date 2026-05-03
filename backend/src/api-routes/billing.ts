@@ -114,11 +114,14 @@ router.post("/billing/webhook", async (req: any, res) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+  if (!webhookSecret) {
+    req.log.error("STRIPE_WEBHOOK_SECRET is not set — refusing to process unverified webhook");
+    return res.status(500).json({ error: "Webhook secret not configured on the server" });
+  }
+
   let event: any;
   try {
-    event = webhookSecret
-      ? stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
-      : JSON.parse(req.body);
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     return res.status(400).json({ error: "Webhook signature verification failed" });
   }

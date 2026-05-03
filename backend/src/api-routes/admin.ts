@@ -16,7 +16,8 @@ function requireAdmin(req: any, res: any, next: any) {
   const auth = getAuth(req);
   const userId = auth?.userId;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  if (ADMIN_USER_IDS.length > 0 && !ADMIN_USER_IDS.includes(userId)) {
+  // If ADMIN_USER_IDS is not configured, deny everyone — no silent open access.
+  if (ADMIN_USER_IDS.length === 0 || !ADMIN_USER_IDS.includes(userId)) {
     return res.status(403).json({ error: "Forbidden" });
   }
   req.userId = userId;
