@@ -33,4 +33,8 @@ router.use(adminRouter);
 router.use(growthRouter);
 router.use(whatsappRouter);
 
+router.use((_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
 export default router;
