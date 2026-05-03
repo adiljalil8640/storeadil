@@ -90,6 +90,32 @@ export interface ValidateCouponResponse {
   error?: string;
 }
 
+export interface Review {
+  id: number;
+  storeId: number;
+  orderId: number;
+  productId: number;
+  customerName?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface CreateReviewBody {
+  trackingToken: string;
+  productId: number;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  comment?: string | null;
+}
+
 export interface ImportProductsBody {
   csv: string;
 }
@@ -739,4 +765,8 @@ export type GetTopProductsParams = {
 export type GetAdminUsersParams = {
   limit?: number;
   offset?: number;
+};
+
+export type GetStoreReviewsParams = {
+  productId?: number;
 };

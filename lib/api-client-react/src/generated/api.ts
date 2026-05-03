@@ -32,6 +32,7 @@ import type {
   CreateCouponBody,
   CreateOrderBody,
   CreateProductBody,
+  CreateReviewBody,
   CreateStoreBody,
   DomainStatusResult,
   ErrorResponse,
@@ -41,6 +42,7 @@ import type {
   GeneratedStore,
   GetAdminUsersParams,
   GetRecentOrdersParams,
+  GetStoreReviewsParams,
   GetTopProductsParams,
   HealthStatus,
   ImportProductsBody,
@@ -61,6 +63,7 @@ import type {
   PublicStore,
   ReferralInfo,
   ReferralPreview,
+  Review,
   ShareMessage,
   SlugCheckResult,
   Store,
@@ -4685,6 +4688,201 @@ export function useGetQrCode<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetQrCodeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit a product review using an order tracking token
+ */
+export const getSubmitReviewUrl = () => {
+  return `/api/reviews`;
+};
+
+export const submitReview = async (
+  createReviewBody: CreateReviewBody,
+  options?: RequestInit,
+): Promise<Review> => {
+  return customFetch<Review>(getSubmitReviewUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createReviewBody),
+  });
+};
+
+export const getSubmitReviewMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitReview>>,
+    TError,
+    { data: BodyType<CreateReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitReview>>,
+  TError,
+  { data: BodyType<CreateReviewBody> },
+  TContext
+> => {
+  const mutationKey = ["submitReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitReview>>,
+    { data: BodyType<CreateReviewBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitReview(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitReview>>
+>;
+export type SubmitReviewMutationBody = BodyType<CreateReviewBody>;
+export type SubmitReviewMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit a product review using an order tracking token
+ */
+export const useSubmitReview = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitReview>>,
+    TError,
+    { data: BodyType<CreateReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitReview>>,
+  TError,
+  { data: BodyType<CreateReviewBody> },
+  TContext
+> => {
+  return useMutation(getSubmitReviewMutationOptions(options));
+};
+
+/**
+ * @summary Get all reviews for a store's products (public)
+ */
+export const getGetStoreReviewsUrl = (
+  slug: string,
+  params?: GetStoreReviewsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/stores/${slug}/reviews?${stringifiedParams}`
+    : `/api/stores/${slug}/reviews`;
+};
+
+export const getStoreReviews = async (
+  slug: string,
+  params?: GetStoreReviewsParams,
+  options?: RequestInit,
+): Promise<Review[]> => {
+  return customFetch<Review[]>(getGetStoreReviewsUrl(slug, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStoreReviewsQueryKey = (
+  slug: string,
+  params?: GetStoreReviewsParams,
+) => {
+  return [`/api/stores/${slug}/reviews`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetStoreReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoreReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  params?: GetStoreReviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoreReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetStoreReviewsQueryKey(slug, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoreReviews>>> = ({
+    signal,
+  }) => getStoreReviews(slug, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoreReviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoreReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoreReviews>>
+>;
+export type GetStoreReviewsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all reviews for a store's products (public)
+ */
+
+export function useGetStoreReviews<
+  TData = Awaited<ReturnType<typeof getStoreReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  params?: GetStoreReviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoreReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoreReviewsQueryOptions(slug, params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

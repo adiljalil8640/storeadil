@@ -1996,3 +1996,40 @@ export const GetShareMessageResponse = zod.object({
       "URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo.",
     ),
 });
+
+/**
+ * @summary Submit a product review using an order tracking token
+ */
+export const submitReviewBodyRatingMax = 5;
+
+export const SubmitReviewBody = zod.object({
+  trackingToken: zod.string(),
+  productId: zod.number(),
+  rating: zod.number().min(1).max(submitReviewBodyRatingMax),
+  comment: zod.string().nullish(),
+});
+
+/**
+ * @summary Get all reviews for a store's products (public)
+ */
+export const GetStoreReviewsParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetStoreReviewsQueryParams = zod.object({
+  productId: zod.coerce.number().optional(),
+});
+
+export const getStoreReviewsResponseRatingMax = 5;
+
+export const GetStoreReviewsResponseItem = zod.object({
+  id: zod.number(),
+  storeId: zod.number(),
+  orderId: zod.number(),
+  productId: zod.number(),
+  customerName: zod.string().nullish(),
+  rating: zod.number().min(1).max(getStoreReviewsResponseRatingMax),
+  comment: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const GetStoreReviewsResponse = zod.array(GetStoreReviewsResponseItem);

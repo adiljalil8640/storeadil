@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useTrackOrder } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Store,
   CheckCircle,
@@ -15,9 +17,112 @@ import {
   RefreshCw,
   ShoppingBag,
   MessageCircle,
+  Star,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { toast } from "sonner";
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onMouseEnter={() => setHovered(n)}
+          onMouseLeave={() => setHovered(0)}
+          onClick={() => onChange(n)}
+          className="focus:outline-none"
+        >
+          <Star
+            className={`w-7 h-7 transition-colors ${
+              n <= (hovered || value)
+                ? "text-amber-400 fill-amber-400"
+                : "text-muted-foreground/25 hover:text-amber-300"
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReviewItem({ item, trackingToken }: { item: any; trackingToken: string }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [status, setStatus] = useState<"idle" | "submitted" | "already">("idle");
+  const [loading, setLoading] = useState(false);
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const handleSubmit = async () => {
+    if (rating === 0) { toast.error("Please select a star rating"); return; }
+    setLoading(true);
+    try {
+      const r = await fetch(`${basePath}/api/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackingToken, productId: item.productId, rating, comment }),
+      });
+      if (r.status === 409) { setStatus("already"); return; }
+      if (!r.ok) { toast.error("Failed to submit review. Please try again."); return; }
+      setStatus("submitted");
+      toast.success("Review submitted — thank you!");
+    } catch { toast.error("Failed to submit review. Please try again."); }
+    finally { setLoading(false); }
+  };
+
+  if (status === "submitted") {
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <div className="flex gap-0.5">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} className={`w-4 h-4 ${n <= rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20"}`} />
+          ))}
+        </div>
+        <div>
+          <p className="text-sm font-medium">{item.productName}</p>
+          <p className="text-xs text-green-600 font-medium">Thank you for your review!</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "already") {
+    return (
+      <div className="py-2">
+        <p className="text-sm font-medium">{item.productName}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Already reviewed</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 pb-5 border-b last:border-0 last:pb-0">
+      <p className="text-sm font-semibold">{item.productName}</p>
+      <StarPicker value={rating} onChange={setRating} />
+      <Textarea
+        placeholder="Share your experience (optional)"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        className="text-sm resize-none h-20"
+        maxLength={500}
+      />
+      <Button
+        size="sm"
+        className="gap-2"
+        onClick={handleSubmit}
+        disabled={loading || rating === 0}
+      >
+        {loading
+          ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          : <Star className="w-3.5 h-3.5" />}
+        Submit Review
+      </Button>
+    </div>
+  );
+}
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; bgColor: string; description: string }> = {
   pending: {
@@ -261,8 +366,30 @@ export default function TrackPage() {
           </motion.div>
         )}
 
+        {/* Rate Your Order — only for completed orders with reviewable products */}
+        {data.status === "completed" && (data.items as any[]).some((i: any) => i.productId) && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  Rate Your Order
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">How did we do? Your feedback helps other customers.</p>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {(data.items as any[])
+                  .filter((item: any) => item.productId)
+                  .map((item: any) => (
+                    <ReviewItem key={item.productId} item={item} trackingToken={token ?? ""} />
+                  ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Actions */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="space-y-3">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="space-y-3">
           <Button
             className="w-full gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white"
             onClick={() => window.open(`${basePath}/store/${data.storeSlug}`, "_blank")}

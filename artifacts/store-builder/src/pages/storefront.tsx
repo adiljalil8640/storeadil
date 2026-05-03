@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "wouter";
-import { useGetPublicStore, useCreateOrder, useJoinWaitlist, useValidateCoupon } from "@workspace/api-client-react";
+import { useGetPublicStore, useCreateOrder, useJoinWaitlist, useValidateCoupon, useGetStoreReviews } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X, Clock, AlertTriangle } from "lucide-react";
+import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X, Clock, AlertTriangle, Star } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -162,6 +162,23 @@ export default function StorefrontPage() {
     return getStoreOpenStatus(store.storeHours as any, store.holidayClosures as string[] | null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store?.storeHours, store?.holidayClosures, store?.temporarilyClosed, store?.temporaryClosedMessage]);
+
+  const { data: storeReviews = [] } = useGetStoreReviews(slug ?? "", {
+    query: { enabled: !!slug },
+  });
+
+  const ratingsByProduct = useMemo(() => {
+    const map: Record<number, { avg: number; count: number }> = {};
+    for (const r of storeReviews) {
+      if (!map[r.productId]) map[r.productId] = { avg: 0, count: 0 };
+      map[r.productId].count++;
+      map[r.productId].avg += r.rating;
+    }
+    for (const key of Object.keys(map)) {
+      map[Number(key)].avg = map[Number(key)].avg / map[Number(key)].count;
+    }
+    return map;
+  }, [storeReviews]);
 
   const createOrder = useCreateOrder();
   const validateCoupon = useValidateCoupon();
@@ -712,6 +729,17 @@ export default function StorefrontPage() {
               </div>
               <div className="p-4 flex flex-col flex-1">
                 <h3 className="font-semibold text-base leading-tight mb-1 line-clamp-2">{product.name}</h3>
+                {ratingsByProduct[product.id] && (
+                  <div className="flex items-center gap-1 mb-1">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-medium text-amber-600">
+                      {ratingsByProduct[product.id].avg.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({ratingsByProduct[product.id].count})
+                    </span>
+                  </div>
+                )}
                 {product.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">{product.description}</p>
                 )}

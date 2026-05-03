@@ -1179,6 +1179,63 @@ paths:
                 type: string
                 format: binary
 
+  /reviews:
+    post:
+      operationId: submitReview
+      tags: [reviews]
+      summary: "Submit a product review using an order tracking token"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewBody"
+      responses:
+        "201":
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stores/{slug}/reviews:
+    get:
+      operationId: getStoreReviews
+      tags: [reviews]
+      summary: "Get all reviews for a store's products (public)"
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: productId
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1303,6 +1360,48 @@ components:
         error:
           type: string
       required: [valid]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        orderId:
+          type: integer
+        productId:
+          type: integer
+        customerName:
+          type: string
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, storeId, orderId, productId, rating, createdAt]
+
+    CreateReviewBody:
+      type: object
+      properties:
+        trackingToken:
+          type: string
+        productId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+      required: [trackingToken, productId, rating]
 
     ImportProductsBody:
       type: object
