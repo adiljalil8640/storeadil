@@ -31,6 +31,8 @@ router.get("/analytics/summary", requireAuth, async (req: any, res) => {
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
+    const startOfLastMonth = new Date(startOfMonth);
+    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
 
     const [orderStats] = await db
       .select({
@@ -40,6 +42,7 @@ router.get("/analytics/summary", requireAuth, async (req: any, res) => {
         completedOrders: sql<number>`COUNT(*) FILTER (WHERE ${ordersTable.status} = 'completed')`,
         revenueThisMonth: sql<number>`COALESCE(SUM(CAST(${ordersTable.total} AS DECIMAL)) FILTER (WHERE ${ordersTable.createdAt} >= ${startOfMonth}), 0)`,
         ordersThisMonth: sql<number>`COUNT(*) FILTER (WHERE ${ordersTable.createdAt} >= ${startOfMonth})`,
+        revenueLastMonth: sql<number>`COALESCE(SUM(CAST(${ordersTable.total} AS DECIMAL)) FILTER (WHERE ${ordersTable.createdAt} >= ${startOfLastMonth} AND ${ordersTable.createdAt} < ${startOfMonth}), 0)`,
       })
       .from(ordersTable)
       .where(eq(ordersTable.storeId, storeId));
@@ -52,12 +55,17 @@ router.get("/analytics/summary", requireAuth, async (req: any, res) => {
       .from(productsTable)
       .where(eq(productsTable.storeId, storeId));
 
+    const revenueThisMonth = Number(orderStats?.revenueThisMonth ?? 0);
+    const revenueLastMonth = Number(orderStats?.revenueLastMonth ?? 0);
+    const revenueGrowth = revenueLastMonth > 0 ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100 : null;
+
     res.json({
       totalRevenue: Number(orderStats?.totalRevenue ?? 0),
       totalOrders: Number(orderStats?.totalOrders ?? 0),
       pendingOrders: Number(orderStats?.pendingOrders ?? 0),
       completedOrders: Number(orderStats?.completedOrders ?? 0),
-      revenueThisMonth: Number(orderStats?.revenueThisMonth ?? 0),
+      revenueThisMonth,
+      revenueGrowth,
       ordersThisMonth: Number(orderStats?.ordersThisMonth ?? 0),
       totalProducts: Number(productStats?.totalProducts ?? 0),
       activeProducts: Number(productStats?.activeProducts ?? 0),
