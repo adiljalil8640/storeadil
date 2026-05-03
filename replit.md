@@ -171,3 +171,38 @@ All routes prefixed with `/api`. Key routes:
 - Billing webhook: `checkout.session.completed` activates plan; `customer.subscription.deleted` + `invoice.payment_failed` downgrade to free
 - Plan limits enforced server-side on product create and order create
 - Referral rewards credited as `bonusOrders` in `usage_tracking` for the referrer's current month
+
+## Backend Hardening (implemented)
+
+### DB Pool (`db/src/index.ts`)
+- `connectionTimeoutMillis: 5000` — fail fast if pool exhausted
+- `query_timeout: 12_000` — client-side query timeout (complements server-side)
+- `idleTimeoutMillis: 30_000` — return idle connections to OS
+- `max: 10` — cap connections
+- `pool.on("connect")` sets `SET statement_timeout = '10000'` per connection (server-side hard limit)
+- `pool.on("error")` logs via pino; `checkDb()` / `getPoolStats()` exported from `backend/src/lib/health.ts`
+
+### Health & Observability
+- `GET /api/healthz` — public (pre-Clerk), returns `{ status, db }`, 200 or 503
+- `GET /api/version` — public (pre-Clerk), returns `{ commit, env, db }`, always 200
+- `GET /admin/health` — admin-only, returns `{ status, db, pool: { total, idle, waiting } }`
+
+### Middleware Stack (order in `app.ts`)
+1. `pinoHttp` — structured request logging
+2. `injectReqId` — stamps `req.startedAt`, injects `reqId` into all 4xx/5xx responses
+3. `CLERK_PROXY_PATH` (`/api/__clerk`) — Clerk proxy (production only; no-op in dev)
+4. `cors` — credentials + origin
+5. `/api/healthz` and `/api/version` — public health endpoints (before Clerk)
+6. **Dev proxy** — non-`/api` requests forwarded to Vite dev server (port 18973) via Node's `http` module; only active when `NODE_ENV=development`
+7. Body parsers (json, urlencoded; raw for Stripe webhooks)
+8. `clerkMiddleware` scoped to `/api` — validates session tokens (requires `CLERK_SECRET_KEY`)
+9. `/api` router — all API routes
+10. `errorHandler` — logs `{ err, userId, storeId, status, responseTimeMs }`, returns 500
+
+### Graceful Shutdown (`backend/src/index.ts`)
+- SIGTERM / SIGINT → `server.close()` + 10-second force-kill timer
+
+### Dev Preview Routing
+- The backend (port 8080) is mapped to external port 80 via `.replit`; the artifact path router at port 80 cannot override this in dev
+- The dev proxy middleware (step 6 above) compensates: non-API traffic arriving at the backend is piped to the Vite server transparently
+- Clerk `proxyUrl` is set to `undefined` in dev (`import.meta.env.PROD` guard) — Clerk dev instances connect directly to FAPI; proxy only activates in production

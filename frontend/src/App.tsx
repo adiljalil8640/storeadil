@@ -30,7 +30,10 @@ import BrowsePage from "@/pages/browse";
 import NotFound from "@/pages/not-found";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+// Clerk proxy only applies in production — dev instances connect directly to FAPI
+const clerkProxyUrl = import.meta.env.PROD
+  ? (import.meta.env.VITE_CLERK_PROXY_URL ?? `${window.location.origin}/api/__clerk`)
+  : undefined;
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY

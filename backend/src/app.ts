@@ -61,12 +61,38 @@ app.get("/api/version", async (_req, res) => {
   res.json({ commit: COMMIT_SHA, env: process.env.NODE_ENV ?? "unknown", db });
 });
 
+// In development, forward non-API requests to the Vite dev server
+if (process.env.NODE_ENV === "development") {
+  const http = await import("node:http");
+  const VITE_PORT = parseInt(process.env.VITE_PORT ?? "18973", 10);
+
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    const proxyReq = http.request(
+      {
+        hostname: "localhost",
+        port: VITE_PORT,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `localhost:${VITE_PORT}` },
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+        proxyRes.pipe(res, { end: true });
+      },
+    );
+    proxyReq.on("error", () => res.status(502).send("Vite dev server unreachable"));
+    req.pipe(proxyReq, { end: true });
+  });
+}
+
 // Raw body for Stripe webhooks
 app.use("/api/billing/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
+  "/api",
   clerkMiddleware((req) => ({
     publishableKey: publishableKeyFromHost(
       getClerkProxyHost(req) ?? "",
