@@ -3,13 +3,14 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useClerk } from "@clerk/react";
 import { useGenerateStore, useCreateStore, useGetMyStore, useApplyReferralCode } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Store, Sparkles, CheckCircle2, Loader2, ArrowRight, Gift } from "lucide-react";
+import { Store, Sparkles, CheckCircle2, Loader2, ArrowRight, Gift, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -87,11 +88,26 @@ export default function OnboardingPage() {
     }
   };
 
+  const { signOut } = useClerk();
+
   if (checkingStore) return null;
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-muted/20 p-4">
       <div className="w-full max-w-lg">
+
+        {/* Sign-out escape hatch */}
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground gap-1.5"
+            onClick={() => signOut({ redirectUrl: "/" })}
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </Button>
+        </div>
         
         {/* Progress bar */}
         <div className="mb-8 flex justify-center items-center gap-2">
