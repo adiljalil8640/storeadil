@@ -238,6 +238,19 @@ export const JoinWaitlistBody = zod.object({
 });
 
 /**
+ * @summary Bulk import products from CSV text
+ */
+export const ImportProductsBody = zod.object({
+  csv: zod.string(),
+});
+
+export const ImportProductsResponse = zod.object({
+  imported: zod.number(),
+  skipped: zod.number(),
+  errors: zod.array(zod.string()),
+});
+
+/**
  * @summary List all unnotified waitlist entries for the authenticated store
  */
 export const ListWaitlistEntriesResponseItem = zod.object({

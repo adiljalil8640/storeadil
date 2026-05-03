@@ -90,6 +90,16 @@ export interface ValidateCouponResponse {
   error?: string;
 }
 
+export interface ImportProductsBody {
+  csv: string;
+}
+
+export interface ImportProductsResponse {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
 export interface WaitlistEntryWithProduct {
   id: number;
   productId: number;

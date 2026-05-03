@@ -260,6 +260,27 @@ paths:
         "404":
           description: Store or product not found
 
+  /products/import:
+    post:
+      operationId: importProducts
+      tags: [products]
+      summary: Bulk import products from CSV text
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportProductsBody"
+      responses:
+        "200":
+          description: Import results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportProductsResponse"
+
   /products/waitlist:
     get:
       operationId: listWaitlistEntries
@@ -1053,6 +1074,26 @@ components:
         error:
           type: string
       required: [valid]
+
+    ImportProductsBody:
+      type: object
+      properties:
+        csv:
+          type: string
+      required: [csv]
+
+    ImportProductsResponse:
+      type: object
+      properties:
+        imported:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+      required: [imported, skipped, errors]
 
     WaitlistEntryWithProduct:
       type: object

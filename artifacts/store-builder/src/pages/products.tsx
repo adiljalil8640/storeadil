@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts } from "@workspace/api-client-react";
+import { useState, useRef } from "react";
+import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts, useImportProducts } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,11 +13,234 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+
+const TEMPLATE_CSV = `name,price,description,category,stock,low_stock_threshold
+Red Sneakers,49.99,Comfortable running shoes for all occasions,Footwear,20,5
+Blue Denim Jacket,89.99,Classic stonewashed denim jacket,Clothing,10,3
+Wireless Earbuds,29.99,Bluetooth 5.0 earbuds with 8h battery,Electronics,50,10`;
+
+const TEMPLATE_FILENAME = "products_template.csv";
+
+function downloadTemplate() {
+  const blob = new Blob([TEMPLATE_CSV], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = TEMPLATE_FILENAME;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+type ParsedRow = {
+  name: string; price: string; description: string;
+  category: string; stock: string; low_stock_threshold: string;
+  _valid: boolean; _error?: string;
+};
+
+function parsePreview(csvText: string): ParsedRow[] {
+  const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+  const parseCell = (s: string) => s.replace(/^["']|["']$/g, "").trim();
+  const header = lines[0].split(",").map(h => parseCell(h).toLowerCase().replace(/\s+/g, "_"));
+  const col = (row: string[], key: string) => {
+    const idx = header.indexOf(key);
+    return idx >= 0 ? parseCell(row[idx] ?? "") : "";
+  };
+  return lines.slice(1).map(line => {
+    const row = line.split(",");
+    const name = col(row, "name");
+    const price = col(row, "price");
+    const p = parseFloat(price);
+    const valid = !!name && !isNaN(p) && p >= 0;
+    return {
+      name, price,
+      description: col(row, "description"),
+      category: col(row, "category"),
+      stock: col(row, "stock"),
+      low_stock_threshold: col(row, "low_stock_threshold"),
+      _valid: valid,
+      _error: !name ? "Missing name" : (isNaN(p) || p < 0) ? "Invalid price" : undefined,
+    };
+  });
+}
+
+function ImportDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
+  const [csvText, setCsvText] = useState("");
+  const [preview, setPreview] = useState<ParsedRow[]>([]);
+  const [result, setResult] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const importProducts = useImportProducts({
+    mutation: {
+      onSuccess: (data) => {
+        setResult(data);
+        if (data.imported > 0) onDone();
+      },
+      onError: (e: any) => toast.error(e?.response?.data?.error ?? "Import failed"),
+    },
+  });
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setCsvText(text);
+      setPreview(parsePreview(text));
+      setResult(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith(".csv")) handleFile(file);
+    else toast.error("Please drop a .csv file");
+  };
+
+  const reset = () => { setCsvText(""); setPreview([]); setResult(null); };
+
+  const handleClose = () => { reset(); onClose(); };
+
+  const validCount = preview.filter(r => r._valid).length;
+  const invalidCount = preview.filter(r => !r._valid).length;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5 text-primary" /> Import Products from CSV
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+          {/* Template download */}
+          <div className="flex items-center justify-between rounded-lg bg-muted/50 border px-4 py-3">
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Download the CSV template</p>
+                <p className="text-xs text-muted-foreground">Columns: name, price, description, category, stock, low_stock_threshold</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={downloadTemplate}>
+              <Download className="w-3.5 h-3.5" /> Template
+            </Button>
+          </div>
+
+          {/* Drop zone */}
+          {!csvText && (
+            <div
+              className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="font-medium text-sm">Drag & drop your CSV file here</p>
+              <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
+              <input ref={fileRef} type="file" accept=".csv" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            </div>
+          )}
+
+          {/* Preview table */}
+          {preview.length > 0 && !result && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="flex items-center gap-1.5 text-primary font-medium">
+                    <CheckCircle className="w-4 h-4" /> {validCount} valid
+                  </span>
+                  {invalidCount > 0 && (
+                    <span className="flex items-center gap-1.5 text-destructive font-medium">
+                      <AlertCircle className="w-4 h-4" /> {invalidCount} invalid
+                    </span>
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" className="text-xs" onClick={reset}>Change file</Button>
+              </div>
+              <div className="border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8"></TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Stock</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {preview.map((row, i) => (
+                      <TableRow key={i} className={!row._valid ? "bg-destructive/5" : ""}>
+                        <TableCell>
+                          {row._valid
+                            ? <CheckCircle className="w-4 h-4 text-primary" />
+                            : <Tooltip><TooltipTrigger><AlertCircle className="w-4 h-4 text-destructive" /></TooltipTrigger><TooltipContent>{row._error}</TooltipContent></Tooltip>
+                          }
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[180px] truncate">{row.name || <span className="text-muted-foreground italic">—</span>}</TableCell>
+                        <TableCell>{row.price}</TableCell>
+                        <TableCell>{row.category || <span className="text-muted-foreground">—</span>}</TableCell>
+                        <TableCell>{row.stock || <span className="text-muted-foreground">—</span>}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* Result */}
+          {result && (
+            <div className="rounded-xl border p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">{result.imported} product{result.imported === 1 ? "" : "s"} imported</p>
+                  {result.skipped > 0 && <p className="text-sm text-muted-foreground">{result.skipped} row{result.skipped === 1 ? "" : "s"} skipped due to errors</p>}
+                </div>
+              </div>
+              {result.errors.length > 0 && (
+                <div className="rounded-lg bg-destructive/5 border border-destructive/20 p-3 space-y-1">
+                  {result.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-destructive flex items-start gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{e}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="pt-2 border-t mt-2">
+          <Button variant="outline" onClick={handleClose}>{result ? "Close" : "Cancel"}</Button>
+          {!result && (
+            <Button
+              disabled={validCount === 0 || importProducts.isPending}
+              onClick={() => importProducts.mutate({ data: { csv: csvText } })}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              {importProducts.isPending ? "Importing…" : `Import ${validCount} Product${validCount === 1 ? "" : "s"}`}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -96,6 +319,7 @@ function AiButtons({ form, nameField, descriptionField, priceField }: { form: an
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -285,7 +509,12 @@ export default function ProductsPage() {
             <p className="text-muted-foreground">Manage your store inventory.</p>
           </div>
 
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setIsImportOpen(true)}>
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </Button>
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="w-4 h-4" />
@@ -304,7 +533,17 @@ export default function ProductsPage() {
               <ProductForm formObj={form} onSubmit={onSubmitAdd} isPending={createProduct.isPending} submitLabel="Add Product" />
             </DialogContent>
           </Dialog>
+          </div>
         </div>
+
+        <ImportDialog
+          open={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          onDone={() => {
+            queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+            setIsImportOpen(false);
+          }}
+        />
 
         <div className="flex items-center relative max-w-md">
           <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />

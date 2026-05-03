@@ -105,6 +105,96 @@ router.get("/products/categories", requireAuth, async (req: any, res) => {
   }
 });
 
+// POST /products/import — bulk CSV import
+router.post("/products/import", requireAuth, async (req: any, res) => {
+  const { csv } = req.body ?? {};
+  if (typeof csv !== "string" || !csv.trim()) {
+    return res.status(400).json({ error: "csv field is required" });
+  }
+
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const lines = csv.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      return res.json({ imported: 0, skipped: 0, errors: ["CSV must have a header row and at least one data row"] });
+    }
+
+    const parseCell = (s: string) => s.replace(/^["']|["']$/g, "").trim();
+    const header = lines[0].split(",").map((h: string) => parseCell(h).toLowerCase().replace(/\s+/g, "_"));
+
+    const col = (row: string[], key: string): string => {
+      const idx = header.indexOf(key);
+      return idx >= 0 ? parseCell(row[idx] ?? "") : "";
+    };
+
+    const errors: string[] = [];
+    const toInsert: any[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const row = lines[i].split(",");
+      const lineNum = i + 1;
+
+      const name = col(row, "name");
+      const priceStr = col(row, "price");
+      const description = col(row, "description") || null;
+      const category = col(row, "category") || null;
+      const stockStr = col(row, "stock");
+      const thresholdStr = col(row, "low_stock_threshold");
+
+      if (!name) { errors.push(`Row ${lineNum}: name is required`); continue; }
+      const price = parseFloat(priceStr);
+      if (isNaN(price) || price < 0) { errors.push(`Row ${lineNum}: invalid price "${priceStr}"`); continue; }
+
+      const stock = stockStr !== "" ? parseInt(stockStr) : null;
+      if (stockStr !== "" && isNaN(stock!)) { errors.push(`Row ${lineNum}: invalid stock "${stockStr}"`); continue; }
+
+      const lowStockThreshold = thresholdStr !== "" ? parseInt(thresholdStr) : null;
+
+      toInsert.push({
+        storeId,
+        name,
+        description,
+        price: String(price),
+        category,
+        stock: stock ?? null,
+        lowStockThreshold: lowStockThreshold ?? null,
+        isActive: true,
+        variants: [],
+      });
+    }
+
+    if (toInsert.length === 0) {
+      return res.json({ imported: 0, skipped: lines.length - 1, errors });
+    }
+
+    const limitCheck = await checkProductLimit(req.userId);
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        error: `Product limit reached for ${limitCheck.planDisplayName} plan`,
+        code: "PRODUCT_LIMIT_REACHED",
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+      });
+    }
+
+    const BATCH = 50;
+    let imported = 0;
+    for (let i = 0; i < toInsert.length; i += BATCH) {
+      const batch = toInsert.slice(i, i + BATCH);
+      await db.insert(productsTable).values(batch);
+      imported += batch.length;
+    }
+
+    req.log.info({ imported, storeId }, "Bulk CSV import completed");
+    res.json({ imported, skipped: errors.length, errors });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /products/:id
 router.get("/products/:id", requireAuth, async (req: any, res) => {
   try {

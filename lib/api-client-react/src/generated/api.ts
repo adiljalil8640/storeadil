@@ -39,6 +39,8 @@ import type {
   GetRecentOrdersParams,
   GetTopProductsParams,
   HealthStatus,
+  ImportProductsBody,
+  ImportProductsResponse,
   JoinWaitlistBody,
   JoinWaitlistResponse,
   LimitReachedError,
@@ -985,6 +987,92 @@ export const useJoinWaitlist = <
   TContext
 > => {
   return useMutation(getJoinWaitlistMutationOptions(options));
+};
+
+/**
+ * @summary Bulk import products from CSV text
+ */
+export const getImportProductsUrl = () => {
+  return `/api/products/import`;
+};
+
+export const importProducts = async (
+  importProductsBody: ImportProductsBody,
+  options?: RequestInit,
+): Promise<ImportProductsResponse> => {
+  return customFetch<ImportProductsResponse>(getImportProductsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(importProductsBody),
+  });
+};
+
+export const getImportProductsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importProducts>>,
+    TError,
+    { data: BodyType<ImportProductsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importProducts>>,
+  TError,
+  { data: BodyType<ImportProductsBody> },
+  TContext
+> => {
+  const mutationKey = ["importProducts"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importProducts>>,
+    { data: BodyType<ImportProductsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return importProducts(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportProductsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importProducts>>
+>;
+export type ImportProductsMutationBody = BodyType<ImportProductsBody>;
+export type ImportProductsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Bulk import products from CSV text
+ */
+export const useImportProducts = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importProducts>>,
+    TError,
+    { data: BodyType<ImportProductsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof importProducts>>,
+  TError,
+  { data: BodyType<ImportProductsBody> },
+  TContext
+> => {
+  return useMutation(getImportProductsMutationOptions(options));
 };
 
 /**
