@@ -187,6 +187,21 @@ export default function Dashboard() {
                 QR Code
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="gap-1.5 border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
+              >
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Check out my store! ${storeUrl}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Share on WhatsApp
+                </a>
+              </Button>
+              <Button
                 variant="ghost"
                 size="sm"
                 asChild
