@@ -12,6 +12,7 @@ import {
 import router from "./api-routes";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middlewares/errorHandler";
+import { injectReqId } from "./middlewares/injectReqId";
 import { seedPlans } from "./services/billing";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
@@ -40,6 +41,8 @@ app.use(
     },
   }),
 );
+
+app.use(injectReqId);
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
