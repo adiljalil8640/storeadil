@@ -8,8 +8,10 @@ import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users,
 import { Link } from "wouter";
 import { toast } from "sonner";
 import {
+  ComposedChart,
   AreaChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -18,6 +20,7 @@ import {
   BarChart,
   Bar,
   Cell,
+  Legend,
 } from "recharts";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -28,12 +31,20 @@ const formatCurrency = (v: number) =>
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-card border rounded-lg p-3 shadow-sm text-sm">
-      <p className="text-muted-foreground mb-1">{label}</p>
+    <div className="bg-card border rounded-lg p-3 shadow-sm text-sm min-w-[160px]">
+      <p className="text-muted-foreground mb-2 text-xs font-medium">{label}</p>
       {payload.map((p: any) => (
-        <p key={p.dataKey} className="font-medium" style={{ color: p.color }}>
-          {p.name}: {p.dataKey === "revenue" ? formatCurrency(p.value) : p.value}
-        </p>
+        <div key={p.dataKey} className="flex items-center justify-between gap-4 mb-1 last:mb-0">
+          <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
+            {p.name}
+          </span>
+          <span className="font-semibold text-xs" style={{ color: p.color }}>
+            {p.dataKey === "revenue" || p.dataKey === "aov"
+              ? formatCurrency(p.value)
+              : p.value}
+          </span>
+        </div>
       ))}
     </div>
   );
@@ -49,6 +60,7 @@ export default function AnalyticsPage() {
   const { data: revenueByDay = [], isLoading: revByDayLoading } = useGetRevenueByDay();
 
   const chartData = (ordersPerDay ?? []).map((d) => ({
+    aov: d.orders > 0 ? Math.round((Number(d.revenue) / d.orders) * 100) / 100 : 0,
     date: format(new Date(d.date + "T00:00:00"), "MMM d"),
     orders: d.orders,
     revenue: Number(d.revenue),
@@ -152,10 +164,15 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Orders Per Day - Area Chart */}
+        {/* Orders Per Day - Composed Chart with AOV overlay */}
         <Card>
-          <CardHeader>
-            <CardTitle>Orders &amp; Revenue — Last 30 Days</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle>Orders, Revenue &amp; Avg Order Value — Last 30 Days</CardTitle>
+            <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-primary" />Orders</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-indigo-500" />Revenue</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 border-t-2 border-dashed border-amber-500" style={{ height: 0 }} />AOV</span>
+            </div>
           </CardHeader>
           <CardContent>
             {chartLoading ? (
@@ -163,7 +180,7 @@ export default function AnalyticsPage() {
             ) : (
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <ComposedChart data={chartData} margin={{ top: 4, right: 48, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
@@ -174,14 +191,76 @@ export default function AnalyticsPage() {
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.6} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    {/* Left: order count */}
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                      width={28}
+                    />
+                    {/* Right: revenue $ */}
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => v === 0 ? "$0" : `$${(v / 1000).toFixed(v >= 1000 ? 1 : 0)}${v >= 1000 ? "k" : ""}`}
+                      width={40}
+                    />
+                    {/* AOV axis — hidden, auto-scaled independently */}
+                    <YAxis
+                      yAxisId="aov"
+                      orientation="right"
+                      hide
+                      domain={["auto", "auto"]}
+                    />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area yAxisId="left" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--primary))" fill="url(#colorOrders)" strokeWidth={2} dot={false} />
-                    <Area yAxisId="right" type="monotone" dataKey="revenue" name="Revenue" stroke="#6366f1" fill="url(#colorRevenue)" strokeWidth={2} dot={false} />
-                  </AreaChart>
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="orders"
+                      name="Orders"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#colorOrders)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                    />
+                    <Area
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="revenue"
+                      name="Revenue"
+                      stroke="#6366f1"
+                      fill="url(#colorRevenue)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                    />
+                    <Line
+                      yAxisId="aov"
+                      type="monotone"
+                      dataKey="aov"
+                      name="Avg Order Value"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      strokeDasharray="5 3"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                      connectNulls={false}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             )}
