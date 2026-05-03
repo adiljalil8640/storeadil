@@ -69,6 +69,58 @@ router.post("/stores", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /stores/browse — public search/browse, no auth
+router.get("/stores/browse", async (req: any, res) => {
+  try {
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
+    const limit = 12;
+    const offset = (page - 1) * limit;
+
+    const { ilike, or, count } = await import("drizzle-orm");
+
+    const whereClause = q
+      ? or(
+          ilike(storesTable.name, `%${q}%`),
+          ilike(storesTable.description, `%${q}%`),
+          ilike(storesTable.slug, `%${q}%`)
+        )
+      : undefined;
+
+    const [totalRow] = await db
+      .select({ total: count() })
+      .from(storesTable)
+      .where(whereClause);
+
+    const rows = await db
+      .select({
+        id: storesTable.id,
+        name: storesTable.name,
+        slug: storesTable.slug,
+        description: storesTable.description,
+        logoUrl: storesTable.logoUrl,
+        orderCount: sql<number>`cast(count(${ordersTable.id}) as int)`,
+      })
+      .from(storesTable)
+      .leftJoin(ordersTable, eq(ordersTable.storeId, storesTable.id))
+      .where(whereClause)
+      .groupBy(storesTable.id)
+      .orderBy(desc(sql`count(${ordersTable.id})`), desc(storesTable.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    res.json({
+      stores: rows,
+      total: Number(totalRow?.total ?? 0),
+      page,
+      totalPages: Math.ceil(Number(totalRow?.total ?? 0) / limit),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /stores/top — public, no auth
 router.get("/stores/top", async (req: any, res) => {
   try {

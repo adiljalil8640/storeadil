@@ -12,6 +12,8 @@ export * from "./adminUser";
 export * from "./analyticsSummary";
 export * from "./applyReferralBody";
 export * from "./billingStatus";
+export * from "./browseStoresParams";
+export * from "./browseStoresResult";
 export * from "./changeUserPlanBody";
 export * from "./changeUserPlanBodyPlanName";
 export * from "./checkoutSession";

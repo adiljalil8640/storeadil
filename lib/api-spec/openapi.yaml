@@ -105,6 +105,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Store"
 
+  /stores/browse:
+    get:
+      operationId: browseStores
+      tags: [stores]
+      summary: Browse and search all public stores (no auth)
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Optional search query (name, slug, description)
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number (1-indexed)
+      responses:
+        "200":
+          description: Paginated store list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrowseStoresResult"
+
   /stores/top:
     get:
       operationId: getTopStores
@@ -1307,6 +1332,21 @@ components:
         - deliveryEnabled
         - pickupEnabled
         - products
+
+    BrowseStoresResult:
+      type: object
+      properties:
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopStore"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required: [stores, total, page, totalPages]
 
     TopStore:
       type: object

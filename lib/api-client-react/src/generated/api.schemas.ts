@@ -230,6 +230,13 @@ export interface TopStore {
   orderCount: number;
 }
 
+export interface BrowseStoresResult {
+  stores: TopStore[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export type CreateStoreBodyTheme =
   (typeof CreateStoreBodyTheme)[keyof typeof CreateStoreBodyTheme];
 
@@ -573,6 +580,17 @@ export interface ShareMessage {
   whatsappUrl: string;
   storeUrl: string;
 }
+
+export type BrowseStoresParams = {
+  /**
+   * Optional search query (name, slug, description)
+   */
+  q?: string;
+  /**
+   * Page number (1-indexed)
+   */
+  page?: number;
+};
 
 export type ListProductsParams = {
   category?: string;

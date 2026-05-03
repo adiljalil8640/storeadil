@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Store, MessageCircle, Zap, TrendingUp, CheckCircle2, ArrowRight, ShoppingBag, ExternalLink } from "lucide-react";
+import { Store, MessageCircle, Zap, TrendingUp, CheckCircle2, ArrowRight, ShoppingBag, ExternalLink, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useGetTopStores } from "@workspace/api-client-react";
@@ -123,7 +123,12 @@ export default function LandingPage() {
             </div>
             <span className="font-bold text-xl tracking-tight">Zapp Store</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Link href={`${basePath}/browse`}>
+              <Button variant="ghost" className="hidden sm:inline-flex gap-1.5">
+                <LayoutGrid className="w-4 h-4" /> Browse Stores
+              </Button>
+            </Link>
             <Link href={`${basePath}/sign-in`}>
               <Button variant="ghost" className="hidden sm:inline-flex">Sign In</Button>
             </Link>

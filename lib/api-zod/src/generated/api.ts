@@ -95,6 +95,38 @@ export const CreateStoreBody = zod.object({
 });
 
 /**
+ * @summary Browse and search all public stores (no auth)
+ */
+export const browseStoresQueryPageDefault = 1;
+
+export const BrowseStoresQueryParams = zod.object({
+  q: zod.coerce
+    .string()
+    .optional()
+    .describe("Optional search query (name, slug, description)"),
+  page: zod.coerce
+    .number()
+    .default(browseStoresQueryPageDefault)
+    .describe("Page number (1-indexed)"),
+});
+
+export const BrowseStoresResponse = zod.object({
+  stores: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+      description: zod.string().nullish(),
+      logoUrl: zod.string().nullish(),
+      orderCount: zod.number(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  totalPages: zod.number(),
+});
+
+/**
  * @summary Get top stores by order volume (public, no auth)
  */
 export const GetTopStoresResponseItem = zod.object({
