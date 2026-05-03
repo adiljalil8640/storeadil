@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle, Send, X, TriangleAlert } from "lucide-react";
+import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell, Upload, Download, FileText, CheckCircle, AlertCircle, Send, X, TriangleAlert, RotateCcw, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -357,6 +357,9 @@ export default function ProductsPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [lowStockDismissed, setLowStockDismissed] = useState(false);
   const [stockFilter, setStockFilter] = useState<"all" | "healthy" | "low" | "out" | "unlimited">("all");
+  const [isBulkRestockOpen, setIsBulkRestockOpen] = useState(false);
+  const [restockQty, setRestockQty] = useState<Record<number, number>>({});
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -396,6 +399,47 @@ export default function ProductsPage() {
   const velocityMap: Record<number, number[]> = Object.fromEntries(
     velocityData.map((v) => [v.productId, v.counts])
   );
+
+  const outOfStockProducts = allProductsForHealth.filter(
+    p => p.isActive && p.stock != null && p.stock === 0
+  );
+
+  const bulkUpdateProduct = useUpdateProduct();
+
+  const handleBulkRestock = async () => {
+    const targets = outOfStockProducts.filter(p => (restockQty[p.id] ?? 10) > 0);
+    if (!targets.length) return;
+    setIsBulkSaving(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const p of targets) {
+      const qty = restockQty[p.id] ?? 10;
+      try {
+        await bulkUpdateProduct.mutateAsync({
+          id: p.id,
+          data: {
+            name: p.name,
+            description: p.description ?? "",
+            price: p.price,
+            category: p.category ?? "",
+            stock: qty,
+            lowStockThreshold: p.lowStockThreshold,
+            imageUrl: p.imageUrl ?? "",
+            isActive: p.isActive,
+          },
+        });
+        succeeded++;
+      } catch {
+        failed++;
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+    setIsBulkSaving(false);
+    setIsBulkRestockOpen(false);
+    setRestockQty({});
+    if (succeeded > 0) toast.success(`Restocked ${succeeded} product${succeeded !== 1 ? "s" : ""} successfully`);
+    if (failed > 0) toast.error(`${failed} product${failed !== 1 ? "s" : ""} failed to update`);
+  };
 
   const createProduct = useCreateProduct({
     mutation: {
@@ -631,14 +675,30 @@ export default function ProductsPage() {
                 <PackageOpen className="h-4 w-4 text-primary" />
                 Inventory Health
               </CardTitle>
-              {stockFilter !== "all" && (
-                <button
-                  onClick={() => setStockFilter("all")}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-                >
-                  <X className="h-3 w-3" /> Clear filter
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {stockFilter === "out" && healthCounts.out > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1.5 text-xs border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                    onClick={() => {
+                      setRestockQty({});
+                      setIsBulkRestockOpen(true);
+                    }}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Restock all
+                  </Button>
+                )}
+                {stockFilter !== "all" && (
+                  <button
+                    onClick={() => setStockFilter("all")}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                  >
+                    <X className="h-3 w-3" /> Clear filter
+                  </button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pb-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -926,6 +986,97 @@ export default function ProductsPage() {
             ))}
           </div>
         )}
+
+        {/* Bulk Restock Dialog */}
+        <Dialog open={isBulkRestockOpen} onOpenChange={(open) => { if (!isBulkSaving) setIsBulkRestockOpen(open); }}>
+          <DialogContent className="sm:max-w-[520px] max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-rose-500" />
+                Bulk Restock
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Set new stock quantities for your out-of-stock products. Defaults to 10 if left unchanged.
+              </p>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto -mx-6 px-6 space-y-2 py-1 min-h-0">
+              {outOfStockProducts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No out-of-stock products.</div>
+              ) : (
+                outOfStockProducts.map((product) => {
+                  const qty = restockQty[product.id] ?? 10;
+                  return (
+                    <div
+                      key={product.id}
+                      className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5"
+                    >
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-md object-cover shrink-0 border" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0 border">
+                          <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{product.name}</p>
+                        {product.category && (
+                          <p className="text-xs text-muted-foreground truncate">{product.category}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setRestockQty(q => ({ ...q, [product.id]: Math.max(1, (q[product.id] ?? 10) - 1) }))}
+                          className="w-7 h-7 rounded border bg-muted hover:bg-muted/80 flex items-center justify-center text-sm font-bold transition-colors"
+                          disabled={isBulkSaving}
+                        >−</button>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={qty}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value);
+                            if (!isNaN(v) && v >= 0) setRestockQty(q => ({ ...q, [product.id]: v }));
+                          }}
+                          className="w-16 h-7 text-center text-sm px-1"
+                          disabled={isBulkSaving}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setRestockQty(q => ({ ...q, [product.id]: (q[product.id] ?? 10) + 1 }))}
+                          className="w-7 h-7 rounded border bg-muted hover:bg-muted/80 flex items-center justify-center text-sm font-bold transition-colors"
+                          disabled={isBulkSaving}
+                        >+</button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <DialogFooter className="pt-4 border-t mt-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkRestockOpen(false)}
+                disabled={isBulkSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkRestock}
+                disabled={isBulkSaving || outOfStockProducts.length === 0}
+                className="gap-2"
+              >
+                {isBulkSaving ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Restocking…</>
+                ) : (
+                  <><RotateCcw className="w-4 h-4" /> Restock {outOfStockProducts.length} product{outOfStockProducts.length !== 1 ? "s" : ""}</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Dialog */}
         <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
