@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Vzw4AQxlQUP9w6OtOFnqU"
+uri = "file://document.md"
+type = "text"
+title = "Zapp Store — Senior Engineer Audit & Handoff Document"
