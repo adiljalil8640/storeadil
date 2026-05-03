@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock, Tag, Percent, CheckCircle2, XCircle, AlertCircle, CalendarDays } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock, Tag, Percent, CheckCircle2, XCircle, AlertCircle, CalendarDays, Trophy, ArrowUpDown } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import {
@@ -68,6 +68,8 @@ export default function AnalyticsPage() {
 
   const today         = new Date().toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const [couponSort, setCouponSort] = useState<"uses" | "discount">("uses");
+
   const [exportFrom, setExportFrom] = useState(thirtyDaysAgo);
   const [exportTo,   setExportTo]   = useState(today);
   const [exporting,  setExporting]  = useState(false);
@@ -562,14 +564,35 @@ export default function AnalyticsPage() {
         </Card>
       </motion.div>
 
-      {/* Coupon Performance Table */}
+      {/* Coupon Performance Leaderboard */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="flex items-center gap-2">
-              <Tag className="w-4 h-4 text-primary" />
-              Coupon Performance
+              <Trophy className="w-4 h-4 text-amber-500" />
+              Coupon Leaderboard
             </CardTitle>
+            {couponPerf.length > 1 && (
+              <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-0.5">
+                {([
+                  { key: "uses" as const,     label: "Most Used" },
+                  { key: "discount" as const, label: "Highest Discount" },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setCouponSort(opt.key)}
+                    className={[
+                      "px-3 py-1 rounded-md text-xs font-medium transition-all",
+                      couponSort === opt.key
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {couponLoading ? (
@@ -582,100 +605,138 @@ export default function AnalyticsPage() {
                   <Link href="/coupons" className="text-primary underline underline-offset-2">Create your first coupon</Link> to start tracking performance.
                 </p>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-xs text-muted-foreground">
-                      <th className="text-left py-2 pr-4 font-medium">Code</th>
-                      <th className="text-left py-2 pr-4 font-medium">Type</th>
-                      <th className="text-right py-2 pr-4 font-medium">Discount</th>
-                      <th className="text-right py-2 pr-4 font-medium">Uses</th>
-                      <th className="text-right py-2 pr-4 font-medium">Est. discount given</th>
-                      <th className="text-left py-2 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {couponPerf.map((c) => {
-                      const statusBadge = (() => {
-                        if (!c.isActive) return { label: "Inactive", cls: "bg-muted text-muted-foreground", icon: <XCircle className="w-3 h-3" /> };
-                        if (c.expired)   return { label: "Expired",  cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: <AlertCircle className="w-3 h-3" /> };
-                        if (c.maxedOut)  return { label: "Maxed out",cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: <AlertCircle className="w-3 h-3" /> };
-                        return { label: "Active", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: <CheckCircle2 className="w-3 h-3" /> };
-                      })();
+            ) : (() => {
+              const sorted = [...couponPerf].sort((a, b) =>
+                couponSort === "uses"
+                  ? b.usedCount - a.usedCount
+                  : (b.estimatedDiscount ?? 0) - (a.estimatedDiscount ?? 0)
+              );
 
-                      const usageBar = c.maxUses
-                        ? Math.min(100, Math.round((c.usedCount / c.maxUses) * 100))
-                        : null;
+              const maxUses     = Math.max(...sorted.map(c => c.usedCount), 1);
+              const maxDiscount = Math.max(...sorted.map(c => c.estimatedDiscount ?? 0), 1);
 
-                      return (
-                        <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="py-3 pr-4">
-                            <span className="font-mono font-semibold tracking-wide text-foreground bg-muted px-2 py-0.5 rounded text-xs">
+              const rankStyle = (i: number) => {
+                if (i === 0) return { badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300/60", row: "bg-amber-50/60 dark:bg-amber-950/20" };
+                if (i === 1) return { badge: "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300 border border-slate-300/60", row: "bg-slate-50/40 dark:bg-slate-900/10" };
+                if (i === 2) return { badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-300/50", row: "bg-orange-50/30 dark:bg-orange-950/10" };
+                return { badge: "bg-muted text-muted-foreground border border-border", row: "" };
+              };
+
+              const rankLabel = (i: number) => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
+
+              const statusBadge = (c: typeof sorted[0]) => {
+                if (!c.isActive) return { label: "Inactive", cls: "bg-muted text-muted-foreground" };
+                if (c.expired)   return { label: "Expired",  cls: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" };
+                if (c.maxedOut)  return { label: "Maxed",    cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" };
+                return             { label: "Active",   cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" };
+              };
+
+              const totalUses     = couponPerf.reduce((s, c) => s + c.usedCount, 0);
+              const totalDiscount = couponPerf.reduce((s, c) => s + (c.estimatedDiscount ?? 0), 0);
+              const activeCount   = couponPerf.filter(c => c.isActive && !c.expired && !c.maxedOut).length;
+
+              return (
+                <div className="space-y-2">
+                  {sorted.map((c, i) => {
+                    const rs  = rankStyle(i);
+                    const sb  = statusBadge(c);
+                    const usePct  = Math.round((c.usedCount / maxUses) * 100);
+                    const discPct = c.estimatedDiscount != null
+                      ? Math.round((c.estimatedDiscount / maxDiscount) * 100)
+                      : 0;
+
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-3 transition-colors ${rs.row}`}
+                      >
+                        {/* Rank badge */}
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${rs.badge}`}>
+                          {rankLabel(i)}
+                        </div>
+
+                        {/* Code + type + status */}
+                        <div className="w-36 shrink-0 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-xs tracking-widest text-foreground bg-muted px-1.5 py-0.5 rounded">
                               {c.code}
                             </span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              {c.type === "percentage"
-                                ? <><Percent className="w-3 h-3" /> Percentage</>
-                                : <><DollarSign className="w-3 h-3" /> Fixed</>}
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${sb.cls}`}>
+                              {sb.label}
                             </span>
-                          </td>
-                          <td className="py-3 pr-4 text-right font-medium">
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-muted-foreground">
                             {c.type === "percentage"
-                              ? `${c.value}%`
-                              : formatCurrency(c.value)}
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="font-semibold">{c.usedCount}</span>
-                              {usageBar !== null && (
-                                <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full bg-primary transition-all"
-                                    style={{ width: `${usageBar}%` }}
-                                  />
-                                </div>
-                              )}
-                              {c.maxUses && (
-                                <span className="text-[10px] text-muted-foreground">of {c.maxUses}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 pr-4 text-right text-muted-foreground">
-                            {c.estimatedDiscount != null
-                              ? <span className="text-foreground font-medium">{formatCurrency(c.estimatedDiscount)}</span>
-                              : <span className="text-xs italic">— (% coupon)</span>}
-                          </td>
-                          <td className="py-3">
-                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
-                              {statusBadge.icon}
-                              {statusBadge.label}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              ? <><Percent className="w-3 h-3" />{c.value}% off</>
+                              : <><DollarSign className="w-3 h-3" />{formatCurrency(c.value)} off</>}
+                            {c.minOrderAmount != null && (
+                              <span className="opacity-60">· min {formatCurrency(c.minOrderAmount)}</span>
+                            )}
+                          </div>
+                        </div>
 
-                {/* Summary row */}
-                {couponPerf.length > 0 && (() => {
-                  const totalUses = couponPerf.reduce((s, c) => s + c.usedCount, 0);
-                  const totalDiscount = couponPerf.reduce((s, c) => s + (c.estimatedDiscount ?? 0), 0);
-                  return (
-                    <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{couponPerf.length} coupon{couponPerf.length !== 1 ? "s" : ""} total · {couponPerf.filter(c => c.isActive && !c.expired && !c.maxedOut).length} active</span>
-                      <span>
-                        {totalUses} total redemption{totalUses !== 1 ? "s" : ""}
-                        {totalDiscount > 0 && <> · <span className="font-medium text-foreground">{formatCurrency(totalDiscount)}</span> est. discount given</>}
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
+                        {/* Uses bar */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <ArrowUpDown className="w-3 h-3" />
+                              Uses
+                            </span>
+                            <span className="text-xs font-semibold text-foreground">
+                              {c.usedCount}
+                              {c.maxUses != null && (
+                                <span className="text-[10px] text-muted-foreground font-normal">/{c.maxUses}</span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all duration-500"
+                              style={{ width: `${usePct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Discount bar */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              Discount given
+                            </span>
+                            <span className="text-xs font-semibold text-foreground">
+                              {c.estimatedDiscount != null
+                                ? formatCurrency(c.estimatedDiscount)
+                                : <span className="text-muted-foreground font-normal text-[10px]">—</span>}
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                              style={{ width: c.estimatedDiscount != null ? `${discPct}%` : "0%" }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Summary footer */}
+                  <div className="pt-3 mt-1 border-t flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {couponPerf.length} coupon{couponPerf.length !== 1 ? "s" : ""} ·{" "}
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">{activeCount} active</span>
+                    </span>
+                    <span>
+                      {totalUses} total redemption{totalUses !== 1 ? "s" : ""}
+                      {totalDiscount > 0 && (
+                        <> · <span className="font-medium text-foreground">{formatCurrency(totalDiscount)}</span> discount given</>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </motion.div>
