@@ -9,6 +9,19 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface WaitlistEntryWithProduct {
+  id: number;
+  productId: number;
+  productName: string;
+  email: string;
+  name?: string | null;
+  createdAt: string;
+}
+
+export interface NotifyWaitlistResponse {
+  notified: number;
+}
+
 export type WaitlistCountsResponseCounts = { [key: string]: number };
 
 export interface WaitlistCountsResponse {

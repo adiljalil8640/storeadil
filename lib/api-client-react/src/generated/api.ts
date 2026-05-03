@@ -42,6 +42,7 @@ import type {
   LimitReachedError,
   ListOrdersParams,
   ListProductsParams,
+  NotifyWaitlistResponse,
   Order,
   OrderTrackingInfo,
   OrderWithWhatsApp,
@@ -59,6 +60,7 @@ import type {
   UpdateProductBody,
   UpdateStoreBody,
   WaitlistCountsResponse,
+  WaitlistEntryWithProduct,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -562,6 +564,165 @@ export const useJoinWaitlist = <
   TContext
 > => {
   return useMutation(getJoinWaitlistMutationOptions(options));
+};
+
+/**
+ * @summary List all unnotified waitlist entries for the authenticated store
+ */
+export const getListWaitlistEntriesUrl = () => {
+  return `/api/products/waitlist`;
+};
+
+export const listWaitlistEntries = async (
+  options?: RequestInit,
+): Promise<WaitlistEntryWithProduct[]> => {
+  return customFetch<WaitlistEntryWithProduct[]>(getListWaitlistEntriesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListWaitlistEntriesQueryKey = () => {
+  return [`/api/products/waitlist`] as const;
+};
+
+export const getListWaitlistEntriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWaitlistEntries>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWaitlistEntries>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListWaitlistEntriesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listWaitlistEntries>>
+  > = ({ signal }) => listWaitlistEntries({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listWaitlistEntries>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListWaitlistEntriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWaitlistEntries>>
+>;
+export type ListWaitlistEntriesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all unnotified waitlist entries for the authenticated store
+ */
+
+export function useListWaitlistEntries<
+  TData = Awaited<ReturnType<typeof listWaitlistEntries>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWaitlistEntries>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListWaitlistEntriesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Send back-in-stock emails to all unnotified waitlist entries for a product
+ */
+export const getNotifyWaitlistUrl = (id: number) => {
+  return `/api/products/${id}/waitlist/notify`;
+};
+
+export const notifyWaitlist = async (
+  id: number,
+  options?: RequestInit,
+): Promise<NotifyWaitlistResponse> => {
+  return customFetch<NotifyWaitlistResponse>(getNotifyWaitlistUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getNotifyWaitlistMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof notifyWaitlist>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof notifyWaitlist>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["notifyWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof notifyWaitlist>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return notifyWaitlist(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type NotifyWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof notifyWaitlist>>
+>;
+
+export type NotifyWaitlistMutationError = ErrorType<void>;
+
+/**
+ * @summary Send back-in-stock emails to all unnotified waitlist entries for a product
+ */
+export const useNotifyWaitlist = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof notifyWaitlist>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof notifyWaitlist>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getNotifyWaitlistMutationOptions(options));
 };
 
 /**

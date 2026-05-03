@@ -71,6 +71,103 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+// GET /products/waitlist — authenticated, returns all unnotified entries with product name
+router.get("/products/waitlist", requireAuth, async (req: any, res) => {
+  try {
+    const [store] = await db
+      .select({ id: storesTable.id })
+      .from(storesTable)
+      .where(eq(storesTable.userId, req.userId));
+
+    if (!store) return res.json([]);
+
+    const entries = await db
+      .select({
+        id: stockWaitlistTable.id,
+        productId: stockWaitlistTable.productId,
+        productName: productsTable.name,
+        email: stockWaitlistTable.email,
+        name: stockWaitlistTable.name,
+        createdAt: stockWaitlistTable.createdAt,
+      })
+      .from(stockWaitlistTable)
+      .innerJoin(productsTable, eq(stockWaitlistTable.productId, productsTable.id))
+      .where(
+        and(
+          eq(stockWaitlistTable.storeId, store.id),
+          isNull(stockWaitlistTable.notifiedAt)
+        )
+      )
+      .orderBy(stockWaitlistTable.createdAt);
+
+    res.json(entries);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /products/:id/waitlist/notify — send back-in-stock emails immediately, mark as notified
+router.post("/products/:id/waitlist/notify", requireAuth, async (req: any, res) => {
+  try {
+    const [store] = await db
+      .select({ id: storesTable.id, name: storesTable.name, slug: storesTable.slug, currency: storesTable.currency })
+      .from(storesTable)
+      .where(eq(storesTable.userId, req.userId));
+
+    if (!store) return res.status(404).json({ error: "No store found" });
+
+    const productId = parseInt(req.params.id);
+    const [product] = await db
+      .select({ id: productsTable.id, name: productsTable.name, price: productsTable.price })
+      .from(productsTable)
+      .where(and(eq(productsTable.id, productId), eq(productsTable.storeId, store.id)));
+
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const waitlist = await db
+      .select()
+      .from(stockWaitlistTable)
+      .where(
+        and(
+          eq(stockWaitlistTable.productId, productId),
+          eq(stockWaitlistTable.storeId, store.id),
+          isNull(stockWaitlistTable.notifiedAt)
+        )
+      );
+
+    if (waitlist.length === 0) return res.json({ notified: 0 });
+
+    const { sendBackInStockEmail } = await import("../services/email");
+    const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+    const now = new Date();
+
+    for (const entry of waitlist) {
+      sendBackInStockEmail({
+        to: entry.email,
+        name: entry.name,
+        storeName: store.name,
+        productName: product.name,
+        productPrice: Number(product.price),
+        currency: store.currency,
+        storeSlug: store.slug,
+        appBaseUrl,
+      }).catch(() => {});
+
+      await db
+        .update(stockWaitlistTable)
+        .set({ notifiedAt: now })
+        .where(eq(stockWaitlistTable.id, entry.id));
+    }
+
+    req.log.info({ productId, notified: waitlist.length }, "Manual back-in-stock notification sent");
+    res.json({ notified: waitlist.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /products/waitlist-counts — authenticated, returns { counts: { [productId]: number } }
 router.get("/products/waitlist-counts", requireAuth, async (req: any, res) => {
   try {

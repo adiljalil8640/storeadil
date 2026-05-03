@@ -150,6 +150,32 @@ export const JoinWaitlistBody = zod.object({
 });
 
 /**
+ * @summary List all unnotified waitlist entries for the authenticated store
+ */
+export const ListWaitlistEntriesResponseItem = zod.object({
+  id: zod.number(),
+  productId: zod.number(),
+  productName: zod.string(),
+  email: zod.string(),
+  name: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListWaitlistEntriesResponse = zod.array(
+  ListWaitlistEntriesResponseItem,
+);
+
+/**
+ * @summary Send back-in-stock emails to all unnotified waitlist entries for a product
+ */
+export const NotifyWaitlistParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const NotifyWaitlistResponse = zod.object({
+  notified: zod.number(),
+});
+
+/**
  * @summary Get waitlist signup counts per product for the authenticated store
  */
 export const GetWaitlistCountsResponse = zod.object({
