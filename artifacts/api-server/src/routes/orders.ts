@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, ordersTable } from "@workspace/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { storesTable, ordersTable, couponsTable } from "@workspace/db";
+import { eq, and, desc, sql, ilike } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
@@ -77,7 +77,7 @@ router.post("/orders", async (req: any, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   try {
-    const { storeId, items, customerName, customerEmail, customerPhone, customerNote, deliveryType } = parsed.data;
+    const { storeId, items, customerName, customerEmail, customerPhone, customerNote, deliveryType, couponCode } = parsed.data;
 
     const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
     if (!store) return res.status(404).json({ error: "Store not found" });
@@ -94,7 +94,36 @@ router.post("/orders", async (req: any, res) => {
       });
     }
 
-    const total = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+
+    // Validate and apply coupon if provided
+    let discountAmount = 0;
+    let appliedCouponId: number | null = null;
+
+    if (couponCode && couponCode.trim()) {
+      const [coupon] = await db
+        .select()
+        .from(couponsTable)
+        .where(and(eq(couponsTable.storeId, storeId), ilike(couponsTable.code, couponCode.trim())));
+
+      if (coupon && coupon.isActive &&
+        (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date()) &&
+        (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) &&
+        (coupon.minOrderAmount === null || subtotal >= Number(coupon.minOrderAmount))
+      ) {
+        const val = Number(coupon.value);
+        discountAmount = coupon.type === "percentage"
+          ? Math.round((subtotal * val / 100) * 100) / 100
+          : Math.min(val, subtotal);
+        appliedCouponId = coupon.id;
+      }
+    }
+
+    const total = Math.max(0, subtotal - discountAmount);
+
+    const noteWithDiscount = discountAmount > 0
+      ? `${customerNote ? customerNote + "\n" : ""}[Coupon: ${couponCode?.toUpperCase()} — -${store.currency} ${discountAmount.toFixed(2)}]`
+      : (customerNote ?? null);
 
     const [order] = await db
       .insert(ordersTable)
@@ -103,13 +132,21 @@ router.post("/orders", async (req: any, res) => {
         customerName: customerName ?? null,
         customerEmail: customerEmail ?? null,
         customerPhone: customerPhone ?? null,
-        customerNote: customerNote ?? null,
+        customerNote: noteWithDiscount,
         items: items as any,
         total: String(total),
         status: "pending",
         deliveryType: deliveryType ?? null,
       })
       .returning();
+
+    // Increment coupon usedCount (fire-and-forget)
+    if (appliedCouponId) {
+      db.update(couponsTable)
+        .set({ usedCount: sql`${couponsTable.usedCount} + 1` })
+        .where(eq(couponsTable.id, appliedCouponId))
+        .catch(() => {});
+    }
 
     await incrementOrderUsage(store.userId);
 

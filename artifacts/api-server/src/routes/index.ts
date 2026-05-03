@@ -10,11 +10,13 @@ import referralRouter from "./referral";
 import adminRouter from "./admin";
 import growthRouter from "./growth";
 import waitlistRouter from "./waitlist";
+import couponsRouter from "./coupons";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(storesRouter);
+router.use(couponsRouter);
 router.use(waitlistRouter);
 router.use(productsRouter);
 router.use(ordersRouter);

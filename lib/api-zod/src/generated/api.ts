@@ -137,6 +137,94 @@ export const GetPublicStoreResponse = zod.object({
 });
 
 /**
+ * @summary Validate a coupon code for a store (public, no auth)
+ */
+export const ValidateCouponBody = zod.object({
+  storeId: zod.number(),
+  code: zod.string(),
+  orderAmount: zod.number(),
+});
+
+export const ValidateCouponResponse = zod.object({
+  valid: zod.boolean(),
+  couponId: zod.number().optional(),
+  discountType: zod.enum(["percentage", "fixed"]).optional(),
+  discountValue: zod.number().optional(),
+  discountAmount: zod.number().optional(),
+  finalAmount: zod.number().optional(),
+  error: zod.string().optional(),
+});
+
+/**
+ * @summary List all coupons for the authenticated store
+ */
+export const ListCouponsResponseItem = zod.object({
+  id: zod.number(),
+  storeId: zod.number(),
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  usedCount: zod.number(),
+  expiresAt: zod.coerce.date().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const ListCouponsResponse = zod.array(ListCouponsResponseItem);
+
+/**
+ * @summary Create a new coupon
+ */
+export const CreateCouponBody = zod.object({
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  expiresAt: zod.coerce.date().nullish(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a coupon
+ */
+export const UpdateCouponParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateCouponBody = zod.object({
+  code: zod.string().optional(),
+  type: zod.enum(["percentage", "fixed"]).optional(),
+  value: zod.number().optional(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  expiresAt: zod.coerce.date().nullish(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateCouponResponse = zod.object({
+  id: zod.number(),
+  storeId: zod.number(),
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  usedCount: zod.number(),
+  expiresAt: zod.coerce.date().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a coupon
+ */
+export const DeleteCouponParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Sign up for back-in-stock alert (public, no auth required)
  */
 export const JoinWaitlistParams = zod.object({
@@ -377,6 +465,7 @@ export const CreateOrderBody = zod.object({
     }),
   ),
   deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+  couponCode: zod.string().nullish(),
 });
 
 /**

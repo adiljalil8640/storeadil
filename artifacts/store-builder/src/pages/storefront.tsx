@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useParams } from "wouter";
-import { useGetPublicStore, useCreateOrder, useJoinWaitlist } from "@workspace/api-client-react";
+import { useGetPublicStore, useCreateOrder, useJoinWaitlist, useValidateCoupon } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell } from "lucide-react";
+import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -108,12 +108,19 @@ export default function StorefrontPage() {
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("pickup");
   const [customerNote, setCustomerNote] = useState("");
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    couponId: number; code: string; discountType: "percentage" | "fixed";
+    discountValue: number; discountAmount: number; finalAmount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState("");
 
   const { data: store, isLoading, error } = useGetPublicStore(slug || "", {
     query: { enabled: !!slug, retry: false }
   });
 
   const createOrder = useCreateOrder();
+  const validateCoupon = useValidateCoupon();
 
   const categories = useMemo(() => {
     if (!store?.products) return [];
@@ -155,6 +162,37 @@ export default function StorefrontPage() {
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
+  const handleApplyCoupon = async () => {
+    if (!store || !couponInput.trim()) return;
+    setCouponError("");
+    try {
+      const result = await validateCoupon.mutateAsync({
+        data: { storeId: store.id, code: couponInput.trim(), orderAmount: cartTotal }
+      });
+      if (result.valid) {
+        setAppliedCoupon({
+          couponId: result.couponId!,
+          code: couponInput.trim().toUpperCase(),
+          discountType: result.discountType!,
+          discountValue: result.discountValue!,
+          discountAmount: result.discountAmount!,
+          finalAmount: result.finalAmount!,
+        });
+        setCouponInput("");
+        toast.success(`Coupon applied! You save ${formatCurrency(result.discountAmount!)}`);
+      } else {
+        setCouponError(result.error ?? "Invalid coupon");
+      }
+    } catch {
+      setCouponError("Could not validate coupon");
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError("");
+  };
+
   const formatCurrency = (amount: number) => {
     const curr = store?.currency || "USD";
     return new Intl.NumberFormat("en-US", { style: "currency", currency: curr }).format(amount);
@@ -172,6 +210,7 @@ export default function StorefrontPage() {
           customerPhone,
           customerNote,
           deliveryType,
+          couponCode: appliedCoupon?.code ?? null,
           items: cart.map(item => ({
             productId: item.product.id,
             productName: item.product.name,
@@ -187,6 +226,8 @@ export default function StorefrontPage() {
         whatsappUrl: result.whatsappUrl,
         storeName: store.name,
       });
+      setAppliedCoupon(null);
+      setCouponInput("");
     } catch (e: any) {
       const msg = e?.response?.data?.error ?? "Something went wrong. Please try again.";
       toast.error(msg);
@@ -349,10 +390,71 @@ export default function StorefrontPage() {
                         </div>
 
                         <div className="border-t pt-4 space-y-4">
-                          <div className="flex justify-between font-bold text-lg">
-                            <span>Total</span>
-                            <span>{formatCurrency(cartTotal)}</span>
-                          </div>
+                          {/* Coupon input */}
+                          {!appliedCoupon ? (
+                            <div className="space-y-1.5">
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="Coupon code"
+                                  value={couponInput}
+                                  onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                                  onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                                  className="font-mono tracking-widest h-9 text-sm"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0 gap-1.5"
+                                  onClick={handleApplyCoupon}
+                                  disabled={!couponInput.trim() || validateCoupon.isPending}
+                                >
+                                  <Tag className="w-3.5 h-3.5" />
+                                  {validateCoupon.isPending ? "…" : "Apply"}
+                                </Button>
+                              </div>
+                              {couponError && (
+                                <p className="text-xs text-destructive">{couponError}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm">
+                              <div className="flex items-center gap-2 text-green-700 font-medium">
+                                <Tag className="w-3.5 h-3.5" />
+                                <span className="font-mono tracking-widest">{appliedCoupon.code}</span>
+                                <span className="font-normal text-green-600">
+                                  {appliedCoupon.discountType === "percentage"
+                                    ? `(${appliedCoupon.discountValue}% off)`
+                                    : `(${formatCurrency(appliedCoupon.discountValue)} off)`}
+                                </span>
+                              </div>
+                              <button onClick={removeCoupon} className="text-green-500 hover:text-green-700 transition-colors">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Totals */}
+                          {appliedCoupon ? (
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between text-sm text-muted-foreground">
+                                <span>Subtotal</span>
+                                <span>{formatCurrency(cartTotal)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm text-green-600 font-medium">
+                                <span>Discount</span>
+                                <span>−{formatCurrency(appliedCoupon.discountAmount)}</span>
+                              </div>
+                              <div className="flex justify-between font-bold text-lg border-t pt-2">
+                                <span>Total</span>
+                                <span>{formatCurrency(appliedCoupon.finalAmount)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex justify-between font-bold text-lg">
+                              <span>Total</span>
+                              <span>{formatCurrency(cartTotal)}</span>
+                            </div>
+                          )}
 
                           <div className="space-y-3">
                             <Label>Delivery Method</Label>

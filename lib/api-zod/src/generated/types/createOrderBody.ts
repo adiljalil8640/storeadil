@@ -16,4 +16,5 @@ export interface CreateOrderBody {
   customerNote?: string | null;
   items: OrderItem[];
   deliveryType?: CreateOrderBodyDeliveryType;
+  couponCode?: string | null;
 }

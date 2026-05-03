@@ -9,6 +9,87 @@ export interface HealthStatus {
   status: string;
 }
 
+export type CouponType = (typeof CouponType)[keyof typeof CouponType];
+
+export const CouponType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface Coupon {
+  id: number;
+  storeId: number;
+  code: string;
+  type: CouponType;
+  value: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  usedCount: number;
+  expiresAt?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type CreateCouponBodyType =
+  (typeof CreateCouponBodyType)[keyof typeof CreateCouponBodyType];
+
+export const CreateCouponBodyType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface CreateCouponBody {
+  code: string;
+  type: CreateCouponBodyType;
+  value: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  expiresAt?: string | null;
+  isActive?: boolean;
+}
+
+export type UpdateCouponBodyType =
+  (typeof UpdateCouponBodyType)[keyof typeof UpdateCouponBodyType];
+
+export const UpdateCouponBodyType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface UpdateCouponBody {
+  code?: string;
+  type?: UpdateCouponBodyType;
+  value?: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  expiresAt?: string | null;
+  isActive?: boolean;
+}
+
+export interface ValidateCouponBody {
+  storeId: number;
+  code: string;
+  orderAmount: number;
+}
+
+export type ValidateCouponResponseDiscountType =
+  (typeof ValidateCouponResponseDiscountType)[keyof typeof ValidateCouponResponseDiscountType];
+
+export const ValidateCouponResponseDiscountType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface ValidateCouponResponse {
+  valid: boolean;
+  couponId?: number;
+  discountType?: ValidateCouponResponseDiscountType;
+  discountValue?: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  error?: string;
+}
+
 export interface WaitlistEntryWithProduct {
   id: number;
   productId: number;
@@ -302,6 +383,7 @@ export interface CreateOrderBody {
   customerNote?: string | null;
   items: OrderItem[];
   deliveryType?: CreateOrderBodyDeliveryType;
+  couponCode?: string | null;
 }
 
 export interface OrderWithWhatsApp {
