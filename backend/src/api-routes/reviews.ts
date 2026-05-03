@@ -4,15 +4,15 @@ import { storesTable, ordersTable, reviewsTable, productsTable } from "@workspac
 import { eq, and, desc } from "drizzle-orm";
 import { sendNewReviewNotification } from "../services/email";
 import { publicStoreLimiter, publicWriteLimiter } from "../middlewares/rateLimiter";
-import { requireAuth, getStoreId } from "../middlewares/auth";
+import { requireAuth, getStoreOrFail } from "../middlewares/auth";
 
 const router = Router();
 
 // GET /reviews — authenticated merchant, list all reviews for their store
 router.get("/reviews", requireAuth, async (req: any, res) => {
   try {
-    const storeId = await getStoreId(req.userId);
-    if (!storeId) return res.status(404).json({ error: "No store found" });
+    const storeId = await getStoreOrFail(req.userId, res);
+    if (storeId === null) return;
 
     const ratingFilter = req.query.rating ? parseInt(req.query.rating as string) : undefined;
     const conditions: any[] = [eq(reviewsTable.storeId, storeId)];
@@ -48,8 +48,8 @@ router.get("/reviews", requireAuth, async (req: any, res) => {
 // PATCH /reviews/:id/reply — authenticated merchant, add/update/remove their reply
 router.patch("/reviews/:id/reply", requireAuth, async (req: any, res) => {
   try {
-    const storeId = await getStoreId(req.userId);
-    if (!storeId) return res.status(404).json({ error: "No store found" });
+    const storeId = await getStoreOrFail(req.userId, res);
+    if (storeId === null) return;
 
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid review id" });

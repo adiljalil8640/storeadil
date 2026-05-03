@@ -26,3 +26,12 @@ export async function getStoreId(userId: string): Promise<number | null> {
     .where(eq(storesTable.userId, userId));
   return store?.id ?? null;
 }
+
+export async function getStoreOrFail(userId: string, res: Response): Promise<number | null> {
+  const storeId = await getStoreId(userId);
+  if (!storeId) {
+    res.status(404).json({ error: "No store found" });
+    return null;
+  }
+  return storeId;
+}
