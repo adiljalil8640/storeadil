@@ -375,4 +375,24 @@ router.patch("/stores/me/slug", requireAuth, async (req: any, res) => {
   }
 });
 
+// PATCH /stores/me/revenue-goal — set or clear the monthly revenue goal
+router.patch("/stores/me/revenue-goal", requireAuth, async (req: any, res) => {
+  const { goal } = req.body;
+  if (goal !== null && goal !== undefined && (typeof goal !== "number" || goal < 0)) {
+    return res.status(400).json({ error: "goal must be a non-negative number or null" });
+  }
+  try {
+    const [store] = await db
+      .update(storesTable)
+      .set({ monthlyRevenueGoal: goal == null ? null : String(goal), updatedAt: new Date() })
+      .where(eq(storesTable.userId, req.userId))
+      .returning();
+    if (!store) return res.status(404).json({ error: "No store found" });
+    return res.json(store);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

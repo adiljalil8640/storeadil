@@ -83,6 +83,7 @@ import type {
   UpdateMyStoreTempClosedBody,
   UpdateOrderStatusBody,
   UpdateProductBody,
+  UpdateRevenueGoalBody,
   UpdateStoreBody,
   UpdateStoreDomainBody,
   UpdateStoreSlugBody,
@@ -333,6 +334,92 @@ export const useUpdateMyStore = <
   TContext
 > => {
   return useMutation(getUpdateMyStoreMutationOptions(options));
+};
+
+/**
+ * @summary Set or clear the monthly revenue goal
+ */
+export const getUpdateRevenueGoalUrl = () => {
+  return `/api/stores/me/revenue-goal`;
+};
+
+export const updateRevenueGoal = async (
+  updateRevenueGoalBody: UpdateRevenueGoalBody,
+  options?: RequestInit,
+): Promise<Store> => {
+  return customFetch<Store>(getUpdateRevenueGoalUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateRevenueGoalBody),
+  });
+};
+
+export const getUpdateRevenueGoalMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRevenueGoal>>,
+    TError,
+    { data: BodyType<UpdateRevenueGoalBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateRevenueGoal>>,
+  TError,
+  { data: BodyType<UpdateRevenueGoalBody> },
+  TContext
+> => {
+  const mutationKey = ["updateRevenueGoal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateRevenueGoal>>,
+    { data: BodyType<UpdateRevenueGoalBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateRevenueGoal(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateRevenueGoalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateRevenueGoal>>
+>;
+export type UpdateRevenueGoalMutationBody = BodyType<UpdateRevenueGoalBody>;
+export type UpdateRevenueGoalMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set or clear the monthly revenue goal
+ */
+export const useUpdateRevenueGoal = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRevenueGoal>>,
+    TError,
+    { data: BodyType<UpdateRevenueGoalBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateRevenueGoal>>,
+  TError,
+  { data: BodyType<UpdateRevenueGoalBody> },
+  TContext
+> => {
+  return useMutation(getUpdateRevenueGoalMutationOptions(options));
 };
 
 /**

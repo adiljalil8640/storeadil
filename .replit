@@ -25,6 +25,10 @@ timeoutMs = 20000
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_Z29vZC13aGlwcGV0LTg0LmNsZXJrLmFjY291bnRzLmRldiQ"
 
 [[ports]]
+localPort = 3999
+externalPort = 3002
+
+[[ports]]
 localPort = 8080
 externalPort = 80
 

@@ -39,6 +39,8 @@ export interface Store {
   temporarilyClosed?: boolean;
   /** Optional message shown to customers when temporarily closed (e.g. "Back Monday at 9 AM"). */
   temporaryClosedMessage?: string | null;
+  /** Merchant-set monthly revenue target used for the dashboard goal tracker. */
+  monthlyRevenueGoal?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

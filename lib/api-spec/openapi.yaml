@@ -84,6 +84,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/Store"
 
+  /stores/me/revenue-goal:
+    patch:
+      operationId: updateRevenueGoal
+      tags: [stores]
+      summary: Set or clear the monthly revenue goal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                goal:
+                  type: number
+                  nullable: true
+              required: [goal]
+      responses:
+        "200":
+          description: Updated store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
   /stores/me/slug:
     patch:
       operationId: updateMyStoreSlug
@@ -1724,6 +1750,10 @@ components:
           type: string
           nullable: true
           description: Optional message shown to customers when temporarily closed (e.g. "Back Monday at 9 AM").
+        monthlyRevenueGoal:
+          type: number
+          nullable: true
+          description: Merchant-set monthly revenue target used for the dashboard goal tracker.
         createdAt:
           type: string
           format: date-time

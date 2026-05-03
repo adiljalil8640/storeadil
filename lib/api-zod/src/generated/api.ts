@@ -135,6 +135,12 @@ export const GetMyStoreResponse = zod.object({
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
     ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -285,6 +291,147 @@ export const UpdateMyStoreResponse = zod.object({
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
     ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
+    ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Set or clear the monthly revenue goal
+ */
+export const UpdateRevenueGoalBody = zod.object({
+  goal: zod.number().nullable(),
+});
+
+export const UpdateRevenueGoalResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  name: zod.string(),
+  slug: zod.string(),
+  description: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  currency: zod.string(),
+  logoUrl: zod.string().nullish(),
+  theme: zod.enum(["light", "dark", "minimal"]),
+  deliveryEnabled: zod.boolean(),
+  pickupEnabled: zod.boolean(),
+  shippingNote: zod.string().nullish(),
+  notificationEmail: zod.string().nullish(),
+  digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
+  category: zod.string().nullish(),
+  metaTitle: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG title shown to search engines and social platforms. Falls back to store name if not set.",
+    ),
+  metaDescription: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
+    ),
+  customDomain: zod
+    .string()
+    .nullish()
+    .describe("Custom domain pointing to this store (e.g. shop.mybrand.com)."),
+  storeHours: zod
+    .object({
+      monday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+      tuesday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+      wednesday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+      thursday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+      friday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+      saturday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+      sunday: zod.object({
+        enabled: zod.boolean(),
+        open: zod
+          .string()
+          .describe('Opening time in HH:mm (24-hour) format, e.g. \"09:00\"'),
+        close: zod
+          .string()
+          .describe('Closing time in HH:mm (24-hour) format, e.g. \"18:00\"'),
+      }),
+    })
+    .nullish()
+    .describe("Per-day opening hours. Null means hours are not configured."),
+  holidayClosures: zod
+    .array(zod.string())
+    .nullish()
+    .describe(
+      "List of YYYY-MM-DD dates on which the store is closed regardless of regular hours.",
+    ),
+  temporarilyClosed: zod
+    .boolean()
+    .optional()
+    .describe(
+      "When true the store is instantly closed regardless of hours or holiday settings.",
+    ),
+  temporaryClosedMessage: zod
+    .string()
+    .nullish()
+    .describe(
+      'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
+    ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -421,6 +568,12 @@ export const UpdateMyStoreSlugResponse = zod.object({
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
     ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -554,6 +707,12 @@ export const UpdateMyStoreTempClosedResponse = zod.object({
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
     ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -684,6 +843,12 @@ export const UpdateMyStoreHolidaysResponse = zod.object({
     .nullish()
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
+    ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
     ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -876,6 +1041,12 @@ export const UpdateMyStoreHoursResponse = zod.object({
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
     ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -1009,6 +1180,12 @@ export const UpdateMyStoreDomainResponse = zod.object({
     .nullish()
     .describe(
       'Optional message shown to customers when temporarily closed (e.g. \"Back Monday at 9 AM\").',
+    ),
+  monthlyRevenueGoal: zod
+    .number()
+    .nullish()
+    .describe(
+      "Merchant-set monthly revenue target used for the dashboard goal tracker.",
     ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),

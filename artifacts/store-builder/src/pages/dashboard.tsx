@@ -1,6 +1,8 @@
-import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts, useGetTopCustomers } from "@workspace/api-client-react";
+import { useState } from "react";
+import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts, useGetTopCustomers, useGetMyStore, useUpdateRevenueGoal, getGetMyStoreQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag, AlertTriangle, Users } from "lucide-react";
+import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag, AlertTriangle, Users, Target, Pencil, Check, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
@@ -15,6 +17,20 @@ export default function Dashboard() {
   const { data: coupons = [], isLoading: couponsLoading } = useListCoupons();
   const { data: allProducts = [], isLoading: stockLoading } = useListProducts();
   const { data: topCustomers = [], isLoading: customersLoading } = useGetTopCustomers({ limit: 8 });
+  const { data: store } = useGetMyStore();
+  const queryClient = useQueryClient();
+
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
+
+  const updateGoal = useUpdateRevenueGoal({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+        setEditingGoal(false);
+      },
+    },
+  });
 
   const DEFAULT_LOW_STOCK = 5;
   const outOfStock = allProducts.filter(
@@ -159,6 +175,113 @@ export default function Dashboard() {
             </Link>
           </motion.div>
         </div>
+
+        {/* Revenue Goal Tracker */}
+        {(() => {
+          const goal = store?.monthlyRevenueGoal != null ? Number(store.monthlyRevenueGoal) : null;
+          const earned = analytics?.revenueThisMonth ?? 0;
+          const pct = goal && goal > 0 ? Math.min((earned / goal) * 100, 100) : 0;
+          const now = new Date();
+          const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+          const daysLeft = daysInMonth - now.getDate();
+          const onTrack = goal && daysLeft > 0
+            ? (earned / (now.getDate() / daysInMonth)) >= goal * 0.9
+            : null;
+
+          const saveGoal = () => {
+            const val = parseFloat(goalInput.replace(/[^0-9.]/g, ""));
+            if (!isNaN(val) && val >= 0) updateGoal.mutate({ data: { goal: val } });
+          };
+
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-base">Monthly Revenue Goal</CardTitle>
+                  </div>
+                  {!editingGoal ? (
+                    <button
+                      onClick={() => { setGoalInput(goal != null ? String(goal) : ""); setEditingGoal(true); }}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      {goal == null ? "Set goal" : "Edit"}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        type="number"
+                        min={0}
+                        value={goalInput}
+                        onChange={(e) => setGoalInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveGoal(); if (e.key === "Escape") setEditingGoal(false); }}
+                        placeholder="e.g. 5000"
+                        className="w-28 text-xs border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button onClick={saveGoal} className="p-1 text-primary hover:text-primary/80" title="Save">
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setEditingGoal(false)} className="p-1 text-muted-foreground hover:text-foreground" title="Cancel">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {goal == null ? (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground">No goal set yet.</p>
+                      <button
+                        onClick={() => { setGoalInput(""); setEditingGoal(true); }}
+                        className="mt-2 text-xs text-primary hover:underline"
+                      >
+                        Set a monthly revenue goal →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Numbers row */}
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <span className="text-2xl font-bold">{formatCurrency(earned)}</span>
+                          <span className="text-sm text-muted-foreground ml-1">/ {formatCurrency(goal)}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xl font-semibold text-primary">{pct.toFixed(0)}%</span>
+                          <p className="text-xs text-muted-foreground">{daysLeft} day{daysLeft !== 1 ? "s" : ""} left</p>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="h-3 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${pct >= 100 ? "bg-primary" : pct >= 70 ? "bg-primary/80" : pct >= 40 ? "bg-amber-500" : "bg-rose-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+
+                      {/* Status line */}
+                      <p className="text-xs text-muted-foreground">
+                        {pct >= 100 ? (
+                          <span className="text-primary font-semibold">Goal reached! 🎉 You've hit your target for this month.</span>
+                        ) : onTrack === true ? (
+                          <span className="text-primary">On track — keep it up!</span>
+                        ) : onTrack === false ? (
+                          <span className="text-amber-600 dark:text-amber-400">Behind pace — {formatCurrency(goal - earned)} to go.</span>
+                        ) : (
+                          <span>{formatCurrency(goal - earned)} remaining this month.</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })()}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="col-span-4">

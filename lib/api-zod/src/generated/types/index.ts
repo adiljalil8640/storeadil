@@ -93,6 +93,7 @@ export * from "./updateMyStoreTempClosedBody";
 export * from "./updateOrderStatusBody";
 export * from "./updateOrderStatusBodyStatus";
 export * from "./updateProductBody";
+export * from "./updateRevenueGoalBody";
 export * from "./updateStoreBody";
 export * from "./updateStoreBodyDigestFrequency";
 export * from "./updateStoreBodyTheme";

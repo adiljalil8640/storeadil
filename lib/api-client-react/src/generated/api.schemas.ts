@@ -260,6 +260,8 @@ export interface Store {
   temporarilyClosed?: boolean;
   /** Optional message shown to customers when temporarily closed (e.g. "Back Monday at 9 AM"). */
   temporaryClosedMessage?: string | null;
+  /** Merchant-set monthly revenue target used for the dashboard goal tracker. */
+  monthlyRevenueGoal?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -742,6 +744,10 @@ export interface ShareMessage {
   /** URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo. */
   ogUrl: string;
 }
+
+export type UpdateRevenueGoalBody = {
+  goal: number | null;
+};
 
 export type UpdateMyStoreTempClosedBody = {
   closed: boolean;
