@@ -32,6 +32,7 @@ export const GetMyStoreResponse = zod.object({
   shippingNote: zod.string().nullish(),
   notificationEmail: zod.string().nullish(),
   digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
+  category: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -51,6 +52,7 @@ export const UpdateMyStoreBody = zod.object({
   shippingNote: zod.string().nullish(),
   notificationEmail: zod.string().nullish(),
   digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
+  category: zod.string().nullish(),
 });
 
 export const UpdateMyStoreResponse = zod.object({
@@ -68,6 +70,7 @@ export const UpdateMyStoreResponse = zod.object({
   shippingNote: zod.string().nullish(),
   notificationEmail: zod.string().nullish(),
   digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
+  category: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -104,6 +107,7 @@ export const BrowseStoresQueryParams = zod.object({
     .string()
     .optional()
     .describe("Optional search query (name, slug, description)"),
+  category: zod.coerce.string().optional().describe("Filter by store category"),
   page: zod.coerce
     .number()
     .default(browseStoresQueryPageDefault)
@@ -118,6 +122,7 @@ export const BrowseStoresResponse = zod.object({
       slug: zod.string(),
       description: zod.string().nullish(),
       logoUrl: zod.string().nullish(),
+      category: zod.string().nullish(),
       orderCount: zod.number(),
     }),
   ),
@@ -135,6 +140,7 @@ export const GetTopStoresResponseItem = zod.object({
   slug: zod.string(),
   description: zod.string().nullish(),
   logoUrl: zod.string().nullish(),
+  category: zod.string().nullish(),
   orderCount: zod.number(),
 });
 export const GetTopStoresResponse = zod.array(GetTopStoresResponseItem);

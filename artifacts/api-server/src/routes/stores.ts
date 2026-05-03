@@ -73,19 +73,27 @@ router.post("/stores", requireAuth, async (req: any, res) => {
 router.get("/stores/browse", async (req: any, res) => {
   try {
     const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    const cat = typeof req.query.category === "string" ? req.query.category.trim() : "";
     const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
     const limit = 12;
     const offset = (page - 1) * limit;
 
-    const { ilike, or, count } = await import("drizzle-orm");
+    const { ilike, or, count, and } = await import("drizzle-orm");
 
-    const whereClause = q
-      ? or(
+    const conditions = [];
+    if (q) {
+      conditions.push(
+        or(
           ilike(storesTable.name, `%${q}%`),
           ilike(storesTable.description, `%${q}%`),
           ilike(storesTable.slug, `%${q}%`)
-        )
-      : undefined;
+        )!
+      );
+    }
+    if (cat) {
+      conditions.push(eq(storesTable.category, cat));
+    }
+    const whereClause = conditions.length ? and(...conditions) : undefined;
 
     const [totalRow] = await db
       .select({ total: count() })
@@ -99,6 +107,7 @@ router.get("/stores/browse", async (req: any, res) => {
         slug: storesTable.slug,
         description: storesTable.description,
         logoUrl: storesTable.logoUrl,
+        category: storesTable.category,
         orderCount: sql<number>`cast(count(${ordersTable.id}) as int)`,
       })
       .from(storesTable)
@@ -131,6 +140,7 @@ router.get("/stores/top", async (req: any, res) => {
         slug: storesTable.slug,
         description: storesTable.description,
         logoUrl: storesTable.logoUrl,
+        category: storesTable.category,
         orderCount: sql<number>`cast(count(${ordersTable.id}) as int)`,
       })
       .from(storesTable)

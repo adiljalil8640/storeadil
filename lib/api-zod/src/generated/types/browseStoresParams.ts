@@ -12,6 +12,10 @@ export type BrowseStoresParams = {
    */
   q?: string;
   /**
+   * Filter by store category
+   */
+  category?: string;
+  /**
    * Page number (1-indexed)
    */
   page?: number;

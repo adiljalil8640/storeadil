@@ -182,6 +182,7 @@ export interface Store {
   shippingNote?: string | null;
   notificationEmail?: string | null;
   digestFrequency?: StoreDigestFrequency;
+  category?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -227,6 +228,7 @@ export interface TopStore {
   slug: string;
   description?: string | null;
   logoUrl?: string | null;
+  category?: string | null;
   orderCount: number;
 }
 
@@ -289,6 +291,7 @@ export interface UpdateStoreBody {
   shippingNote?: string | null;
   notificationEmail?: string | null;
   digestFrequency?: UpdateStoreBodyDigestFrequency;
+  category?: string | null;
 }
 
 export interface CreateProductBody {
@@ -586,6 +589,10 @@ export type BrowseStoresParams = {
    * Optional search query (name, slug, description)
    */
   q?: string;
+  /**
+   * Filter by store category
+   */
+  category?: string;
   /**
    * Page number (1-indexed)
    */

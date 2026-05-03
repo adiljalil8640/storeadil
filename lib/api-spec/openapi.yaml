@@ -117,6 +117,11 @@ paths:
             type: string
           description: Optional search query (name, slug, description)
         - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by store category
+        - in: query
           name: page
           schema:
             type: integer
@@ -1272,6 +1277,9 @@ components:
           type: string
           enum: [none, daily, weekly]
           nullable: true
+        category:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1363,6 +1371,9 @@ components:
         logoUrl:
           type: string
           nullable: true
+        category:
+          type: string
+          nullable: true
         orderCount:
           type: integer
       required: [id, name, slug, orderCount]
@@ -1430,6 +1441,9 @@ components:
         digestFrequency:
           type: string
           enum: [none, daily, weekly]
+          nullable: true
+        category:
+          type: string
           nullable: true
 
     Product:

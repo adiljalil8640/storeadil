@@ -12,5 +12,6 @@ export interface TopStore {
   slug: string;
   description?: string | null;
   logoUrl?: string | null;
+  category?: string | null;
   orderCount: number;
 }

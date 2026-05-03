@@ -20,4 +20,5 @@ export interface UpdateStoreBody {
   shippingNote?: string | null;
   notificationEmail?: string | null;
   digestFrequency?: UpdateStoreBodyDigestFrequency;
+  category?: string | null;
 }

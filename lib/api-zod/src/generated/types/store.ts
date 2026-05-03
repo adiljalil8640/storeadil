@@ -23,6 +23,7 @@ export interface Store {
   shippingNote?: string | null;
   notificationEmail?: string | null;
   digestFrequency?: StoreDigestFrequency;
+  category?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
