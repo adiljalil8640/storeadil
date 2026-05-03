@@ -7,7 +7,7 @@ import * as z from "zod";
 import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -356,10 +356,34 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [lowStockDismissed, setLowStockDismissed] = useState(false);
+  const [stockFilter, setStockFilter] = useState<"all" | "healthy" | "low" | "out" | "unlimited">("all");
 
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useListProducts({ search: searchTerm || undefined });
+  const { data: allProductsForHealth = [] } = useListProducts();
+
+  const lowStockThresholdFor = (p: { lowStockThreshold?: number | null }) =>
+    p.lowStockThreshold != null ? p.lowStockThreshold : 10;
+
+  const healthCounts = {
+    healthy:   allProductsForHealth.filter(p => p.isActive && p.stock != null && p.stock > lowStockThresholdFor(p)).length,
+    low:       allProductsForHealth.filter(p => p.isActive && p.stock != null && p.stock > 0 && p.stock <= lowStockThresholdFor(p)).length,
+    out:       allProductsForHealth.filter(p => p.isActive && p.stock != null && p.stock === 0).length,
+    unlimited: allProductsForHealth.filter(p => p.isActive && p.stock == null).length,
+    inactive:  allProductsForHealth.filter(p => !p.isActive).length,
+  };
+
+  const displayedProducts = stockFilter === "all"
+    ? (products ?? [])
+    : (products ?? []).filter(p => {
+        const t = lowStockThresholdFor(p);
+        if (stockFilter === "healthy")   return p.isActive && p.stock != null && p.stock > t;
+        if (stockFilter === "low")       return p.isActive && p.stock != null && p.stock > 0 && p.stock <= t;
+        if (stockFilter === "out")       return p.isActive && p.stock != null && p.stock === 0;
+        if (stockFilter === "unlimited") return p.isActive && p.stock == null;
+        return true;
+      });
 
   const lowStockProducts = (products ?? []).filter((p) => {
     if (p.stock === null || p.stock === undefined) return false;
@@ -599,6 +623,105 @@ export default function ProductsPage() {
           }}
         />
 
+        {/* Stock Health Overview */}
+        {allProductsForHealth.length > 0 && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <PackageOpen className="h-4 w-4 text-primary" />
+                Inventory Health
+              </CardTitle>
+              {stockFilter !== "all" && (
+                <button
+                  onClick={() => setStockFilter("all")}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
+                  <X className="h-3 w-3" /> Clear filter
+                </button>
+              )}
+            </CardHeader>
+            <CardContent className="pb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {([
+                  {
+                    key: "healthy" as const,
+                    label: "Healthy",
+                    count: healthCounts.healthy,
+                    icon: CheckCircle,
+                    colorText: "text-emerald-700 dark:text-emerald-400",
+                    colorBg: "bg-emerald-50 dark:bg-emerald-950/40",
+                    colorBorder: "border-emerald-200 dark:border-emerald-800",
+                    dot: "bg-emerald-500",
+                    activeBorder: "ring-2 ring-emerald-500",
+                  },
+                  {
+                    key: "low" as const,
+                    label: "Low Stock",
+                    count: healthCounts.low,
+                    icon: TriangleAlert,
+                    colorText: "text-amber-700 dark:text-amber-400",
+                    colorBg: "bg-amber-50 dark:bg-amber-950/40",
+                    colorBorder: "border-amber-200 dark:border-amber-800",
+                    dot: "bg-amber-500",
+                    activeBorder: "ring-2 ring-amber-500",
+                  },
+                  {
+                    key: "out" as const,
+                    label: "Out of Stock",
+                    count: healthCounts.out,
+                    icon: AlertCircle,
+                    colorText: "text-rose-700 dark:text-rose-400",
+                    colorBg: "bg-rose-50 dark:bg-rose-950/40",
+                    colorBorder: "border-rose-200 dark:border-rose-800",
+                    dot: "bg-rose-500",
+                    activeBorder: "ring-2 ring-rose-500",
+                  },
+                  {
+                    key: "unlimited" as const,
+                    label: "No tracking",
+                    count: healthCounts.unlimited,
+                    icon: PackageOpen,
+                    colorText: "text-muted-foreground",
+                    colorBg: "bg-muted/50",
+                    colorBorder: "border-border",
+                    dot: "bg-muted-foreground",
+                    activeBorder: "ring-2 ring-primary",
+                  },
+                ] as const).map((seg) => {
+                  const Icon = seg.icon;
+                  const isActive = stockFilter === seg.key;
+                  return (
+                    <button
+                      key={seg.key}
+                      onClick={() => setStockFilter(isActive ? "all" : seg.key)}
+                      className={[
+                        "rounded-xl border p-3 text-left transition-all duration-150 hover:shadow-sm focus:outline-none",
+                        seg.colorBg,
+                        seg.colorBorder,
+                        isActive ? seg.activeBorder : "",
+                        seg.count === 0 ? "opacity-50 cursor-default" : "cursor-pointer",
+                      ].join(" ")}
+                      disabled={seg.count === 0}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Icon className={`h-4 w-4 ${seg.colorText}`} />
+                        {isActive && <span className="text-[10px] font-medium text-primary">Filtered</span>}
+                      </div>
+                      <div className={`text-2xl font-bold ${seg.colorText}`}>{seg.count}</div>
+                      <div className={`text-xs mt-0.5 ${seg.colorText} opacity-80`}>{seg.label}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {healthCounts.inactive > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-3">
+                  + {healthCounts.inactive} inactive product{healthCounts.inactive !== 1 ? "s" : ""} not shown above.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex items-center relative max-w-md">
           <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />
           <Input
@@ -677,16 +800,24 @@ export default function ProductsPage() {
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading products...</div>
-        ) : products?.length === 0 ? (
+        ) : displayedProducts.length === 0 ? (
           <div className="text-center py-20 border border-dashed rounded-xl bg-card">
             <PackageOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-1">No products found</h3>
-            <p className="text-muted-foreground mb-4">You haven't added any products yet, or none match your search.</p>
-            <Button onClick={() => setIsAddOpen(true)}>Add your first product</Button>
+            <h3 className="text-lg font-medium mb-1">
+              {stockFilter !== "all" ? "No products match this filter" : "No products found"}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {stockFilter !== "all"
+                ? "Try clearing the stock filter or adjusting your search."
+                : "You haven't added any products yet, or none match your search."}
+            </p>
+            {stockFilter !== "all"
+              ? <Button variant="outline" onClick={() => setStockFilter("all")}>Clear filter</Button>
+              : <Button onClick={() => setIsAddOpen(true)}>Add your first product</Button>}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products?.map((product) => (
+            {displayedProducts.map((product) => (
               <motion.div key={product.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <Card className="overflow-hidden group hover:shadow-md transition-shadow">
                   <div className="aspect-square bg-muted relative border-b overflow-hidden flex items-center justify-center">
