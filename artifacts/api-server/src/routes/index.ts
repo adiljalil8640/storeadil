@@ -13,6 +13,7 @@ import waitlistRouter from "./waitlist";
 import couponsRouter from "./coupons";
 import reviewsRouter from "./reviews";
 import ogRouter from "./og";
+import whatsappRouter from "./whatsapp";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(billingRouter);
 router.use(referralRouter);
 router.use(adminRouter);
 router.use(growthRouter);
+router.use(whatsappRouter);
 
 export default router;

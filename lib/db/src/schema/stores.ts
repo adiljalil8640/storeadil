@@ -26,6 +26,13 @@ export const storesTable = pgTable("stores", {
   temporarilyClosed: boolean("temporarily_closed").default(false),
   temporaryClosedMessage: text("temporarily_closed_message"),
   monthlyRevenueGoal: numeric("monthly_revenue_goal"),
+  // WhatsApp Auto-Reply
+  waMode: text("wa_mode").default("none"),           // none | business-api | web-js
+  waBizPhoneId: text("wa_biz_phone_id"),             // Meta phone number ID
+  waBizAccessToken: text("wa_biz_access_token"),     // Meta permanent access token
+  waBizVerifyToken: text("wa_biz_verify_token"),     // Webhook verify token (user sets)
+  waAutoReply: boolean("wa_auto_reply").default(false),
+  waReplyPrompt: text("wa_reply_prompt"),            // Custom system prompt for AI replies
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

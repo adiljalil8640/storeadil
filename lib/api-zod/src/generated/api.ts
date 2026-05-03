@@ -2569,6 +2569,78 @@ export const GetShareMessageResponse = zod.object({
 });
 
 /**
+ * @summary Meta webhook verification challenge (public)
+ */
+export const VerifyWhatsappWebhookQueryParams = zod.object({
+  "hub.mode": zod.coerce.string().optional(),
+  "hub.verify_token": zod.coerce.string().optional(),
+  "hub.challenge": zod.coerce.string().optional(),
+});
+
+/**
+ * @summary Incoming message from Meta (public)
+ */
+export const ReceiveWhatsappWebhookBody = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+/**
+ * @summary Get store WhatsApp auto-reply config
+ */
+export const GetWhatsappConfigResponse = zod.object({
+  waMode: zod.enum(["none", "business-api", "web-js"]),
+  waBizPhoneId: zod.string().optional(),
+  waBizAccessToken: zod.string().optional(),
+  waBizVerifyToken: zod.string().optional(),
+  waAutoReply: zod.boolean(),
+  waReplyPrompt: zod.string().optional(),
+});
+
+/**
+ * @summary Save WhatsApp auto-reply config
+ */
+export const UpdateWhatsappConfigBody = zod.object({
+  waMode: zod.enum(["none", "business-api", "web-js"]).optional(),
+  waBizPhoneId: zod.string().optional(),
+  waBizAccessToken: zod.string().optional(),
+  waBizVerifyToken: zod.string().optional(),
+  waAutoReply: zod.boolean().optional(),
+  waReplyPrompt: zod.string().optional(),
+});
+
+export const UpdateWhatsappConfigResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Poll web-js session status and QR code
+ */
+export const GetWhatsappStatusResponse = zod.object({
+  mode: zod.string(),
+  status: zod.enum(["disconnected", "connecting", "qr_pending", "connected"]),
+  qrCode: zod.string().nullish(),
+  phone: zod.string().nullish(),
+});
+
+/**
+ * @summary Initiate WhatsApp Web (web-js) session
+ */
+export const ConnectWhatsappResponse = zod.object({
+  mode: zod.string(),
+  status: zod.enum(["disconnected", "connecting", "qr_pending", "connected"]),
+  qrCode: zod.string().nullish(),
+  phone: zod.string().nullish(),
+});
+
+/**
+ * @summary Disconnect WhatsApp Web (web-js) session
+ */
+export const DisconnectWhatsappResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary List all reviews for the authenticated merchant's store
  */
 export const listMerchantReviewsQueryRatingMax = 5;

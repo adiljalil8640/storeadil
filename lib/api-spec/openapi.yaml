@@ -1553,6 +1553,120 @@ paths:
                 type: string
                 format: binary
 
+  /whatsapp/webhook:
+    get:
+      operationId: verifyWhatsappWebhook
+      tags: [whatsapp]
+      summary: Meta webhook verification challenge (public)
+      parameters:
+        - in: query
+          name: hub.mode
+          schema: { type: string }
+        - in: query
+          name: hub.verify_token
+          schema: { type: string }
+        - in: query
+          name: hub.challenge
+          schema: { type: string }
+      responses:
+        "200":
+          description: Challenge string
+
+    post:
+      operationId: receiveWhatsappWebhook
+      tags: [whatsapp]
+      summary: Incoming message from Meta (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: EVENT_RECEIVED
+
+  /stores/me/whatsapp-config:
+    get:
+      operationId: getWhatsappConfig
+      tags: [whatsapp]
+      summary: Get store WhatsApp auto-reply config
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: WhatsApp config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappConfig"
+
+    put:
+      operationId: updateWhatsappConfig
+      tags: [whatsapp]
+      summary: Save WhatsApp auto-reply config
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappConfigBody"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /stores/me/whatsapp-status:
+    get:
+      operationId: getWhatsappStatus
+      tags: [whatsapp]
+      summary: Poll web-js session status and QR code
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappStatus"
+
+  /stores/me/whatsapp-connect:
+    post:
+      operationId: connectWhatsapp
+      tags: [whatsapp]
+      summary: Initiate WhatsApp Web (web-js) session
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Connection initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappStatus"
+
+  /stores/me/whatsapp-disconnect:
+    post:
+      operationId: disconnectWhatsapp
+      tags: [whatsapp]
+      summary: Disconnect WhatsApp Web (web-js) session
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /reviews:
     get:
       operationId: listMerchantReviews
@@ -3215,3 +3329,54 @@ components:
           type: string
           description: URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo.
       required: [message, whatsappUrl, storeUrl, ogUrl]
+
+    WhatsappConfig:
+      type: object
+      properties:
+        waMode:
+          type: string
+          enum: [none, business-api, web-js]
+        waBizPhoneId:
+          type: string
+        waBizAccessToken:
+          type: string
+        waBizVerifyToken:
+          type: string
+        waAutoReply:
+          type: boolean
+        waReplyPrompt:
+          type: string
+      required: [waMode, waAutoReply]
+
+    WhatsappConfigBody:
+      type: object
+      properties:
+        waMode:
+          type: string
+          enum: [none, business-api, web-js]
+        waBizPhoneId:
+          type: string
+        waBizAccessToken:
+          type: string
+        waBizVerifyToken:
+          type: string
+        waAutoReply:
+          type: boolean
+        waReplyPrompt:
+          type: string
+
+    WhatsappStatus:
+      type: object
+      properties:
+        mode:
+          type: string
+        status:
+          type: string
+          enum: [disconnected, connecting, qr_pending, connected]
+        qrCode:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+      required: [mode, status]

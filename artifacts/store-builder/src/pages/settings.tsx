@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useGetMyStore, useUpdateMyStore, getGetMyStoreQueryKey, useGetShareMessage, useGetQrCode, useGetMyStoreDigestPreview } from "@workspace/api-client-react";
+import { useGetMyStore, useUpdateMyStore, getGetMyStoreQueryKey, useGetShareMessage, useGetQrCode, useGetMyStoreDigestPreview, useGetWhatsappConfig, useUpdateWhatsappConfig, useGetWhatsappStatus, useConnectWhatsapp, useDisconnectWhatsapp } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle, Eye, TrendingUp, ShoppingCart, Package } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle, Eye, EyeOff, TrendingUp, ShoppingCart, Package, Bot, Zap, WifiOff, ScanLine } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
@@ -288,6 +288,54 @@ export default function SettingsPage() {
       setDomainStatus(await r.json());
     } catch { toast.error("DNS check failed"); }
     finally { setDomainChecking(false); }
+  };
+
+  // --- WhatsApp Auto-Reply ---
+  const [waMode, setWaMode] = useState<"none" | "business-api" | "web-js">("none");
+  const [waBizPhoneId, setWaBizPhoneId] = useState("");
+  const [waBizAccessToken, setWaBizAccessToken] = useState("");
+  const [waBizVerifyToken, setWaBizVerifyToken] = useState("");
+  const [waAutoReply, setWaAutoReply] = useState(false);
+  const [waReplyPrompt, setWaReplyPrompt] = useState("");
+  const [waTokenVisible, setWaTokenVisible] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+
+  const { data: waConfig } = useGetWhatsappConfig({ query: { enabled: !!store } });
+
+  const { data: waStatus } = useGetWhatsappStatus({
+    query: {
+      enabled: waMode === "web-js",
+      refetchInterval: waMode === "web-js" ? 3000 : false,
+    },
+  });
+
+  const connectWhatsapp = useConnectWhatsapp();
+  const disconnectWhatsapp = useDisconnectWhatsapp();
+  const updateWaConfig = useUpdateWhatsappConfig();
+
+  useEffect(() => {
+    if (waConfig) {
+      setWaMode((waConfig.waMode as "none" | "business-api" | "web-js") ?? "none");
+      setWaBizPhoneId(waConfig.waBizPhoneId ?? "");
+      setWaBizAccessToken(waConfig.waBizAccessToken ?? "");
+      setWaBizVerifyToken(waConfig.waBizVerifyToken ?? "");
+      setWaAutoReply(waConfig.waAutoReply ?? false);
+      setWaReplyPrompt(waConfig.waReplyPrompt ?? "");
+    }
+  }, [waConfig]);
+
+  const handleWaSave = async () => {
+    setWaSaving(true);
+    try {
+      await updateWaConfig.mutateAsync({
+        data: { waMode, waBizPhoneId, waBizAccessToken, waBizVerifyToken, waAutoReply, waReplyPrompt },
+      });
+      toast.success("WhatsApp settings saved");
+    } catch {
+      toast.error("Failed to save WhatsApp settings");
+    } finally {
+      setWaSaving(false);
+    }
   };
 
   // --- Store Badges ---
@@ -2292,6 +2340,305 @@ export default function SettingsPage() {
             </div>
           </form>
         </Form>
+
+        {/* ── WhatsApp Auto-Reply ───────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-[#25D366]" />
+                  WhatsApp Auto-Reply
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 uppercase tracking-wide">Beta</span>
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  AI-powered replies to incoming customer WhatsApp messages. Choose the integration mode that suits your business.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+
+            {/* Mode selector */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Integration Mode</p>
+              <div className="grid grid-cols-3 gap-3">
+                {(
+                  [
+                    { value: "none", label: "Disabled", Icon: XCircle, desc: "No auto-reply" },
+                    { value: "business-api", label: "Business API", Icon: Zap, desc: "Official Meta API" },
+                    { value: "web-js", label: "WhatsApp Web", Icon: Smartphone, desc: "Scan QR to link" },
+                  ] as const
+                ).map(({ value, label, Icon, desc }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setWaMode(value)}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-4 text-center transition-all cursor-pointer ${waMode === value ? "border-[#25D366] bg-[#25D366]/5" : "border-muted hover:border-[#25D366]/40"}`}
+                  >
+                    <Icon className={`w-5 h-5 ${waMode === value ? "text-[#25D366]" : "text-muted-foreground"}`} />
+                    <p className={`text-sm font-semibold ${waMode === value ? "text-[#25D366]" : "text-foreground"}`}>{label}</p>
+                    <p className="text-[11px] text-muted-foreground">{desc}</p>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                <strong>Business API</strong> is the official Meta integration — ideal for high volume and verified businesses.{" "}
+                <strong>WhatsApp Web</strong> links your existing personal/business number via QR scan — no Meta approval needed.
+              </p>
+            </div>
+
+            {/* Business API config */}
+            {waMode === "business-api" && (
+              <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Zap className="w-4 h-4 text-[#25D366]" />
+                  Meta WhatsApp Business API
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Phone Number ID</label>
+                    <Input
+                      value={waBizPhoneId}
+                      onChange={e => setWaBizPhoneId(e.target.value)}
+                      placeholder="1234567890123456"
+                    />
+                    <p className="text-xs text-muted-foreground">Found in Meta for Developers → Your App → WhatsApp → API Setup</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Permanent Access Token</label>
+                    <div className="relative">
+                      <Input
+                        type={waTokenVisible ? "text" : "password"}
+                        value={waBizAccessToken}
+                        onChange={e => setWaBizAccessToken(e.target.value)}
+                        placeholder="EAAxxxxx..."
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setWaTokenVisible(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {waTokenVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Use a System User token for long-lived access — not a temporary token</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Webhook Verify Token</label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={waBizVerifyToken}
+                        onChange={e => setWaBizVerifyToken(e.target.value)}
+                        placeholder="my-secret-token-123"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => setWaBizVerifyToken(`zapp-${Math.random().toString(36).slice(2, 10)}`)}
+                      >
+                        Generate
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">A secret string you choose — paste this exact value in Meta's webhook config</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1 border-t">
+                  <p className="text-xs font-medium text-foreground">Your Webhook URL (paste into Meta)</p>
+                  <div className="flex gap-2 items-center">
+                    <code className="flex-1 text-xs bg-background border rounded-lg px-3 py-2 overflow-x-auto text-muted-foreground select-all">
+                      {window.location.origin}{basePath}/api/whatsapp/webhook
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 gap-1.5"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}${basePath}/api/whatsapp/webhook`);
+                        toast.success("Webhook URL copied!");
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Copy
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs space-y-1 text-blue-800">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" /> Setup Steps
+                  </p>
+                  <ol className="space-y-0.5 ml-4 list-decimal">
+                    <li>Go to <strong>Meta for Developers → Your App → WhatsApp → Configuration</strong></li>
+                    <li>Paste the Webhook URL above and enter your Verify Token</li>
+                    <li>Subscribe to the <strong>messages</strong> webhook field</li>
+                    <li>Fill in Phone Number ID and Access Token above, then save</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
+            {/* WhatsApp Web (web-js) config */}
+            {waMode === "web-js" && (
+              <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Smartphone className="w-4 h-4 text-[#25D366]" />
+                  WhatsApp Web (Unofficial)
+                </div>
+
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 flex gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Unofficial Integration — Use at Your Own Risk</p>
+                    <p className="mt-0.5">This links your regular WhatsApp account (no Meta approval needed). It may violate WhatsApp's Terms of Service and could result in account restrictions. Best for testing or markets where the Business API isn't available.</p>
+                  </div>
+                </div>
+
+                {/* Connection status row */}
+                <div className="flex items-center justify-between rounded-lg border bg-background px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      waStatus?.status === "connected"
+                        ? "bg-[#25D366] shadow-[0_0_6px_#25D366]"
+                        : waStatus?.status === "qr_pending" || waStatus?.status === "connecting"
+                        ? "bg-amber-400 animate-pulse"
+                        : "bg-muted-foreground/30"
+                    }`} />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {waStatus?.status === "connected"
+                          ? "Connected"
+                          : waStatus?.status === "qr_pending"
+                          ? "Waiting for QR scan…"
+                          : waStatus?.status === "connecting"
+                          ? "Connecting…"
+                          : "Disconnected"}
+                      </p>
+                      {waStatus?.status === "connected" && waStatus.phone && (
+                        <p className="text-xs text-muted-foreground">+{waStatus.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {waStatus?.status !== "connected" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                        disabled={connectWhatsapp.isPending}
+                        onClick={() =>
+                          connectWhatsapp.mutate(
+                            {},
+                            { onError: () => toast.error("Failed to start connection — save settings first") }
+                          )
+                        }
+                      >
+                        <ScanLine className="w-4 h-4" />
+                        {waStatus?.status === "connecting" || waStatus?.status === "qr_pending"
+                          ? "Reconnect"
+                          : "Connect & Show QR"}
+                      </Button>
+                    )}
+                    {waStatus?.status === "connected" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="gap-1.5"
+                        disabled={disconnectWhatsapp.isPending}
+                        onClick={() =>
+                          disconnectWhatsapp.mutate(
+                            {},
+                            { onSuccess: () => toast.success("WhatsApp disconnected") }
+                          )
+                        }
+                      >
+                        <WifiOff className="w-4 h-4" /> Disconnect
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* QR code display */}
+                {waStatus?.qrCode && waStatus.status === "qr_pending" && (
+                  <div className="flex flex-col items-center gap-3 py-2">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Open WhatsApp on your phone → <strong>Linked Devices</strong> → <strong>Link a Device</strong> → scan this code
+                    </p>
+                    <div className="rounded-2xl border-2 border-[#25D366]/40 p-3 bg-white shadow-sm">
+                      <img src={waStatus.qrCode} alt="WhatsApp QR Code" className="w-56 h-56 object-contain" />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground animate-pulse">Refreshing automatically every 3 seconds…</p>
+                  </div>
+                )}
+
+                {waStatus?.status === "connected" && (
+                  <div className="rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-3 flex items-center gap-3 text-sm text-[#128C7E]">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <p>WhatsApp Web is active. Incoming messages will be replied to automatically when auto-reply is enabled below.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* AI Reply settings — visible when any mode is active */}
+            {waMode !== "none" && (
+              <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Bot className="w-4 h-4 text-[#25D366]" />
+                  AI Reply Settings
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Enable Auto-Reply</p>
+                    <p className="text-xs text-muted-foreground">AI will respond to incoming customer messages automatically</p>
+                  </div>
+                  <Switch checked={waAutoReply} onCheckedChange={setWaAutoReply} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    Custom AI Prompt <span className="text-muted-foreground font-normal">(optional)</span>
+                  </label>
+                  <Textarea
+                    value={waReplyPrompt}
+                    onChange={e => setWaReplyPrompt(e.target.value)}
+                    rows={3}
+                    placeholder={`You are a friendly sales assistant for ${store?.name || "our store"}. Reply warmly and concisely. Help customers find products and place orders via WhatsApp.`}
+                    className="text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to use the default prompt. Your full product catalog is always included automatically — no need to list products here.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-muted border px-4 py-3 text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" /> How replies are generated
+                  </p>
+                  <p>Each incoming message is answered by the AI provider set in the Admin panel (defaults to the built-in AI). The AI sees your store name, currency, and live product list.</p>
+                  <p>Human-like delay of 1.5 – 4 seconds is added before each reply to feel natural.</p>
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              onClick={handleWaSave}
+              disabled={waSaving}
+              className="gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white"
+            >
+              <Save className="w-4 h-4" />
+              {waSaving ? "Saving…" : "Save WhatsApp Settings"}
+            </Button>
+
+          </CardContent>
+        </Card>
       </div>
 
       {/* Digest Preview Dialog */}

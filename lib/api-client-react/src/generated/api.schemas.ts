@@ -923,6 +923,59 @@ export interface ShareMessage {
   ogUrl: string;
 }
 
+export type WhatsappConfigWaMode =
+  (typeof WhatsappConfigWaMode)[keyof typeof WhatsappConfigWaMode];
+
+export const WhatsappConfigWaMode = {
+  none: "none",
+  "business-api": "business-api",
+  "web-js": "web-js",
+} as const;
+
+export interface WhatsappConfig {
+  waMode: WhatsappConfigWaMode;
+  waBizPhoneId?: string;
+  waBizAccessToken?: string;
+  waBizVerifyToken?: string;
+  waAutoReply: boolean;
+  waReplyPrompt?: string;
+}
+
+export type WhatsappConfigBodyWaMode =
+  (typeof WhatsappConfigBodyWaMode)[keyof typeof WhatsappConfigBodyWaMode];
+
+export const WhatsappConfigBodyWaMode = {
+  none: "none",
+  "business-api": "business-api",
+  "web-js": "web-js",
+} as const;
+
+export interface WhatsappConfigBody {
+  waMode?: WhatsappConfigBodyWaMode;
+  waBizPhoneId?: string;
+  waBizAccessToken?: string;
+  waBizVerifyToken?: string;
+  waAutoReply?: boolean;
+  waReplyPrompt?: string;
+}
+
+export type WhatsappStatusStatus =
+  (typeof WhatsappStatusStatus)[keyof typeof WhatsappStatusStatus];
+
+export const WhatsappStatusStatus = {
+  disconnected: "disconnected",
+  connecting: "connecting",
+  qr_pending: "qr_pending",
+  connected: "connected",
+} as const;
+
+export interface WhatsappStatus {
+  mode: string;
+  status: WhatsappStatusStatus;
+  qrCode?: string | null;
+  phone?: string | null;
+}
+
 export type UpdateRevenueGoalBody = {
   goal: number | null;
 };
@@ -1021,6 +1074,14 @@ export type GetAdminUsersParams = {
   limit?: number;
   offset?: number;
 };
+
+export type VerifyWhatsappWebhookParams = {
+  "hub.mode"?: string;
+  "hub.verify_token"?: string;
+  "hub.challenge"?: string;
+};
+
+export type ReceiveWhatsappWebhookBody = { [key: string]: unknown };
 
 export type ListMerchantReviewsParams = {
   /**

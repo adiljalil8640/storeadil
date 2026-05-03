@@ -76,6 +76,7 @@ import type {
   ProductVelocityItem,
   ProductWithStats,
   PublicStore,
+  ReceiveWhatsappWebhookBody,
   ReferralInfo,
   ReferralPreview,
   ReplyToReviewBody,
@@ -103,8 +104,12 @@ import type {
   UpdateStoreSlugBody,
   ValidateCouponBody,
   ValidateCouponResponse,
+  VerifyWhatsappWebhookParams,
   WaitlistCountsResponse,
   WaitlistEntryWithProduct,
+  WhatsappConfig,
+  WhatsappConfigBody,
+  WhatsappStatus,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -6197,6 +6202,591 @@ export function useGetQrCode<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Meta webhook verification challenge (public)
+ */
+export const getVerifyWhatsappWebhookUrl = (
+  params?: VerifyWhatsappWebhookParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/whatsapp/webhook?${stringifiedParams}`
+    : `/api/whatsapp/webhook`;
+};
+
+export const verifyWhatsappWebhook = async (
+  params?: VerifyWhatsappWebhookParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getVerifyWhatsappWebhookUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getVerifyWhatsappWebhookQueryKey = (
+  params?: VerifyWhatsappWebhookParams,
+) => {
+  return [`/api/whatsapp/webhook`, ...(params ? [params] : [])] as const;
+};
+
+export const getVerifyWhatsappWebhookQueryOptions = <
+  TData = Awaited<ReturnType<typeof verifyWhatsappWebhook>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: VerifyWhatsappWebhookParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof verifyWhatsappWebhook>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getVerifyWhatsappWebhookQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof verifyWhatsappWebhook>>
+  > = ({ signal }) =>
+    verifyWhatsappWebhook(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof verifyWhatsappWebhook>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type VerifyWhatsappWebhookQueryResult = NonNullable<
+  Awaited<ReturnType<typeof verifyWhatsappWebhook>>
+>;
+export type VerifyWhatsappWebhookQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Meta webhook verification challenge (public)
+ */
+
+export function useVerifyWhatsappWebhook<
+  TData = Awaited<ReturnType<typeof verifyWhatsappWebhook>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: VerifyWhatsappWebhookParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof verifyWhatsappWebhook>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getVerifyWhatsappWebhookQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Incoming message from Meta (public)
+ */
+export const getReceiveWhatsappWebhookUrl = () => {
+  return `/api/whatsapp/webhook`;
+};
+
+export const receiveWhatsappWebhook = async (
+  receiveWhatsappWebhookBody: ReceiveWhatsappWebhookBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getReceiveWhatsappWebhookUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(receiveWhatsappWebhookBody),
+  });
+};
+
+export const getReceiveWhatsappWebhookMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveWhatsappWebhook>>,
+    TError,
+    { data: BodyType<ReceiveWhatsappWebhookBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof receiveWhatsappWebhook>>,
+  TError,
+  { data: BodyType<ReceiveWhatsappWebhookBody> },
+  TContext
+> => {
+  const mutationKey = ["receiveWhatsappWebhook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof receiveWhatsappWebhook>>,
+    { data: BodyType<ReceiveWhatsappWebhookBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return receiveWhatsappWebhook(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveWhatsappWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveWhatsappWebhook>>
+>;
+export type ReceiveWhatsappWebhookMutationBody =
+  BodyType<ReceiveWhatsappWebhookBody>;
+export type ReceiveWhatsappWebhookMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Incoming message from Meta (public)
+ */
+export const useReceiveWhatsappWebhook = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveWhatsappWebhook>>,
+    TError,
+    { data: BodyType<ReceiveWhatsappWebhookBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof receiveWhatsappWebhook>>,
+  TError,
+  { data: BodyType<ReceiveWhatsappWebhookBody> },
+  TContext
+> => {
+  return useMutation(getReceiveWhatsappWebhookMutationOptions(options));
+};
+
+/**
+ * @summary Get store WhatsApp auto-reply config
+ */
+export const getGetWhatsappConfigUrl = () => {
+  return `/api/stores/me/whatsapp-config`;
+};
+
+export const getWhatsappConfig = async (
+  options?: RequestInit,
+): Promise<WhatsappConfig> => {
+  return customFetch<WhatsappConfig>(getGetWhatsappConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWhatsappConfigQueryKey = () => {
+  return [`/api/stores/me/whatsapp-config`] as const;
+};
+
+export const getGetWhatsappConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWhatsappConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWhatsappConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWhatsappConfig>>
+  > = ({ signal }) => getWhatsappConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWhatsappConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWhatsappConfig>>
+>;
+export type GetWhatsappConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get store WhatsApp auto-reply config
+ */
+
+export function useGetWhatsappConfig<
+  TData = Awaited<ReturnType<typeof getWhatsappConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWhatsappConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save WhatsApp auto-reply config
+ */
+export const getUpdateWhatsappConfigUrl = () => {
+  return `/api/stores/me/whatsapp-config`;
+};
+
+export const updateWhatsappConfig = async (
+  whatsappConfigBody: WhatsappConfigBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getUpdateWhatsappConfigUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(whatsappConfigBody),
+  });
+};
+
+export const getUpdateWhatsappConfigMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateWhatsappConfig>>,
+    TError,
+    { data: BodyType<WhatsappConfigBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateWhatsappConfig>>,
+  TError,
+  { data: BodyType<WhatsappConfigBody> },
+  TContext
+> => {
+  const mutationKey = ["updateWhatsappConfig"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateWhatsappConfig>>,
+    { data: BodyType<WhatsappConfigBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateWhatsappConfig(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateWhatsappConfigMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateWhatsappConfig>>
+>;
+export type UpdateWhatsappConfigMutationBody = BodyType<WhatsappConfigBody>;
+export type UpdateWhatsappConfigMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Save WhatsApp auto-reply config
+ */
+export const useUpdateWhatsappConfig = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateWhatsappConfig>>,
+    TError,
+    { data: BodyType<WhatsappConfigBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateWhatsappConfig>>,
+  TError,
+  { data: BodyType<WhatsappConfigBody> },
+  TContext
+> => {
+  return useMutation(getUpdateWhatsappConfigMutationOptions(options));
+};
+
+/**
+ * @summary Poll web-js session status and QR code
+ */
+export const getGetWhatsappStatusUrl = () => {
+  return `/api/stores/me/whatsapp-status`;
+};
+
+export const getWhatsappStatus = async (
+  options?: RequestInit,
+): Promise<WhatsappStatus> => {
+  return customFetch<WhatsappStatus>(getGetWhatsappStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWhatsappStatusQueryKey = () => {
+  return [`/api/stores/me/whatsapp-status`] as const;
+};
+
+export const getGetWhatsappStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWhatsappStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWhatsappStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWhatsappStatus>>
+  > = ({ signal }) => getWhatsappStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWhatsappStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWhatsappStatus>>
+>;
+export type GetWhatsappStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Poll web-js session status and QR code
+ */
+
+export function useGetWhatsappStatus<
+  TData = Awaited<ReturnType<typeof getWhatsappStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWhatsappStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWhatsappStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Initiate WhatsApp Web (web-js) session
+ */
+export const getConnectWhatsappUrl = () => {
+  return `/api/stores/me/whatsapp-connect`;
+};
+
+export const connectWhatsapp = async (
+  options?: RequestInit,
+): Promise<WhatsappStatus> => {
+  return customFetch<WhatsappStatus>(getConnectWhatsappUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConnectWhatsappMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof connectWhatsapp>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof connectWhatsapp>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["connectWhatsapp"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof connectWhatsapp>>,
+    void
+  > = () => {
+    return connectWhatsapp(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConnectWhatsappMutationResult = NonNullable<
+  Awaited<ReturnType<typeof connectWhatsapp>>
+>;
+
+export type ConnectWhatsappMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Initiate WhatsApp Web (web-js) session
+ */
+export const useConnectWhatsapp = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof connectWhatsapp>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof connectWhatsapp>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getConnectWhatsappMutationOptions(options));
+};
+
+/**
+ * @summary Disconnect WhatsApp Web (web-js) session
+ */
+export const getDisconnectWhatsappUrl = () => {
+  return `/api/stores/me/whatsapp-disconnect`;
+};
+
+export const disconnectWhatsapp = async (
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDisconnectWhatsappUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDisconnectWhatsappMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disconnectWhatsapp>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof disconnectWhatsapp>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["disconnectWhatsapp"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof disconnectWhatsapp>>,
+    void
+  > = () => {
+    return disconnectWhatsapp(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DisconnectWhatsappMutationResult = NonNullable<
+  Awaited<ReturnType<typeof disconnectWhatsapp>>
+>;
+
+export type DisconnectWhatsappMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Disconnect WhatsApp Web (web-js) session
+ */
+export const useDisconnectWhatsapp = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disconnectWhatsapp>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof disconnectWhatsapp>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getDisconnectWhatsappMutationOptions(options));
+};
 
 /**
  * @summary List all reviews for the authenticated merchant's store
