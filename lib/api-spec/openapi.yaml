@@ -1098,6 +1098,23 @@ paths:
                 items:
                   $ref: "#/components/schemas/HeatmapCell"
 
+  /analytics/coupon-performance:
+    get:
+      operationId: getCouponPerformance
+      tags: [analytics]
+      summary: Get performance stats for all coupons in the store
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of coupon performance stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CouponPerformance"
+
   /analytics/top-customers:
     get:
       operationId: getTopCustomers
@@ -2076,6 +2093,44 @@ components:
           nullable: true
           description: Custom domain to set (e.g. shop.mybrand.com). Pass null to remove.
       required: [domain]
+
+    CouponPerformance:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed]
+        value:
+          type: number
+        minOrderAmount:
+          type: number
+          nullable: true
+        maxUses:
+          type: integer
+          nullable: true
+        usedCount:
+          type: integer
+        estimatedDiscount:
+          type: number
+          nullable: true
+        isActive:
+          type: boolean
+        expired:
+          type: boolean
+        maxedOut:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, code, type, value, usedCount, isActive, expired, maxedOut, createdAt]
 
     DigestPreview:
       type: object

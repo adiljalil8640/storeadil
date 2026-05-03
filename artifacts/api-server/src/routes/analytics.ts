@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, ordersTable, productsTable } from "@workspace/db";
+import { storesTable, ordersTable, productsTable, couponsTable } from "@workspace/db";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
 
 const router = Router();
@@ -293,6 +293,49 @@ router.get("/analytics/product-velocity", requireAuth, async (req: any, res) => 
       productId: Number(productId),
       counts: dates.map(d => dayCounts[d] ?? 0),
     }));
+
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /analytics/coupon-performance
+router.get("/analytics/coupon-performance", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const coupons = await db
+      .select()
+      .from(couponsTable)
+      .where(eq(couponsTable.storeId, storeId))
+      .orderBy(desc(couponsTable.usedCount));
+
+    const result = coupons.map((c) => {
+      const usedCount = c.usedCount ?? 0;
+      const value = Number(c.value ?? 0);
+      const estimatedDiscount = c.type === "fixed" ? value * usedCount : null;
+      const now = new Date();
+      const expired = c.expiresAt != null && c.expiresAt < now;
+      const maxedOut = c.maxUses != null && usedCount >= c.maxUses;
+      return {
+        id: c.id,
+        code: c.code,
+        type: c.type,
+        value,
+        minOrderAmount: c.minOrderAmount != null ? Number(c.minOrderAmount) : null,
+        maxUses: c.maxUses,
+        usedCount,
+        estimatedDiscount,
+        isActive: c.isActive,
+        expired,
+        maxedOut,
+        expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
+        createdAt: c.createdAt.toISOString(),
+      };
+    });
 
     res.json(result);
   } catch (err) {

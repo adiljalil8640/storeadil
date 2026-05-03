@@ -30,6 +30,7 @@ import type {
   CheckSlugAvailabilityParams,
   CheckoutSession,
   Coupon,
+  CouponPerformance,
   CreateCheckoutBody,
   CreateCouponBody,
   CreateOrderBody,
@@ -4242,6 +4243,81 @@ export function useGetOrderHeatmap<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetOrderHeatmapQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get performance stats for all coupons in the store
+ */
+export const getGetCouponPerformanceUrl = () => {
+  return `/api/analytics/coupon-performance`;
+};
+
+export const getCouponPerformance = async (
+  options?: RequestInit,
+): Promise<CouponPerformance[]> => {
+  return customFetch<CouponPerformance[]>(getGetCouponPerformanceUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCouponPerformanceQueryKey = () => {
+  return [`/api/analytics/coupon-performance`] as const;
+};
+
+export const getGetCouponPerformanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCouponPerformance>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCouponPerformance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCouponPerformanceQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCouponPerformance>>
+  > = ({ signal }) => getCouponPerformance({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCouponPerformance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCouponPerformanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCouponPerformance>>
+>;
+export type GetCouponPerformanceQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get performance stats for all coupons in the store
+ */
+
+export function useGetCouponPerformance<
+  TData = Awaited<ReturnType<typeof getCouponPerformance>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCouponPerformance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCouponPerformanceQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

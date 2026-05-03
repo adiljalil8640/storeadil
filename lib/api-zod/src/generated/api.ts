@@ -2152,6 +2152,28 @@ export const GetOrderHeatmapResponseItem = zod.object({
 export const GetOrderHeatmapResponse = zod.array(GetOrderHeatmapResponseItem);
 
 /**
+ * @summary Get performance stats for all coupons in the store
+ */
+export const GetCouponPerformanceResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  usedCount: zod.number(),
+  estimatedDiscount: zod.number().nullish(),
+  isActive: zod.boolean(),
+  expired: zod.boolean(),
+  maxedOut: zod.boolean(),
+  expiresAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const GetCouponPerformanceResponse = zod.array(
+  GetCouponPerformanceResponseItem,
+);
+
+/**
  * @summary Get top customers by total spend
  */
 export const getTopCustomersQueryLimitDefault = 8;

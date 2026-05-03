@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap, useGetCouponPerformance } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock, Tag, Percent, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import {
@@ -45,6 +45,7 @@ export default function AnalyticsPage() {
   const { data: topProducts, isLoading: topLoading } = useGetTopProducts({ limit: 10 });
   const { data: referral, isLoading: referralLoading } = useGetMyReferral();
   const { data: heatmapData = [], isLoading: heatmapLoading } = useGetOrderHeatmap();
+  const { data: couponPerf = [], isLoading: couponLoading } = useGetCouponPerformance();
 
   const chartData = (ordersPerDay ?? []).map((d) => ({
     date: format(new Date(d.date + "T00:00:00"), "MMM d"),
@@ -477,6 +478,124 @@ export default function AnalyticsPage() {
                 </div>
               );
             })()}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Coupon Performance Table */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-primary" />
+              Coupon Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {couponLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : couponPerf.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Tag className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>No coupons created yet.</p>
+                <p className="text-xs mt-1">
+                  <Link href="/coupons" className="text-primary underline underline-offset-2">Create your first coupon</Link> to start tracking performance.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="text-left py-2 pr-4 font-medium">Code</th>
+                      <th className="text-left py-2 pr-4 font-medium">Type</th>
+                      <th className="text-right py-2 pr-4 font-medium">Discount</th>
+                      <th className="text-right py-2 pr-4 font-medium">Uses</th>
+                      <th className="text-right py-2 pr-4 font-medium">Est. discount given</th>
+                      <th className="text-left py-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {couponPerf.map((c) => {
+                      const statusBadge = (() => {
+                        if (!c.isActive) return { label: "Inactive", cls: "bg-muted text-muted-foreground", icon: <XCircle className="w-3 h-3" /> };
+                        if (c.expired)   return { label: "Expired",  cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: <AlertCircle className="w-3 h-3" /> };
+                        if (c.maxedOut)  return { label: "Maxed out",cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: <AlertCircle className="w-3 h-3" /> };
+                        return { label: "Active", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: <CheckCircle2 className="w-3 h-3" /> };
+                      })();
+
+                      const usageBar = c.maxUses
+                        ? Math.min(100, Math.round((c.usedCount / c.maxUses) * 100))
+                        : null;
+
+                      return (
+                        <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="py-3 pr-4">
+                            <span className="font-mono font-semibold tracking-wide text-foreground bg-muted px-2 py-0.5 rounded text-xs">
+                              {c.code}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              {c.type === "percentage"
+                                ? <><Percent className="w-3 h-3" /> Percentage</>
+                                : <><DollarSign className="w-3 h-3" /> Fixed</>}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4 text-right font-medium">
+                            {c.type === "percentage"
+                              ? `${c.value}%`
+                              : formatCurrency(c.value)}
+                          </td>
+                          <td className="py-3 pr-4 text-right">
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="font-semibold">{c.usedCount}</span>
+                              {usageBar !== null && (
+                                <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-primary transition-all"
+                                    style={{ width: `${usageBar}%` }}
+                                  />
+                                </div>
+                              )}
+                              {c.maxUses && (
+                                <span className="text-[10px] text-muted-foreground">of {c.maxUses}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 pr-4 text-right text-muted-foreground">
+                            {c.estimatedDiscount != null
+                              ? <span className="text-foreground font-medium">{formatCurrency(c.estimatedDiscount)}</span>
+                              : <span className="text-xs italic">— (% coupon)</span>}
+                          </td>
+                          <td className="py-3">
+                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
+                              {statusBadge.icon}
+                              {statusBadge.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Summary row */}
+                {couponPerf.length > 0 && (() => {
+                  const totalUses = couponPerf.reduce((s, c) => s + c.usedCount, 0);
+                  const totalDiscount = couponPerf.reduce((s, c) => s + (c.estimatedDiscount ?? 0), 0);
+                  return (
+                    <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{couponPerf.length} coupon{couponPerf.length !== 1 ? "s" : ""} total · {couponPerf.filter(c => c.isActive && !c.expired && !c.maxedOut).length} active</span>
+                      <span>
+                        {totalUses} total redemption{totalUses !== 1 ? "s" : ""}
+                        {totalDiscount > 0 && <> · <span className="font-medium text-foreground">{formatCurrency(totalDiscount)}</span> est. discount given</>}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

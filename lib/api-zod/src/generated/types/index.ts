@@ -22,6 +22,8 @@ export * from "./changeUserPlanBodyPlanName";
 export * from "./checkoutSession";
 export * from "./checkSlugAvailabilityParams";
 export * from "./coupon";
+export * from "./couponPerformance";
+export * from "./couponPerformanceType";
 export * from "./couponType";
 export * from "./createCheckoutBody";
 export * from "./createCheckoutBodyPlanName";

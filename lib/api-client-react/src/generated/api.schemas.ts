@@ -406,6 +406,30 @@ export interface UpdateStoreDomainBody {
   domain: string | null;
 }
 
+export type CouponPerformanceType =
+  (typeof CouponPerformanceType)[keyof typeof CouponPerformanceType];
+
+export const CouponPerformanceType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface CouponPerformance {
+  id: number;
+  code: string;
+  type: CouponPerformanceType;
+  value: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  usedCount: number;
+  estimatedDiscount?: number | null;
+  isActive: boolean;
+  expired: boolean;
+  maxedOut: boolean;
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
 export type DigestPreviewPeriod =
   (typeof DigestPreviewPeriod)[keyof typeof DigestPreviewPeriod];
 
