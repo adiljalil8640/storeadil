@@ -28,6 +28,7 @@ export default function StorefrontPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("pickup");
   const [customerNote, setCustomerNote] = useState("");
@@ -92,6 +93,7 @@ export default function StorefrontPage() {
         data: {
           storeId: store.id,
           customerName,
+          customerEmail: customerEmail || null,
           customerPhone,
           customerNote,
           deliveryType,
@@ -298,6 +300,11 @@ export default function StorefrontPage() {
                           <div className="space-y-2">
                             <Label>Your Name</Label>
                             <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Jane Doe" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Email <span className="text-muted-foreground text-xs">(for order updates)</span></Label>
+                            <Input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="jane@example.com" />
                           </div>
 
                           <div className="space-y-2">

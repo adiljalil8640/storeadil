@@ -44,10 +44,13 @@ A multi-tenant SaaS platform where merchants create online stores and customers 
 13. **Referral System** — Unique referral codes, referral link sharing, bonus orders for referrers
 14. **Admin Panel** — `/admin` — platform stats, user table, per-user plan override
 15. **Growth Features** — QR code PNG download, pre-written WhatsApp share message
+16. **Order Tracking** — Public `/track/:token` page; customers see real-time order status timeline without logging in
+17. **Email Notifications** — Resend-powered transactional emails; confirmation on order place + status-update emails when merchant changes order state (gated on `RESEND_API_KEY` env var)
 
 ## Database Schema
 
 - `stores` — one store per user (userId from Clerk), slug for public URL
+- `orders.customerEmail` — optional email collected at checkout; used to send confirmation + status-update emails via Resend
 - `products` — linked to store, with JSONB variants field
 - `orders` — linked to store, JSONB items array, customer contact info
 - `plans` — Free / Pro / Business plan definitions (seeded on startup)

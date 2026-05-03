@@ -1086,6 +1086,9 @@ components:
         customerName:
           type: string
           nullable: true
+        customerEmail:
+          type: string
+          nullable: true
         customerPhone:
           type: string
           nullable: true
@@ -1167,6 +1170,9 @@ components:
         storeId:
           type: integer
         customerName:
+          type: string
+          nullable: true
+        customerEmail:
           type: string
           nullable: true
         customerPhone:

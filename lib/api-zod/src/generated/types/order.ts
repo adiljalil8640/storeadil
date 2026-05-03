@@ -13,6 +13,7 @@ export interface Order {
   id: number;
   storeId: number;
   customerName?: string | null;
+  customerEmail?: string | null;
   customerPhone?: string | null;
   customerNote?: string | null;
   items: OrderItem[];

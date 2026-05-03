@@ -7,6 +7,7 @@ export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
   storeId: integer("store_id").notNull().references(() => storesTable.id, { onDelete: "cascade" }),
   customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
   customerPhone: text("customer_phone"),
   customerNote: text("customer_note"),
   items: jsonb("items").notNull().default([]),

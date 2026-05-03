@@ -11,6 +11,7 @@ import type { OrderItem } from "./orderItem";
 export interface CreateOrderBody {
   storeId: number;
   customerName?: string | null;
+  customerEmail?: string | null;
   customerPhone?: string | null;
   customerNote?: string | null;
   items: OrderItem[];

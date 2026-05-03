@@ -5,6 +5,7 @@ import { storesTable, ordersTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
+import { sendOrderConfirmation, sendStatusUpdateEmail } from "../services/email";
 
 const router = Router();
 
@@ -75,7 +76,7 @@ router.post("/orders", async (req: any, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   try {
-    const { storeId, items, customerName, customerPhone, customerNote, deliveryType } = parsed.data;
+    const { storeId, items, customerName, customerEmail, customerPhone, customerNote, deliveryType } = parsed.data;
 
     const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
     if (!store) return res.status(404).json({ error: "Store not found" });
@@ -99,6 +100,7 @@ router.post("/orders", async (req: any, res) => {
       .values({
         storeId,
         customerName: customerName ?? null,
+        customerEmail: customerEmail ?? null,
         customerPhone: customerPhone ?? null,
         customerNote: customerNote ?? null,
         items: items as any,
@@ -113,6 +115,23 @@ router.post("/orders", async (req: any, res) => {
     const whatsappUrl = store.whatsappNumber
       ? buildWhatsAppUrl(store.whatsappNumber, items, total, store.currency, customerName, customerNote)
       : "";
+
+    // Send confirmation email (fire-and-forget; no key = no-op)
+    if (customerEmail) {
+      const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+      sendOrderConfirmation({
+        to: customerEmail,
+        customerName: customerName ?? null,
+        orderId: order.id,
+        trackingToken: order.trackingToken,
+        items,
+        total,
+        currency: store.currency,
+        storeName: store.name,
+        deliveryType: deliveryType ?? null,
+        appBaseUrl,
+      }).catch(() => {});
+    }
 
     res.status(201).json({ order, whatsappUrl });
   } catch (err) {
@@ -202,6 +221,27 @@ router.patch("/orders/:id", requireAuth, async (req: any, res) => {
       .returning();
 
     if (!order) return res.status(404).json({ error: "Order not found" });
+
+    // Send status-update email (fire-and-forget; no key = no-op)
+    if (order.customerEmail) {
+      const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+      if (store) {
+        const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+        sendStatusUpdateEmail({
+          to: order.customerEmail,
+          customerName: order.customerName ?? null,
+          orderId: order.id,
+          trackingToken: order.trackingToken,
+          newStatus: parsed.data.status,
+          items: order.items as any[],
+          total: Number(order.total),
+          currency: store.currency,
+          storeName: store.name,
+          appBaseUrl,
+        }).catch(() => {});
+      }
+    }
+
     res.json(order);
   } catch (err) {
     req.log.error(err);
