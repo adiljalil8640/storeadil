@@ -37,6 +37,7 @@ import type {
   CreateReviewBody,
   CreateStoreBody,
   CustomerHistory,
+  DigestPreview,
   DomainStatusResult,
   ErrorResponse,
   GenerateDescriptionBody,
@@ -858,6 +859,82 @@ export const useUpdateMyStoreDomain = <
 > => {
   return useMutation(getUpdateMyStoreDomainMutationOptions(options));
 };
+
+/**
+ * @summary Get a digest preview of orders and revenue for the store's configured period
+ */
+export const getGetMyStoreDigestPreviewUrl = () => {
+  return `/api/stores/me/digest-preview`;
+};
+
+export const getMyStoreDigestPreview = async (
+  options?: RequestInit,
+): Promise<DigestPreview> => {
+  return customFetch<DigestPreview>(getGetMyStoreDigestPreviewUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyStoreDigestPreviewQueryKey = () => {
+  return [`/api/stores/me/digest-preview`] as const;
+};
+
+export const getGetMyStoreDigestPreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyStoreDigestPreview>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStoreDigestPreview>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMyStoreDigestPreviewQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMyStoreDigestPreview>>
+  > = ({ signal }) => getMyStoreDigestPreview({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStoreDigestPreview>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyStoreDigestPreviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyStoreDigestPreview>>
+>;
+export type GetMyStoreDigestPreviewQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a digest preview of orders and revenue for the store's configured period
+ */
+
+export function useGetMyStoreDigestPreview<
+  TData = Awaited<ReturnType<typeof getMyStoreDigestPreview>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStoreDigestPreview>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyStoreDigestPreviewQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Check DNS status of the custom domain for the authenticated user's store

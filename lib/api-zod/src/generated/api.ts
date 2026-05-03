@@ -1192,6 +1192,36 @@ export const UpdateMyStoreDomainResponse = zod.object({
 });
 
 /**
+ * @summary Get a digest preview of orders and revenue for the store's configured period
+ */
+export const GetMyStoreDigestPreviewResponse = zod.object({
+  period: zod.enum(["daily", "weekly"]),
+  periodStart: zod.coerce.date(),
+  periodEnd: zod.coerce.date(),
+  orderCount: zod.number(),
+  revenue: zod.number(),
+  avgOrderValue: zod.number(),
+  storeName: zod.string(),
+  currency: zod.string(),
+  topProducts: zod.array(
+    zod.object({
+      name: zod.string(),
+      unitsSold: zod.number(),
+      revenue: zod.number(),
+    }),
+  ),
+  recentOrders: zod.array(
+    zod.object({
+      id: zod.number(),
+      customerName: zod.string().nullish(),
+      total: zod.number(),
+      status: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
  * @summary Check DNS status of the custom domain for the authenticated user's store
  */
 export const GetMyStoreDomainStatusResponse = zod.object({

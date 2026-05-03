@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, ordersTable } from "@workspace/db";
-import { eq, sql, desc } from "drizzle-orm";
+import { storesTable, ordersTable, productsTable } from "@workspace/db";
+import { eq, sql, desc, and, gte } from "drizzle-orm";
 import { CreateStoreBody, UpdateMyStoreBody } from "@workspace/api-zod";
 
 const router = Router();
@@ -389,6 +389,72 @@ router.patch("/stores/me/revenue-goal", requireAuth, async (req: any, res) => {
       .returning();
     if (!store) return res.status(404).json({ error: "No store found" });
     return res.json(store);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /stores/me/digest-preview
+router.get("/stores/me/digest-preview", requireAuth, async (req: any, res) => {
+  try {
+    const [store] = await db.select().from(storesTable).where(eq(storesTable.userId, req.userId));
+    if (!store) return res.status(404).json({ error: "No store found" });
+
+    const freq = store.digestFrequency ?? "daily";
+    const now = new Date();
+    const periodStart = new Date(now);
+    if (freq === "weekly") {
+      periodStart.setDate(periodStart.getDate() - 7);
+    } else {
+      periodStart.setDate(periodStart.getDate() - 1);
+    }
+    periodStart.setHours(0, 0, 0, 0);
+
+    const orders = await db
+      .select()
+      .from(ordersTable)
+      .where(and(eq(ordersTable.storeId, store.id), gte(ordersTable.createdAt, periodStart)))
+      .orderBy(desc(ordersTable.createdAt));
+
+    const orderCount = orders.length;
+    const revenue = orders.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+    const avgOrderValue = orderCount > 0 ? revenue / orderCount : 0;
+
+    const productMap: Record<string, { name: string; unitsSold: number; revenue: number }> = {};
+    for (const order of orders) {
+      const items = order.items as any[];
+      for (const item of items) {
+        const key = String(item.productId ?? item.productName);
+        if (!productMap[key]) productMap[key] = { name: item.productName, unitsSold: 0, revenue: 0 };
+        productMap[key].unitsSold += item.quantity;
+        productMap[key].revenue += item.price * item.quantity;
+      }
+    }
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    const recentOrders = orders.slice(0, 5).map((o) => ({
+      id: o.id,
+      customerName: o.customerName,
+      total: Number(o.total ?? 0),
+      status: o.status,
+      createdAt: o.createdAt,
+    }));
+
+    return res.json({
+      period: freq === "weekly" ? "weekly" : "daily",
+      periodStart: periodStart.toISOString(),
+      periodEnd: now.toISOString(),
+      orderCount,
+      revenue,
+      avgOrderValue,
+      topProducts,
+      recentOrders,
+      storeName: store.name,
+      currency: store.currency,
+    });
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Internal server error" });

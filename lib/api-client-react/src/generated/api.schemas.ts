@@ -406,6 +406,41 @@ export interface UpdateStoreDomainBody {
   domain: string | null;
 }
 
+export type DigestPreviewPeriod =
+  (typeof DigestPreviewPeriod)[keyof typeof DigestPreviewPeriod];
+
+export const DigestPreviewPeriod = {
+  daily: "daily",
+  weekly: "weekly",
+} as const;
+
+export type DigestPreviewTopProductsItem = {
+  name: string;
+  unitsSold: number;
+  revenue: number;
+};
+
+export type DigestPreviewRecentOrdersItem = {
+  id: number;
+  customerName?: string | null;
+  total: number;
+  status: string;
+  createdAt: string;
+};
+
+export interface DigestPreview {
+  period: DigestPreviewPeriod;
+  periodStart: string;
+  periodEnd: string;
+  orderCount: number;
+  revenue: number;
+  avgOrderValue: number;
+  storeName: string;
+  currency: string;
+  topProducts: DigestPreviewTopProductsItem[];
+  recentOrders: DigestPreviewRecentOrdersItem[];
+}
+
 /**
  * DNS resolution result
  */

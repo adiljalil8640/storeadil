@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useGetMyStore, useUpdateMyStore, getGetMyStoreQueryKey, useGetShareMessage, useGetQrCode } from "@workspace/api-client-react";
+import { useGetMyStore, useUpdateMyStore, getGetMyStoreQueryKey, useGetShareMessage, useGetQrCode, useGetMyStoreDigestPreview } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle, Eye, TrendingUp, ShoppingCart, Package } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -39,8 +40,12 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const [qrBlob, setQrBlob] = useState<string | null>(null);
+  const [digestPreviewOpen, setDigestPreviewOpen] = useState(false);
 
   const { data: store, isLoading } = useGetMyStore();
+  const { data: digestData, isFetching: digestFetching, refetch: refetchDigest } = useGetMyStoreDigestPreview({
+    query: { enabled: false },
+  });
   const { data: shareData } = useGetShareMessage({ query: { enabled: !!store } });
 
   const updateStore = useUpdateMyStore({
@@ -2078,6 +2083,20 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 w-fit"
+                  disabled={digestFetching}
+                  onClick={async () => {
+                    await refetchDigest();
+                    setDigestPreviewOpen(true);
+                  }}
+                >
+                  <Eye className="w-4 h-4" />
+                  {digestFetching ? "Loading…" : "Preview digest email"}
+                </Button>
               </CardContent>
             </Card>
 
@@ -2274,6 +2293,132 @@ export default function SettingsPage() {
           </form>
         </Form>
       </div>
+
+      {/* Digest Preview Dialog */}
+      <Dialog open={digestPreviewOpen} onOpenChange={setDigestPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-primary" />
+              {digestData?.period === "weekly" ? "Weekly" : "Daily"} Digest Preview
+            </DialogTitle>
+          </DialogHeader>
+
+          {digestData ? (() => {
+            const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: digestData.currency || "USD" }).format(n);
+            const start = new Date(digestData.periodStart).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            const end = new Date(digestData.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            const statusColor: Record<string, string> = {
+              pending: "bg-amber-100 text-amber-800",
+              confirmed: "bg-blue-100 text-blue-800",
+              completed: "bg-green-100 text-green-800",
+              cancelled: "bg-red-100 text-red-800",
+            };
+            return (
+              <div className="space-y-6 text-sm">
+                {/* Period banner */}
+                <div className="rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">{digestData.storeName}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {digestData.period === "weekly" ? "Weekly" : "Daily"} sales digest · {start} – {end}
+                    </p>
+                  </div>
+                </div>
+
+                {/* KPI row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border bg-card p-4 text-center">
+                    <ShoppingCart className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-2xl font-bold">{digestData.orderCount}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Orders</p>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4 text-center">
+                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-2xl font-bold">{fmt(digestData.revenue)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Revenue</p>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4 text-center">
+                    <Package className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-2xl font-bold">{fmt(digestData.avgOrderValue)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Avg order</p>
+                  </div>
+                </div>
+
+                {/* Top products */}
+                {digestData.topProducts.length > 0 && (
+                  <div>
+                    <p className="font-semibold mb-2 text-foreground">Top Products</p>
+                    <div className="rounded-lg border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-muted/50 text-muted-foreground text-xs">
+                            <th className="text-left px-3 py-2 font-medium">Product</th>
+                            <th className="text-right px-3 py-2 font-medium">Units</th>
+                            <th className="text-right px-3 py-2 font-medium">Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {digestData.topProducts.map((p, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="px-3 py-2 font-medium truncate max-w-[200px]">{p.name}</td>
+                              <td className="px-3 py-2 text-right text-muted-foreground">{p.unitsSold}</td>
+                              <td className="px-3 py-2 text-right font-medium">{fmt(p.revenue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent orders */}
+                {digestData.recentOrders.length > 0 && (
+                  <div>
+                    <p className="font-semibold mb-2 text-foreground">Recent Orders</p>
+                    <div className="space-y-2">
+                      {digestData.recentOrders.map((o) => (
+                        <div key={o.id} className="flex items-center justify-between rounded-lg border px-3 py-2 gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{o.customerName ?? "Guest"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Order #{o.id} · {new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[o.status] ?? "bg-muted text-muted-foreground"}`}>
+                              {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
+                            </span>
+                            <span className="font-semibold">{fmt(o.total)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {digestData.orderCount === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                    <p>No orders in this period yet.</p>
+                    <p className="text-xs mt-1">The digest will show data once orders come in.</p>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground border-t pt-3 text-center">
+                  This is a preview of what your {digestData.period === "weekly" ? "weekly" : "daily"} digest email will look like.
+                  {store?.notificationEmail ? ` It will be sent to ${store.notificationEmail}.` : " Set a notification email above to receive it."}
+                </p>
+              </div>
+            );
+          })() : (
+            <div className="text-center py-8 text-muted-foreground">Loading digest data…</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
