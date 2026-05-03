@@ -1,7 +1,8 @@
 import { Router } from "express";
+import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, productsTable, stockWaitlistTable } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -56,6 +57,50 @@ router.post("/stores/public/:slug/waitlist", async (req: any, res) => {
     });
 
     res.status(201).json({ message: "You're on the waitlist! We'll email you when it's back." });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+function requireAuth(req: any, res: any, next: any) {
+  const auth = getAuth(req);
+  const userId = auth?.userId;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  req.userId = userId;
+  next();
+}
+
+// GET /products/waitlist-counts — authenticated, returns { counts: { [productId]: number } }
+router.get("/products/waitlist-counts", requireAuth, async (req: any, res) => {
+  try {
+    const [store] = await db
+      .select({ id: storesTable.id })
+      .from(storesTable)
+      .where(eq(storesTable.userId, req.userId));
+
+    if (!store) return res.json({ counts: {} });
+
+    const rows = await db
+      .select({
+        productId: stockWaitlistTable.productId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(stockWaitlistTable)
+      .where(
+        and(
+          eq(stockWaitlistTable.storeId, store.id),
+          isNull(stockWaitlistTable.notifiedAt)
+        )
+      )
+      .groupBy(stockWaitlistTable.productId);
+
+    const counts: Record<number, number> = {};
+    for (const row of rows) {
+      counts[row.productId] = row.count;
+    }
+
+    res.json({ counts });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

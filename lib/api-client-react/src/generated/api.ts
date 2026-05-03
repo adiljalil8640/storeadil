@@ -58,6 +58,7 @@ import type {
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdateStoreBody,
+  WaitlistCountsResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -562,6 +563,81 @@ export const useJoinWaitlist = <
 > => {
   return useMutation(getJoinWaitlistMutationOptions(options));
 };
+
+/**
+ * @summary Get waitlist signup counts per product for the authenticated store
+ */
+export const getGetWaitlistCountsUrl = () => {
+  return `/api/products/waitlist-counts`;
+};
+
+export const getWaitlistCounts = async (
+  options?: RequestInit,
+): Promise<WaitlistCountsResponse> => {
+  return customFetch<WaitlistCountsResponse>(getGetWaitlistCountsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWaitlistCountsQueryKey = () => {
+  return [`/api/products/waitlist-counts`] as const;
+};
+
+export const getGetWaitlistCountsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWaitlistCounts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWaitlistCounts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWaitlistCountsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWaitlistCounts>>
+  > = ({ signal }) => getWaitlistCounts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWaitlistCounts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWaitlistCountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWaitlistCounts>>
+>;
+export type GetWaitlistCountsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get waitlist signup counts per product for the authenticated store
+ */
+
+export function useGetWaitlistCounts<
+  TData = Awaited<ReturnType<typeof getWaitlistCounts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWaitlistCounts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWaitlistCountsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all products for the authenticated user's store

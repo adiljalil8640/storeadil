@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice } from "@workspace/api-client-react";
+import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign } from "lucide-react";
+import { Search, Plus, MoreVertical, Edit, Trash, PackageOpen, ImageIcon, Sparkles, DollarSign, Bell } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -102,6 +102,8 @@ export default function ProductsPage() {
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useListProducts({ search: searchTerm || undefined });
+  const { data: waitlistData } = useGetWaitlistCounts();
+  const waitlistCounts: Record<number, number> = waitlistData?.counts ?? {};
 
   const createProduct = useCreateProduct({
     mutation: {
@@ -333,6 +335,21 @@ export default function ProductsPage() {
                       <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
                     ) : (
                       <ImageIcon className="w-10 h-10 text-muted-foreground/30" />
+                    )}
+                    {waitlistCounts[product.id] > 0 && (
+                      <div className="absolute top-2 left-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm cursor-default">
+                              <Bell className="w-3 h-3" />
+                              {waitlistCounts[product.id]}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {waitlistCounts[product.id]} customer{waitlistCounts[product.id] === 1 ? "" : "s"} waiting for restock
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     )}
                     <div className="absolute top-2 right-2">
                       <DropdownMenu>

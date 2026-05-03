@@ -9,6 +9,12 @@ export interface HealthStatus {
   status: string;
 }
 
+export type WaitlistCountsResponseCounts = { [key: string]: number };
+
+export interface WaitlistCountsResponse {
+  counts: WaitlistCountsResponseCounts;
+}
+
 export interface JoinWaitlistBody {
   productId: number;
   email: string;

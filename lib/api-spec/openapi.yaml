@@ -163,6 +163,21 @@ paths:
         "404":
           description: Store or product not found
 
+  /products/waitlist-counts:
+    get:
+      operationId: getWaitlistCounts
+      tags: [products]
+      summary: Get waitlist signup counts per product for the authenticated store
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Map of productId to waitlist count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitlistCountsResponse"
+
   # Product endpoints
   /products:
     get:
@@ -790,6 +805,15 @@ components:
         status:
           type: string
       required: [status]
+
+    WaitlistCountsResponse:
+      type: object
+      properties:
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+      required: [counts]
 
     JoinWaitlistBody:
       type: object

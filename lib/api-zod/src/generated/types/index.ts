@@ -65,3 +65,5 @@ export * from "./updateProductBody";
 export * from "./updateStoreBody";
 export * from "./updateStoreBodyDigestFrequency";
 export * from "./updateStoreBodyTheme";
+export * from "./waitlistCountsResponse";
+export * from "./waitlistCountsResponseCounts";

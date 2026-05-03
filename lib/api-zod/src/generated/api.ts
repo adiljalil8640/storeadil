@@ -150,6 +150,13 @@ export const JoinWaitlistBody = zod.object({
 });
 
 /**
+ * @summary Get waitlist signup counts per product for the authenticated store
+ */
+export const GetWaitlistCountsResponse = zod.object({
+  counts: zod.record(zod.string(), zod.number()),
+});
+
+/**
  * @summary List all products for the authenticated user's store
  */
 export const ListProductsQueryParams = zod.object({
