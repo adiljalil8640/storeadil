@@ -8,6 +8,10 @@ export interface AuthedRequest extends Request {
   userId: string;
 }
 
+export interface StoreRequest extends AuthedRequest {
+  storeId: number;
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = getAuth(req);
   const userId = auth?.userId;
@@ -34,4 +38,15 @@ export async function getStoreOrFail(userId: string, res: Response): Promise<num
     return null;
   }
   return storeId;
+}
+
+export async function requireStore(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const userId = (req as AuthedRequest).userId;
+  const storeId = await getStoreId(userId);
+  if (!storeId) {
+    res.status(404).json({ error: "No store found" });
+    return;
+  }
+  (req as StoreRequest).storeId = storeId;
+  next();
 }

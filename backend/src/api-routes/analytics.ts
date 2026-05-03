@@ -2,15 +2,15 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, productsTable, couponsTable } from "@workspace/db";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
-import { requireAuth, getStoreOrFail } from "../middlewares/auth";
+import { requireAuth, requireStore } from "../middlewares/auth";
 
 const router = Router();
+router.use(requireAuth, requireStore);
 
 // GET /analytics/summary
-router.get("/analytics/summary", requireAuth, async (req: any, res) => {
+router.get("/analytics/summary", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -61,10 +61,9 @@ router.get("/analytics/summary", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/recent-orders
-router.get("/analytics/recent-orders", requireAuth, async (req: any, res) => {
+router.get("/analytics/recent-orders", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const limit = parseInt(req.query.limit as string) || 10;
     const orders = await db
@@ -82,10 +81,9 @@ router.get("/analytics/recent-orders", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/top-products
-router.get("/analytics/top-products", requireAuth, async (req: any, res) => {
+router.get("/analytics/top-products", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const limit = parseInt(req.query.limit as string) || 5;
     const orders = await db.select().from(ordersTable).where(eq(ordersTable.storeId, storeId));
@@ -122,10 +120,9 @@ router.get("/analytics/top-products", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/orders-per-day
-router.get("/analytics/orders-per-day", requireAuth, async (req: any, res) => {
+router.get("/analytics/orders-per-day", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
@@ -161,10 +158,9 @@ router.get("/analytics/orders-per-day", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/order-heatmap
-router.get("/analytics/order-heatmap", requireAuth, async (req: any, res) => {
+router.get("/analytics/order-heatmap", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const rows = await db
       .select({
@@ -187,10 +183,9 @@ router.get("/analytics/order-heatmap", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/customer-insights
-router.get("/analytics/customer-insights", requireAuth, async (req: any, res) => {
+router.get("/analytics/customer-insights", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const orders = await db
       .select({
@@ -252,10 +247,9 @@ router.get("/analytics/customer-insights", requireAuth, async (req: any, res) =>
 });
 
 // GET /analytics/top-customers
-router.get("/analytics/top-customers", requireAuth, async (req: any, res) => {
+router.get("/analytics/top-customers", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const limit = Math.min(parseInt(req.query.limit as string) || 8, 20);
 
@@ -312,10 +306,9 @@ router.get("/analytics/top-customers", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/product-velocity
-router.get("/analytics/product-velocity", requireAuth, async (req: any, res) => {
+router.get("/analytics/product-velocity", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
@@ -359,10 +352,9 @@ router.get("/analytics/product-velocity", requireAuth, async (req: any, res) => 
 });
 
 // GET /analytics/coupon-performance
-router.get("/analytics/coupon-performance", requireAuth, async (req: any, res) => {
+router.get("/analytics/coupon-performance", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const coupons = await db
       .select()
@@ -402,10 +394,9 @@ router.get("/analytics/coupon-performance", requireAuth, async (req: any, res) =
 });
 
 // GET /analytics/revenue-trend
-router.get("/analytics/revenue-trend", requireAuth, async (req: any, res) => {
+router.get("/analytics/revenue-trend", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const days = 7;
     const since = new Date();
@@ -439,10 +430,9 @@ router.get("/analytics/revenue-trend", requireAuth, async (req: any, res) => {
 });
 
 // GET /analytics/revenue-by-day
-router.get("/analytics/revenue-by-day", requireAuth, async (req: any, res) => {
+router.get("/analytics/revenue-by-day", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const rows = await db
       .select({

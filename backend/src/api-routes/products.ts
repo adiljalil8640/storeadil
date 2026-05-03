@@ -5,15 +5,15 @@ import { eq, and, ilike, sql, isNull } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
 import { checkProductLimit } from "../services/usage";
 import { sendBackInStockEmail } from "../services/email";
-import { requireAuth, getStoreOrFail } from "../middlewares/auth";
+import { requireAuth, requireStore } from "../middlewares/auth";
 
 const router = Router();
+router.use(requireAuth, requireStore);
 
 // GET /products
-router.get("/products", requireAuth, async (req: any, res) => {
+router.get("/products", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const { category, search } = req.query;
     const conditions: any[] = [eq(productsTable.storeId, storeId)];
@@ -34,7 +34,7 @@ router.get("/products", requireAuth, async (req: any, res) => {
 });
 
 // POST /products
-router.post("/products", requireAuth, async (req: any, res) => {
+router.post("/products", async (req: any, res) => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
@@ -51,8 +51,7 @@ router.post("/products", requireAuth, async (req: any, res) => {
       });
     }
 
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const [product] = await db
       .insert(productsTable)
@@ -72,10 +71,9 @@ router.post("/products", requireAuth, async (req: any, res) => {
 });
 
 // GET /products/categories
-router.get("/products/categories", requireAuth, async (req: any, res) => {
+router.get("/products/categories", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const rows = await db
       .selectDistinct({ category: productsTable.category })
@@ -90,15 +88,14 @@ router.get("/products/categories", requireAuth, async (req: any, res) => {
 });
 
 // POST /products/import — bulk CSV import
-router.post("/products/import", requireAuth, async (req: any, res) => {
+router.post("/products/import", async (req: any, res) => {
   const { csv } = req.body ?? {};
   if (typeof csv !== "string" || !csv.trim()) {
     return res.status(400).json({ error: "csv field is required" });
   }
 
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const lines = csv.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
     if (lines.length < 2) {
@@ -180,10 +177,9 @@ router.post("/products/import", requireAuth, async (req: any, res) => {
 });
 
 // GET /products/:id
-router.get("/products/:id", requireAuth, async (req: any, res) => {
+router.get("/products/:id", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const [product] = await db
       .select()
@@ -199,13 +195,12 @@ router.get("/products/:id", requireAuth, async (req: any, res) => {
 });
 
 // PUT /products/:id
-router.put("/products/:id", requireAuth, async (req: any, res) => {
+router.put("/products/:id", async (req: any, res) => {
   const parsed = UpdateProductBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const updateData: any = { ...parsed.data };
     if (updateData.price !== undefined) updateData.price = String(updateData.price);
@@ -283,10 +278,9 @@ router.put("/products/:id", requireAuth, async (req: any, res) => {
 });
 
 // DELETE /products/:id
-router.delete("/products/:id", requireAuth, async (req: any, res) => {
+router.delete("/products/:id", async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     await db
       .delete(productsTable)

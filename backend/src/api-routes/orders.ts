@@ -7,7 +7,7 @@ import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
 import { productsTable } from "@workspace/db";
 import { publicOrderLimiter, publicTrackLimiter } from "../middlewares/rateLimiter";
-import { requireAuth, getStoreOrFail } from "../middlewares/auth";
+import { requireAuth, requireStore } from "../middlewares/auth";
 
 const router = Router();
 
@@ -33,10 +33,9 @@ function buildWhatsAppUrl(phoneNumber: string, items: any[], total: number, curr
 }
 
 // GET /orders
-router.get("/orders", requireAuth, async (req: any, res) => {
+router.get("/orders", requireAuth, requireStore, async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const { status, limit } = req.query;
     const conditions: any[] = [eq(ordersTable.storeId, storeId)];
@@ -247,10 +246,9 @@ router.post("/orders", publicOrderLimiter, async (req: any, res) => {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // GET /orders/export — download orders as CSV (optional ?from=YYYY-MM-DD&to=YYYY-MM-DD)
-router.get("/orders/export", requireAuth, async (req: any, res) => {
+router.get("/orders/export", requireAuth, requireStore, async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const fromStr = req.query.from as string | undefined;
     const toStr   = req.query.to   as string | undefined;
@@ -371,10 +369,9 @@ router.get("/orders/track/:token", publicTrackLimiter, async (req: any, res) => 
 });
 
 // GET /orders/:id
-router.get("/orders/:id", requireAuth, async (req: any, res) => {
+router.get("/orders/:id", requireAuth, requireStore, async (req: any, res) => {
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const [order] = await db
       .select()
@@ -390,13 +387,12 @@ router.get("/orders/:id", requireAuth, async (req: any, res) => {
 });
 
 // PATCH /orders/:id
-router.patch("/orders/:id", requireAuth, async (req: any, res) => {
+router.patch("/orders/:id", requireAuth, requireStore, async (req: any, res) => {
   const parsed = UpdateOrderStatusBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const [order] = await db
       .update(ordersTable)
@@ -434,7 +430,7 @@ router.patch("/orders/:id", requireAuth, async (req: any, res) => {
 });
 
 // GET /orders/customer-history — all orders + stats for a customer
-router.get("/orders/customer-history", requireAuth, async (req: any, res) => {
+router.get("/orders/customer-history", requireAuth, requireStore, async (req: any, res) => {
   const { phone, email } = req.query as { phone?: string; email?: string };
 
   if (!phone && !email) {
@@ -442,8 +438,7 @@ router.get("/orders/customer-history", requireAuth, async (req: any, res) => {
   }
 
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const allOrders = await db
       .select()
@@ -484,15 +479,14 @@ router.get("/orders/customer-history", requireAuth, async (req: any, res) => {
 });
 
 // PATCH /orders/:id/note — set or clear the owner-only internal note
-router.patch("/orders/:id/note", requireAuth, async (req: any, res) => {
+router.patch("/orders/:id/note", requireAuth, requireStore, async (req: any, res) => {
   const orderId = Number(req.params.id);
   const { ownerNote } = req.body;
 
   if (isNaN(orderId)) return res.status(400).json({ error: "Invalid order id" });
 
   try {
-    const storeId = await getStoreOrFail(req.userId, res);
-    if (storeId === null) return;
+    const storeId = req.storeId;
 
     const [order] = await db
       .update(ordersTable)
@@ -509,7 +503,7 @@ router.patch("/orders/:id/note", requireAuth, async (req: any, res) => {
 });
 
 // POST /orders/bulk-status — update status for multiple orders at once
-router.post("/orders/bulk-status", requireAuth, async (req: any, res) => {
+router.post("/orders/bulk-status", requireAuth, requireStore, async (req: any, res) => {
   const { orderIds, status } = req.body;
   const VALID = ["pending", "confirmed", "completed", "cancelled"];
 
@@ -521,17 +515,10 @@ router.post("/orders/bulk-status", requireAuth, async (req: any, res) => {
   }
 
   try {
-    const [store] = await db
-      .select({ id: storesTable.id })
-      .from(storesTable)
-      .where(eq(storesTable.userId, req.userId));
-
-    if (!store) return res.status(404).json({ error: "No store found" });
-
     const result = await db
       .update(ordersTable)
       .set({ status, updatedAt: new Date() })
-      .where(and(eq(ordersTable.storeId, store.id), inArray(ordersTable.id, orderIds)));
+      .where(and(eq(ordersTable.storeId, req.storeId), inArray(ordersTable.id, orderIds)));
 
     return res.json({ updated: orderIds.length });
   } catch (err) {
