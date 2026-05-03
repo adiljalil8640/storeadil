@@ -186,10 +186,12 @@ export default function StorefrontPage() {
     return m;
   }, [store?.products]);
 
-  const sortedReviews = useMemo(
-    () => [...storeReviews].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [storeReviews]
-  );
+  const sortedReviews = useMemo(() => {
+    const copy = [...storeReviews];
+    if (reviewSort === "highest") return copy.sort((a, b) => b.rating - a.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (reviewSort === "lowest")  return copy.sort((a, b) => a.rating - b.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [storeReviews, reviewSort]);
 
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -266,6 +268,7 @@ export default function StorefrontPage() {
 
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [reviewSort, setReviewSort] = useState<"recent" | "highest" | "lowest">("recent");
 
   const filteredProducts = useMemo(() => {
     if (!store?.products) return [];
@@ -790,11 +793,28 @@ export default function StorefrontPage() {
         {/* Customer Reviews Section */}
         {sortedReviews.length > 0 && (
           <section id="reviews" className="mt-12 pt-8 border-t space-y-5">
-            <div className="flex items-baseline gap-3">
-              <h2 className="text-xl font-bold">Customer Reviews</h2>
-              <span className="text-sm text-muted-foreground">
-                {sortedReviews.length} review{sortedReviews.length !== 1 ? "s" : ""}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-xl font-bold">Customer Reviews</h2>
+                <span className="text-sm text-muted-foreground">
+                  {sortedReviews.length} review{sortedReviews.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                {(["recent", "highest", "lowest"] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setReviewSort(opt)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      reviewSort === opt
+                        ? "bg-foreground text-background border-foreground"
+                        : "border-border text-muted-foreground hover:border-foreground/50"
+                    }`}
+                  >
+                    {opt === "recent" ? "Most Recent" : opt === "highest" ? "Highest Rated" : "Lowest Rated"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-4">
