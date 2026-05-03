@@ -93,11 +93,28 @@ app.use("/api/billing/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+// The CLERK_SECRET_KEY may belong to a different Clerk instance than VITE_CLERK_PUBLISHABLE_KEY.
+// To decouple JWT verification from the secret key's JWKS, we supply the RSA public key
+// (fetched from the FAPI's /.well-known/jwks.json) directly as jwtKey.
+// This ensures tokens issued by the pk_test_ instance are verified with the correct key,
+// regardless of which Clerk instance the sk_test_ belongs to.
+const CLERK_JWT_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwIsShJgN2ISL4Es4yzIT
+EAmsXiHYxr8STT92WNdIb8Tro5ysajGUBWFzp/pnzTw/8eTq9zcwIoEYXX0OMa+Q
+V8U7nxzPHyHTfad3cqz9tKty9lTNmIspin6ulYSL7LnovRYaYAoBhmSC2iKslbNZ
+I+C0P91XclZ4adxsD1OMv9QM6lXu+fBEyt4NBN8wfjOoI3rlchk5oMATFXVN4lnc
+6IWUIATBZOUs/rUToeM/xEnsfX54Pn4k5PltcfwPLIOARYRgTfpB6x/fUVxLAUfC
+qRmGs9hKCL9oJ/mdlzmT7NmbBEbg58AlGNPRjkvFqkOpRIqzM7SfRJe8HREVmhc1
+owIDAQAB
+-----END PUBLIC KEY-----`;
+
 app.use(
   "/api",
   clerkMiddleware({
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
     secretKey: process.env.CLERK_SECRET_KEY,
+    jwtKey: CLERK_JWT_KEY,
   }),
 );
 

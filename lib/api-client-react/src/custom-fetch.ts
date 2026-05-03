@@ -17,6 +17,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _on401: (() => void) | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +43,16 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Register a callback that is invoked whenever an API response returns HTTP
+ * 401 Unauthorized. Useful for automatically signing the user out when their
+ * session token is stale or invalid.
+ * Pass `null` to remove the handler.
+ */
+export function setOn401Callback(handler: (() => void) | null): void {
+  _on401 = handler;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -363,6 +374,9 @@ export async function customFetch<T = unknown>(
   const response = await fetch(input, { ...init, method, headers });
 
   if (!response.ok) {
+    if (response.status === 401 && _on401) {
+      _on401();
+    }
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
   }

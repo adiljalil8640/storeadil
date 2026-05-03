@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useClerk } from "@clerk/react";
-import { useGetMyStore, setAuthTokenGetter } from "@workspace/api-client-react";
+import { useGetMyStore, setAuthTokenGetter, setOn401Callback } from "@workspace/api-client-react";
 
 // Pages
 import LandingPage from "@/pages/landing";
@@ -107,13 +107,23 @@ function ClerkQueryClientCacheInvalidator() {
 
 // Injects Clerk's session JWT into every API request as a Bearer token.
 // This works across all environments (dev, prod, Replit) without relying on cookies.
+// Also registers a 401 handler that automatically signs the user out whenever
+// the backend rejects their token (e.g. stale session from a different Clerk instance).
 function ClerkTokenInjector() {
   const { getToken, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
 
   useEffect(() => {
     setAuthTokenGetter(isSignedIn ? () => getToken() : null);
-    return () => { setAuthTokenGetter(null); };
-  }, [getToken, isSignedIn]);
+    setOn401Callback(isSignedIn ? () => {
+      signOut({ redirectUrl: "/" });
+    } : null);
+
+    return () => {
+      setAuthTokenGetter(null);
+      setOn401Callback(null);
+    };
+  }, [getToken, isSignedIn, signOut]);
 
   return null;
 }
