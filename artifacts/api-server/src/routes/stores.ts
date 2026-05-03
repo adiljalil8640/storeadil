@@ -177,6 +177,31 @@ router.get("/stores/public/:slug", async (req: any, res) => {
   }
 });
 
+// PATCH /stores/me/hours — update store opening hours
+router.patch("/stores/me/hours", requireAuth, async (req: any, res) => {
+  const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const body = req.body;
+  for (const day of DAYS) {
+    const d = body?.[day];
+    if (!d || typeof d.enabled !== "boolean" || !TIME_RE.test(String(d.open)) || !TIME_RE.test(String(d.close))) {
+      return res.status(400).json({ error: `Invalid hours data for ${day}` });
+    }
+  }
+  try {
+    const [store] = await db
+      .update(storesTable)
+      .set({ storeHours: body, updatedAt: new Date() })
+      .where(eq(storesTable.userId, req.userId))
+      .returning();
+    if (!store) return res.status(404).json({ error: "No store found" });
+    return res.json(store);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /stores/me/domain — set or clear custom domain
 router.patch("/stores/me/domain", requireAuth, async (req: any, res) => {
   const raw: unknown = req.body?.domain;
@@ -290,13 +315,13 @@ router.patch("/stores/me/slug", requireAuth, async (req: any, res) => {
       .returning();
 
     if (!store) return res.status(404).json({ error: "No store found" });
-    res.json(store);
+    return res.json(store);
   } catch (err: any) {
     req.log.error(err);
     if (err.code === "23505") {
       return res.status(409).json({ error: "That URL handle is already taken" });
     }
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -64,6 +64,7 @@ import type {
   ShareMessage,
   SlugCheckResult,
   Store,
+  StoreHoursMap,
   SuggestPriceBody,
   SuggestPriceResponse,
   TopStore,
@@ -406,6 +407,92 @@ export const useUpdateMyStoreSlug = <
   TContext
 > => {
   return useMutation(getUpdateMyStoreSlugMutationOptions(options));
+};
+
+/**
+ * @summary Update store opening hours
+ */
+export const getUpdateMyStoreHoursUrl = () => {
+  return `/api/stores/me/hours`;
+};
+
+export const updateMyStoreHours = async (
+  storeHoursMap: StoreHoursMap,
+  options?: RequestInit,
+): Promise<Store> => {
+  return customFetch<Store>(getUpdateMyStoreHoursUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(storeHoursMap),
+  });
+};
+
+export const getUpdateMyStoreHoursMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreHours>>,
+    TError,
+    { data: BodyType<StoreHoursMap> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyStoreHours>>,
+  TError,
+  { data: BodyType<StoreHoursMap> },
+  TContext
+> => {
+  const mutationKey = ["updateMyStoreHours"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyStoreHours>>,
+    { data: BodyType<StoreHoursMap> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyStoreHours(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyStoreHoursMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyStoreHours>>
+>;
+export type UpdateMyStoreHoursMutationBody = BodyType<StoreHoursMap>;
+export type UpdateMyStoreHoursMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update store opening hours
+ */
+export const useUpdateMyStoreHours = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreHours>>,
+    TError,
+    { data: BodyType<StoreHoursMap> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyStoreHours>>,
+  TError,
+  { data: BodyType<StoreHoursMap> },
+  TContext
+> => {
+  return useMutation(getUpdateMyStoreHoursMutationOptions(options));
 };
 
 /**

@@ -5,10 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X } from "lucide-react";
+import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X, Clock } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+
+// --- Store hours helpers ---
+const STORE_DAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as const;
+
+function fmtTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function getStoreOpenStatus(hours: Record<string, { enabled: boolean; open: string; close: string }>): { open: boolean; label: string } {
+  const now = new Date();
+  const dayKey = STORE_DAYS[now.getDay()];
+  const day = hours[dayKey];
+  if (!day?.enabled) return { open: false, label: "Closed today" };
+  const [oh, om] = day.open.split(":").map(Number);
+  const [ch, cm] = day.close.split(":").map(Number);
+  const nowM  = now.getHours() * 60 + now.getMinutes();
+  const openM = oh * 60 + om;
+  const closeM = ch * 60 + cm;
+  if (nowM >= openM && nowM < closeM) return { open: true,  label: `Open · Closes ${fmtTime(day.close)}` };
+  if (nowM < openM)                   return { open: false, label: `Opens ${fmtTime(day.open)}` };
+  return { open: false, label: "Closed" };
+}
 
 type CartItem = {
   product: any;
@@ -118,6 +143,12 @@ export default function StorefrontPage() {
   const { data: store, isLoading, error } = useGetPublicStore(slug || "", {
     query: { enabled: !!slug, retry: false }
   });
+
+  const openStatus = useMemo(
+    () => store?.storeHours ? getStoreOpenStatus(store.storeHours as any) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [store?.storeHours]
+  );
 
   const createOrder = useCreateOrder();
   const validateCoupon = useValidateCoupon();
@@ -327,6 +358,16 @@ export default function StorefrontPage() {
               </div>
             )}
             <h1 className="font-bold text-xl">{store.name}</h1>
+            {openStatus && (
+              <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${
+                openStatus.open
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${openStatus.open ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+                {openStatus.label}
+              </span>
+            )}
           </div>
 
           <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>

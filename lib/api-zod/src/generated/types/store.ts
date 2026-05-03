@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { StoreDigestFrequency } from "./storeDigestFrequency";
+import type { StoreHoursMap } from "./storeHoursMap";
 import type { StoreTheme } from "./storeTheme";
 
 export interface Store {
@@ -30,6 +31,8 @@ export interface Store {
   metaDescription?: string | null;
   /** Custom domain pointing to this store (e.g. shop.mybrand.com). */
   customDomain?: string | null;
+  /** Per-day opening hours. Null means hours are not configured. */
+  storeHours?: StoreHoursMap | null;
   createdAt: Date;
   updatedAt: Date;
 }

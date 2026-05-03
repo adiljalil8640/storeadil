@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Product } from "./product";
+import type { StoreHoursMap } from "./storeHoursMap";
 
 export interface PublicStore {
   id: number;
@@ -19,5 +20,7 @@ export interface PublicStore {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   shippingNote?: string | null;
+  /** Per-day opening hours. Null if not configured. */
+  storeHours?: StoreHoursMap | null;
   products: Product[];
 }

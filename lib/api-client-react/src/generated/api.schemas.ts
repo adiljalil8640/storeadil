@@ -167,6 +167,24 @@ export const StoreDigestFrequency = {
   weekly: "weekly",
 } as const;
 
+export interface DayHours {
+  enabled: boolean;
+  /** Opening time in HH:mm (24-hour) format, e.g. "09:00" */
+  open: string;
+  /** Closing time in HH:mm (24-hour) format, e.g. "18:00" */
+  close: string;
+}
+
+export interface StoreHoursMap {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
 export interface Store {
   id: number;
   userId: string;
@@ -189,6 +207,8 @@ export interface Store {
   metaDescription?: string | null;
   /** Custom domain pointing to this store (e.g. shop.mybrand.com). */
   customDomain?: string | null;
+  /** Per-day opening hours. Null means hours are not configured. */
+  storeHours?: StoreHoursMap | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -225,6 +245,8 @@ export interface PublicStore {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   shippingNote?: string | null;
+  /** Per-day opening hours. Null if not configured. */
+  storeHours?: StoreHoursMap | null;
   products: Product[];
 }
 

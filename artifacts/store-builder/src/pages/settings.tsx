@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2 } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -495,6 +495,62 @@ export default function SettingsPage() {
   const handleCopyQrUrl = () => {
     navigator.clipboard.writeText(qrUrl);
     toast.success("URL copied to clipboard!");
+  };
+
+  // --- Store Hours ---
+  type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+  type DayHoursState = { enabled: boolean; open: string; close: string };
+  type HoursState = Record<DayKey, DayHoursState>;
+
+  const DAYS_OF_WEEK: { key: DayKey; label: string }[] = [
+    { key: "monday",    label: "Monday"    },
+    { key: "tuesday",   label: "Tuesday"   },
+    { key: "wednesday", label: "Wednesday" },
+    { key: "thursday",  label: "Thursday"  },
+    { key: "friday",    label: "Friday"    },
+    { key: "saturday",  label: "Saturday"  },
+    { key: "sunday",    label: "Sunday"    },
+  ];
+
+  const defaultHours = (): HoursState => ({
+    monday:    { enabled: true,  open: "09:00", close: "18:00" },
+    tuesday:   { enabled: true,  open: "09:00", close: "18:00" },
+    wednesday: { enabled: true,  open: "09:00", close: "18:00" },
+    thursday:  { enabled: true,  open: "09:00", close: "18:00" },
+    friday:    { enabled: true,  open: "09:00", close: "18:00" },
+    saturday:  { enabled: false, open: "09:00", close: "15:00" },
+    sunday:    { enabled: false, open: "09:00", close: "15:00" },
+  });
+
+  const [hours, setHours] = useState<HoursState>(defaultHours());
+  const [hoursSaving, setHoursSaving] = useState(false);
+  const [hoursInitialized, setHoursInitialized] = useState(false);
+
+  useEffect(() => {
+    if (store && !hoursInitialized) {
+      if (store.storeHours) setHours(store.storeHours as HoursState);
+      setHoursInitialized(true);
+    }
+  }, [store, hoursInitialized]);
+
+  const updateDay = (day: DayKey, patch: Partial<DayHoursState>) =>
+    setHours((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+
+  const handleSaveHours = async () => {
+    setHoursSaving(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/hours`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(hours),
+      });
+      if (!r.ok) { toast.error((await r.json()).error ?? "Failed to save hours"); }
+      else {
+        toast.success("Store hours saved!");
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+      }
+    } catch { toast.error("Failed to save hours"); }
+    finally { setHoursSaving(false); }
   };
 
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
@@ -1484,6 +1540,81 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground">
                 Print this QR code on packaging, receipts, business cards, or display it in your shop window so customers can scan and order instantly.
               </p>
+
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Store Hours card */}
+        {store && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Store Hours
+              </CardTitle>
+              <CardDescription>
+                Set your opening hours so customers know when you're available. A live Open/Closed indicator will appear on your storefront.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="space-y-1">
+                {DAYS_OF_WEEK.map(({ key, label }) => {
+                  const day = hours[key];
+                  return (
+                    <div
+                      key={key}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${day.enabled ? "bg-muted/40" : ""}`}
+                    >
+                      <Switch
+                        checked={day.enabled}
+                        onCheckedChange={(v) => updateDay(key, { enabled: v })}
+                        id={`hours-${key}`}
+                      />
+                      <label
+                        htmlFor={`hours-${key}`}
+                        className={`w-24 text-sm font-medium cursor-pointer select-none shrink-0 ${day.enabled ? "" : "text-muted-foreground"}`}
+                      >
+                        {label}
+                      </label>
+
+                      {day.enabled ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <input
+                            type="time"
+                            value={day.open}
+                            onChange={(e) => updateDay(key, { open: e.target.value })}
+                            className="h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          />
+                          <span className="text-muted-foreground text-xs">to</span>
+                          <input
+                            type="time"
+                            value={day.close}
+                            onChange={(e) => updateDay(key, { close: e.target.value })}
+                            className="h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Closed</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                className="gap-2"
+                disabled={hoursSaving}
+                onClick={handleSaveHours}
+              >
+                {hoursSaving
+                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  : <Save className="w-3.5 h-3.5" />}
+                {hoursSaving ? "Saving…" : "Save Hours"}
+              </Button>
 
             </CardContent>
           </Card>
