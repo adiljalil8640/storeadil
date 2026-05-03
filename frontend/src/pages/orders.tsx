@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, useGetCustomerHistory, useGetMyStore, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
+import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, useGetCustomerHistory, useGetMyStore, getListOrdersQueryKey, getGetAnalyticsSummaryQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,6 +170,7 @@ export default function OrdersPage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAnalyticsSummaryQueryKey() });
         toast.success("Order status updated");
       }
     }
@@ -335,6 +336,7 @@ export default function OrdersPage() {
     mutation: {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAnalyticsSummaryQueryKey() });
         setSelectedIds(new Set());
         toast.success(`${data.updated} order${data.updated !== 1 ? "s" : ""} updated to ${bulkStatus}`);
       },
