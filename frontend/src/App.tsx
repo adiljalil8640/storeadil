@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useClerk } from "@clerk/react";
-import { useGetMyStore } from "@workspace/api-client-react";
+import { useGetMyStore, setAuthTokenGetter } from "@workspace/api-client-react";
 
 // Pages
 import LandingPage from "@/pages/landing";
@@ -109,6 +109,19 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+// Injects Clerk's session JWT into every API request as a Bearer token.
+// This works across all environments (dev, prod, Replit) without relying on cookies.
+function ClerkTokenInjector() {
+  const { getToken, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(isSignedIn ? () => getToken() : null);
+    return () => { setAuthTokenGetter(null); };
+  }, [getToken, isSignedIn]);
+
+  return null;
+}
+
 function HomeRedirect() {
   const [, setLocation] = useLocation();
   const { isSignedIn, isLoaded } = useAuth();
@@ -200,6 +213,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <ClerkTokenInjector />
         <Switch>
           <Route path="/" component={HomeRedirect} />
           <Route path="/sign-in/*?" component={SignInPage} />

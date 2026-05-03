@@ -21,7 +21,7 @@ import {
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGetMyStore, useGetBillingStatus, useGetAnalyticsSummary } from "@workspace/api-client-react";
+import { useGetMyStore, useGetBillingStatus, useGetAnalyticsSummary, useListMerchantReviews } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -40,6 +40,9 @@ export function AppLayout({ children }: LayoutProps) {
   const { data: analytics } = useGetAnalyticsSummary({ query: { enabled: !!user && !!store } });
   const pendingOrders = analytics?.pendingOrders ?? 0;
 
+  const { data: reviewsData } = useListMerchantReviews(undefined, { query: { enabled: !!user && !!store } });
+  const unrepliedReviews = (reviewsData ?? []).filter((r) => !r.merchantReply).length;
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location]);
@@ -49,7 +52,7 @@ export function AppLayout({ children }: LayoutProps) {
     { href: `${basePath}/products`, label: "Products", icon: Package },
     { href: `${basePath}/orders`, label: "Orders", icon: ShoppingCart, badge: pendingOrders > 0 ? pendingOrders : undefined },
     { href: `${basePath}/coupons`, label: "Coupons", icon: Tag },
-    { href: `${basePath}/reviews`, label: "Reviews", icon: Star },
+    { href: `${basePath}/reviews`, label: "Reviews", icon: Star, badge: unrepliedReviews > 0 ? unrepliedReviews : undefined },
     { href: `${basePath}/waitlist`, label: "Waitlist", icon: Bell },
     { href: `${basePath}/referrals`, label: "Referrals", icon: Gift },
     { href: `${basePath}/analytics`, label: "Analytics", icon: TrendingUp },
