@@ -115,6 +115,24 @@ export default function SettingsPage() {
   const REQUIRED_TAGS = ["og:title", "og:description", "og:url", "og:type"];
   const RECOMMENDED_TAGS = ["og:image", "og:site_name", "twitter:card", "twitter:title", "twitter:description"];
 
+  type HealthStatus = "idle" | "loading" | "good" | "warn" | "error";
+  const [healthStatus, setHealthStatus] = useState<HealthStatus>("idle");
+
+  // Silent background fetch to populate the header health badge
+  useEffect(() => {
+    if (!store) return;
+    setHealthStatus("loading");
+    fetch(`${basePath}/api/og/${store.slug}/meta`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { tags: Record<string, string | null> } | null) => {
+        if (!data) { setHealthStatus("error"); return; }
+        const allRequired = REQUIRED_TAGS.every(k => data.tags[k]);
+        const allRecommended = RECOMMENDED_TAGS.every(k => data.tags[k]);
+        setHealthStatus(allRequired && allRecommended ? "good" : allRequired ? "warn" : "error");
+      })
+      .catch(() => setHealthStatus("error"));
+  }, [store, basePath]);
+
   const handleVerify = async () => {
     if (!store) return;
     setVerifying(true);
@@ -164,9 +182,44 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       <div className="space-y-6 max-w-4xl mx-auto pb-10">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage your store preferences and configuration.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+            <p className="text-muted-foreground">Manage your store preferences and configuration.</p>
+          </div>
+
+          {/* OG Preview Health Badge */}
+          {healthStatus !== "idle" && (
+            <div className="shrink-0 mt-1">
+              {healthStatus === "loading" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse" />
+                  Checking preview…
+                </span>
+              )}
+              {healthStatus === "good" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  Preview ready
+                </span>
+              )}
+              {healthStatus === "warn" && (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors"
+                  title="Add a logo to enable image previews on WhatsApp and Twitter"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Add a logo for richer previews
+                </span>
+              )}
+              {healthStatus === "error" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  Preview needs attention
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {store && (
