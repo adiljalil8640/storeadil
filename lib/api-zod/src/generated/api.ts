@@ -33,6 +33,18 @@ export const GetMyStoreResponse = zod.object({
   notificationEmail: zod.string().nullish(),
   digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
   category: zod.string().nullish(),
+  metaTitle: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG title shown to search engines and social platforms. Falls back to store name if not set.",
+    ),
+  metaDescription: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -53,6 +65,16 @@ export const UpdateMyStoreBody = zod.object({
   notificationEmail: zod.string().nullish(),
   digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
   category: zod.string().nullish(),
+  metaTitle: zod
+    .string()
+    .nullish()
+    .describe("Custom SEO\/OG title. Falls back to store name if not set."),
+  metaDescription: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG description. Falls back to store description if not set.",
+    ),
 });
 
 export const UpdateMyStoreResponse = zod.object({
@@ -71,6 +93,18 @@ export const UpdateMyStoreResponse = zod.object({
   notificationEmail: zod.string().nullish(),
   digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
   category: zod.string().nullish(),
+  metaTitle: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG title shown to search engines and social platforms. Falls back to store name if not set.",
+    ),
+  metaDescription: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

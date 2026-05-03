@@ -1280,6 +1280,14 @@ components:
         category:
           type: string
           nullable: true
+        metaTitle:
+          type: string
+          nullable: true
+          description: Custom SEO/OG title shown to search engines and social platforms. Falls back to store name if not set.
+        metaDescription:
+          type: string
+          nullable: true
+          description: Custom SEO/OG description for link previews and search results. Falls back to store description if not set.
         createdAt:
           type: string
           format: date-time
@@ -1445,6 +1453,14 @@ components:
         category:
           type: string
           nullable: true
+        metaTitle:
+          type: string
+          nullable: true
+          description: Custom SEO/OG title. Falls back to store name if not set.
+        metaDescription:
+          type: string
+          nullable: true
+          description: Custom SEO/OG description. Falls back to store description if not set.
 
     Product:
       type: object

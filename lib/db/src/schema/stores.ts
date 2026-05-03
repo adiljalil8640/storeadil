@@ -18,6 +18,8 @@ export const storesTable = pgTable("stores", {
   notificationEmail: text("notification_email"),
   digestFrequency: text("digest_frequency").default("none"),
   category: text("category"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

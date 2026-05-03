@@ -21,4 +21,8 @@ export interface UpdateStoreBody {
   notificationEmail?: string | null;
   digestFrequency?: UpdateStoreBodyDigestFrequency;
   category?: string | null;
+  /** Custom SEO/OG title. Falls back to store name if not set. */
+  metaTitle?: string | null;
+  /** Custom SEO/OG description. Falls back to store description if not set. */
+  metaDescription?: string | null;
 }

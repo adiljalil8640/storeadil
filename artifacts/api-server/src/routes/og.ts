@@ -33,6 +33,8 @@ router.get("/og/:slug", async (req: any, res) => {
         slug: storesTable.slug,
         description: storesTable.description,
         logoUrl: storesTable.logoUrl,
+        metaTitle: storesTable.metaTitle,
+        metaDescription: storesTable.metaDescription,
       })
       .from(storesTable)
       .where(eq(storesTable.slug, slug));
@@ -49,10 +51,15 @@ router.get("/og/:slug", async (req: any, res) => {
     const storeUrl = `${origin}/store/${store.slug}`;
     const ogUrl = `${origin}/api/og/${store.slug}`;
 
-    const title = escapeHtml(store.name);
-    const description = store.description
-      ? escapeHtml(store.description.slice(0, 160))
-      : escapeHtml(`Shop ${store.name} on Zapp Store — browse products and order via WhatsApp.`);
+    // metaTitle / metaDescription take priority over name / description
+    const resolvedTitle = store.metaTitle || store.name;
+    const resolvedDescription =
+      store.metaDescription ||
+      store.description ||
+      `Shop ${store.name} on Zapp Store — browse products and order via WhatsApp.`;
+
+    const title = escapeHtml(resolvedTitle);
+    const description = escapeHtml(resolvedDescription.slice(0, 160));
     const imageUrl = store.logoUrl ? escapeHtml(store.logoUrl) : "";
     const siteName = "Zapp Store";
 
@@ -120,6 +127,8 @@ router.get("/og/:slug/meta", async (req: any, res) => {
         slug: storesTable.slug,
         description: storesTable.description,
         logoUrl: storesTable.logoUrl,
+        metaTitle: storesTable.metaTitle,
+        metaDescription: storesTable.metaDescription,
       })
       .from(storesTable)
       .where(eq(storesTable.slug, slug));
@@ -133,21 +142,26 @@ router.get("/og/:slug/meta", async (req: any, res) => {
     const origin = `${proto}://${host}`;
 
     const storeUrl = `${origin}/store/${store.slug}`;
-    const description = store.description
-      ? store.description.slice(0, 160)
-      : `Shop ${store.name} on Zapp Store — browse products and order via WhatsApp.`;
+
+    // metaTitle / metaDescription take priority over name / description
+    const resolvedTitle = store.metaTitle || store.name;
+    const resolvedDescription =
+      store.metaDescription ||
+      store.description ||
+      `Shop ${store.name} on Zapp Store — browse products and order via WhatsApp.`;
+    const description = resolvedDescription.slice(0, 160);
 
     const tags: Record<string, string | null> = {
-      "title": `${store.name} — Zapp Store`,
+      "title": `${resolvedTitle} — Zapp Store`,
       "description": description,
       "og:type": "website",
       "og:site_name": "Zapp Store",
       "og:url": storeUrl,
-      "og:title": store.name,
+      "og:title": resolvedTitle,
       "og:description": description,
       "og:image": store.logoUrl ?? null,
       "twitter:card": store.logoUrl ? "summary_large_image" : "summary",
-      "twitter:title": store.name,
+      "twitter:title": resolvedTitle,
       "twitter:description": description,
       "twitter:image": store.logoUrl ?? null,
     };

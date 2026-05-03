@@ -24,6 +24,10 @@ export interface Store {
   notificationEmail?: string | null;
   digestFrequency?: StoreDigestFrequency;
   category?: string | null;
+  /** Custom SEO/OG title shown to search engines and social platforms. Falls back to store name if not set. */
+  metaTitle?: string | null;
+  /** Custom SEO/OG description for link previews and search results. Falls back to store description if not set. */
+  metaDescription?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

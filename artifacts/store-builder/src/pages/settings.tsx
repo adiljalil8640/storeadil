@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 
@@ -28,6 +28,8 @@ const settingsSchema = z.object({
   shippingNote: z.string().optional().nullable(),
   notificationEmail: z.string().email("Must be a valid email").optional().nullable().or(z.literal("")),
   digestFrequency: z.enum(["none", "daily", "weekly"]).default("none"),
+  metaTitle: z.string().max(60, "Keep it under 60 characters for best results").optional().nullable().or(z.literal("")),
+  metaDescription: z.string().max(160, "Keep it under 160 characters for best results").optional().nullable().or(z.literal("")),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -63,6 +65,8 @@ export default function SettingsPage() {
       shippingNote: "",
       notificationEmail: "",
       digestFrequency: "none" as const,
+      metaTitle: "",
+      metaDescription: "",
     },
   });
 
@@ -80,6 +84,8 @@ export default function SettingsPage() {
         shippingNote: store.shippingNote,
         notificationEmail: store.notificationEmail || "",
         digestFrequency: (store.digestFrequency as any) || "none",
+        metaTitle: store.metaTitle || "",
+        metaDescription: store.metaDescription || "",
       });
     }
   }, [store, form]);
@@ -101,8 +107,8 @@ export default function SettingsPage() {
   const ogPreviewUrl = store ? `${window.location.origin}${basePath}/api/og/${store.slug}` : "";
 
   const [previewPlatform, setPreviewPlatform] = useState<"whatsapp" | "slack" | "twitter">("whatsapp");
-  const previewName = form.watch("name") || store?.name || "Your Store";
-  const previewDesc = form.watch("description") || store?.description || "";
+  const previewName = form.watch("metaTitle") || form.watch("name") || store?.name || "Your Store";
+  const previewDesc = form.watch("metaDescription") || form.watch("description") || store?.description || "";
   const previewLogo = store?.logoUrl ?? null;
   const previewDomain = store ? window.location.hostname : "zappstore.app";
 
@@ -824,6 +830,86 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Store SEO card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-primary" />
+                  Store SEO &amp; Link Preview Text
+                </CardTitle>
+                <CardDescription>
+                  Craft a title and description specifically for search engines, WhatsApp previews, and social sharing — separate from what customers see on your storefront. Leave blank to use your store name and description automatically.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="metaTitle"
+                  render={({ field }) => {
+                    const len = (field.value ?? "").length;
+                    return (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>SEO Title</FormLabel>
+                          <span className={`text-xs tabular-nums ${len > 55 ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
+                            {len}/60
+                          </span>
+                        </div>
+                        <FormControl>
+                          <Input
+                            placeholder={`${store?.name ?? "Your Store"} — Zapp Store`}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Shown in search results and browser tabs. Aim for 50–60 characters. Falls back to your store name.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={form.control}
+                  name="metaDescription"
+                  render={({ field }) => {
+                    const len = (field.value ?? "").length;
+                    return (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>SEO Description</FormLabel>
+                          <span className={`text-xs tabular-nums ${len > 150 ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
+                            {len}/160
+                          </span>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            placeholder={store?.description ?? "Describe what makes your store special…"}
+                            className="resize-none"
+                            rows={3}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Shown in search snippets, WhatsApp previews, and link cards. Aim for 120–160 characters. Falls back to your store description.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <div className="rounded-lg border bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-primary" /> How this works
+                  </p>
+                  <p>When someone pastes your preview link on WhatsApp, Slack, or Twitter, they see your <strong>SEO Title</strong> as the headline and your <strong>SEO Description</strong> as the body — not the description on your storefront page.</p>
+                  <p>This lets you write one message for shoppers ("Browse handmade candles…") and a punchier hook for sharing ("🕯️ Handmade soy candles — free shipping this weekend").</p>
+                </div>
               </CardContent>
             </Card>
 
