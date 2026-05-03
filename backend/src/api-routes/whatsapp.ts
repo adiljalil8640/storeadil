@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, whatsappMessagesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -10,15 +9,9 @@ import {
   sendBusinessApiMessage,
   generateAutoReply,
 } from "../services/whatsapp";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const { userId } = getAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 async function getStore(userId: string) {
   const [store] = await db.select().from(storesTable).where(eq(storesTable.userId, userId));

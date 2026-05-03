@@ -1,20 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import OpenAI from "openai";
 import { GenerateStoreBody } from "@workspace/api-zod";
 import { db } from "@workspace/db";
 import { aiProvidersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 async function getAiClient(): Promise<{ client: OpenAI; model: string }> {
   try {

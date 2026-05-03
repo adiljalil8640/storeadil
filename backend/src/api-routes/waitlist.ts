@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, productsTable, stockWaitlistTable } from "@workspace/db";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { publicWriteLimiter } from "../middlewares/rateLimiter";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -64,13 +64,6 @@ router.post("/stores/public/:slug/waitlist", publicWriteLimiter, async (req: any
   }
 });
 
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 // GET /products/waitlist — authenticated, returns all unnotified entries with product name
 router.get("/products/waitlist", requireAuth, async (req: any, res) => {

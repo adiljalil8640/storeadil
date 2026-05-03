@@ -1,20 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, productsTable } from "@workspace/db";
 import { eq, sql, desc, and, gte } from "drizzle-orm";
 import { CreateStoreBody, UpdateMyStoreBody } from "@workspace/api-zod";
 import { publicStoreLimiter } from "../middlewares/rateLimiter";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 // GET /stores/me
 router.get("/stores/me", requireAuth, async (req: any, res) => {

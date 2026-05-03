@@ -1,20 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { plansTable, subscriptionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getOrCreateSubscription, getPlanByName, getStripeClient } from "../services/billing";
 import { getUserUsageSummary } from "../services/usage";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 // GET /billing/plans
 router.get("/billing/plans", async (req: any, res) => {

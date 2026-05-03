@@ -1,29 +1,13 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, productsTable, stockWaitlistTable } from "@workspace/db";
 import { eq, and, ilike, sql, isNull } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
 import { checkProductLimit } from "../services/usage";
 import { sendBackInStockEmail } from "../services/email";
+import { requireAuth, getStoreId } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
-
-async function getStoreId(userId: string): Promise<number | null> {
-  const [store] = await db
-    .select({ id: storesTable.id })
-    .from(storesTable)
-    .where(eq(storesTable.userId, userId));
-  return store?.id ?? null;
-}
 
 // GET /products
 router.get("/products", requireAuth, async (req: any, res) => {

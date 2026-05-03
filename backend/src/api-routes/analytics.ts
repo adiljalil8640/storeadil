@@ -1,26 +1,10 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, productsTable, couponsTable } from "@workspace/db";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
+import { requireAuth, getStoreId } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
-
-async function getStoreId(userId: string): Promise<number | null> {
-  const [store] = await db
-    .select({ id: storesTable.id })
-    .from(storesTable)
-    .where(eq(storesTable.userId, userId));
-  return store?.id ?? null;
-}
 
 // GET /analytics/summary
 router.get("/analytics/summary", requireAuth, async (req: any, res) => {

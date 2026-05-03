@@ -1,19 +1,11 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import QRCode from "qrcode";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 // GET /growth/share-message
 router.get("/growth/share-message", requireAuth, async (req: any, res) => {

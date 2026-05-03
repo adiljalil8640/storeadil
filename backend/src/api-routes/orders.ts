@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, couponsTable } from "@workspace/db";
 import { eq, and, desc, sql, ilike, gte, lte, inArray } from "drizzle-orm";
@@ -8,24 +7,9 @@ import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
 import { productsTable } from "@workspace/db";
 import { publicOrderLimiter, publicTrackLimiter } from "../middlewares/rateLimiter";
+import { requireAuth, getStoreId } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
-
-async function getStoreId(userId: string): Promise<number | null> {
-  const [store] = await db
-    .select({ id: storesTable.id })
-    .from(storesTable)
-    .where(eq(storesTable.userId, userId));
-  return store?.id ?? null;
-}
 
 function buildWhatsAppUrl(phoneNumber: string, items: any[], total: number, currency: string, customerName?: string | null, customerNote?: string | null): string {
   const itemLines = items.map((item: any) => {

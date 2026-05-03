@@ -1,28 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, reviewsTable, productsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { sendNewReviewNotification } from "../services/email";
 import { publicStoreLimiter, publicWriteLimiter } from "../middlewares/rateLimiter";
+import { requireAuth, getStoreId } from "../middlewares/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
-
-async function getStoreId(userId: string): Promise<number | null> {
-  const [store] = await db
-    .select({ id: storesTable.id })
-    .from(storesTable)
-    .where(eq(storesTable.userId, userId));
-  return store?.id ?? null;
-}
 
 // GET /reviews — authenticated merchant, list all reviews for their store
 router.get("/reviews", requireAuth, async (req: any, res) => {

@@ -1,21 +1,13 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { referralsTable, usageTrackingTable } from "@workspace/db";
 import { eq, and, count, sql } from "drizzle-orm";
 import { getCurrentMonth } from "../services/usage";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
 const REFERRAL_BONUS_ORDERS = 50;
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-}
 
 function generateReferralCode(userId: string): string {
   const base = userId.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 6);
