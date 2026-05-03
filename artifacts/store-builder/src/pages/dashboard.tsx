@@ -242,40 +242,100 @@ export default function Dashboard() {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {/* Numbers row */}
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <span className="text-2xl font-bold">{formatCurrency(earned)}</span>
-                          <span className="text-sm text-muted-foreground ml-1">/ {formatCurrency(goal)}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xl font-semibold text-primary">{pct.toFixed(0)}%</span>
-                          <p className="text-xs text-muted-foreground">{daysLeft} day{daysLeft !== 1 ? "s" : ""} left</p>
-                        </div>
-                      </div>
+                    (() => {
+                      const r = 54;
+                      const circ = 2 * Math.PI * r;
+                      const offset = circ * (1 - Math.min(pct, 100) / 100);
+                      const arcColor =
+                        pct >= 100 ? "hsl(var(--primary))"
+                        : pct >= 70  ? "hsl(var(--primary))"
+                        : pct >= 40  ? "#f59e0b"
+                        : "#f43f5e";
+                      const remaining = Math.max(0, goal - earned);
+                      return (
+                        <div className="flex items-center gap-6">
+                          {/* Arc ring */}
+                          <div className="shrink-0">
+                            <svg width="148" height="148" viewBox="0 0 148 148" aria-label={`${pct.toFixed(0)}% of monthly goal`}>
+                              {/* Track */}
+                              <circle cx="74" cy="74" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="13" strokeLinecap="round" />
+                              {/* Milestone ticks at 25 / 50 / 75 % */}
+                              {[0.25, 0.5, 0.75].map((m) => {
+                                const angle = -Math.PI / 2 + 2 * Math.PI * m;
+                                const tx = 74 + (r + 10) * Math.cos(angle);
+                                const ty = 74 + (r + 10) * Math.sin(angle);
+                                return (
+                                  <circle
+                                    key={m}
+                                    cx={tx} cy={ty} r="2.5"
+                                    fill={pct / 100 >= m ? arcColor : "hsl(var(--muted-foreground))"}
+                                    opacity={0.5}
+                                  />
+                                );
+                              })}
+                              {/* Progress arc */}
+                              <circle
+                                cx="74" cy="74" r={r}
+                                fill="none"
+                                stroke={arcColor}
+                                strokeWidth="13"
+                                strokeLinecap="round"
+                                strokeDasharray={circ}
+                                strokeDashoffset={offset}
+                                transform="rotate(-90 74 74)"
+                                style={{ transition: "stroke-dashoffset 0.9s cubic-bezier(.4,0,.2,1), stroke 0.4s ease" }}
+                              />
+                              {/* Center: percentage */}
+                              <text
+                                x="74" y="69"
+                                textAnchor="middle" dominantBaseline="middle"
+                                style={{ fontSize: "24px", fontWeight: 700, fill: "hsl(var(--foreground))" }}
+                              >
+                                {pct.toFixed(0)}%
+                              </text>
+                              <text
+                                x="74" y="89"
+                                textAnchor="middle" dominantBaseline="middle"
+                                style={{ fontSize: "11px", fill: "hsl(var(--muted-foreground))" }}
+                              >
+                                of goal
+                              </text>
+                            </svg>
+                          </div>
 
-                      {/* Progress bar */}
-                      <div className="h-3 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ${pct >= 100 ? "bg-primary" : pct >= 70 ? "bg-primary/80" : pct >= 40 ? "bg-amber-500" : "bg-rose-500"}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
+                          {/* Stats column */}
+                          <div className="flex-1 min-w-0 space-y-4">
+                            <div>
+                              <div className="text-2xl font-bold leading-none">{formatCurrency(earned)}</div>
+                              <div className="text-sm text-muted-foreground mt-0.5">of {formatCurrency(goal)} target</div>
+                            </div>
 
-                      {/* Status line */}
-                      <p className="text-xs text-muted-foreground">
-                        {pct >= 100 ? (
-                          <span className="text-primary font-semibold">Goal reached! 🎉 You've hit your target for this month.</span>
-                        ) : onTrack === true ? (
-                          <span className="text-primary">On track — keep it up!</span>
-                        ) : onTrack === false ? (
-                          <span className="text-amber-600 dark:text-amber-400">Behind pace — {formatCurrency(goal - earned)} to go.</span>
-                        ) : (
-                          <span>{formatCurrency(goal - earned)} remaining this month.</span>
-                        )}
-                      </p>
-                    </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="rounded-lg bg-muted/50 px-3 py-2">
+                                <div className="text-base font-semibold">{formatCurrency(remaining)}</div>
+                                <div className="text-xs text-muted-foreground">remaining</div>
+                              </div>
+                              <div className="rounded-lg bg-muted/50 px-3 py-2">
+                                <div className="text-base font-semibold">{daysLeft}</div>
+                                <div className="text-xs text-muted-foreground">day{daysLeft !== 1 ? "s" : ""} left</div>
+                              </div>
+                            </div>
+
+                            <p className="text-xs leading-relaxed">
+                              {pct >= 100 ? (
+                                <span className="text-primary font-semibold">🎉 Goal reached! You've hit your target for this month.</span>
+                              ) : onTrack === true ? (
+                                <span className="text-primary font-medium">On track — keep it up!</span>
+                              ) : onTrack === false ? (
+                                <span className="text-amber-600 dark:text-amber-400">Behind pace — {formatCurrency(remaining)} to go.</span>
+                              ) : (
+                                <span className="text-muted-foreground">{formatCurrency(remaining)} remaining this month.</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()
                   )}
                 </CardContent>
               </Card>
