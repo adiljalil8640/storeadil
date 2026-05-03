@@ -66,6 +66,12 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    hmr: {
+      // Route HMR through the same host/port the browser sees (the backend proxy at port 80)
+      // so WebSocket upgrades work without the browser trying to reach Vite directly.
+      clientPort: 443,
+      protocol: "wss",
+    },
   },
   preview: {
     port,

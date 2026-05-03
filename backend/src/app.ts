@@ -29,6 +29,10 @@ const COMMIT_SHA = (() => {
 
 const app: Express = express();
 
+// Trust the reverse proxy (Replit's routing layer) so that X-Forwarded-For
+// is used for rate limiting and Clerk's IP detection instead of the internal IP.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
