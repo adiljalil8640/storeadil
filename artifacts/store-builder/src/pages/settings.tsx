@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag } from "lucide-react";
+import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 
 const settingsSchema = z.object({
@@ -20,6 +21,7 @@ const settingsSchema = z.object({
   description: z.string().optional().nullable(),
   whatsappNumber: z.string().min(5, "WhatsApp number is required"),
   currency: z.string().min(1, "Currency is required"),
+  category: z.string().optional().nullable(),
   theme: z.enum(["light", "dark", "minimal"]),
   deliveryEnabled: z.boolean(),
   pickupEnabled: z.boolean(),
@@ -54,6 +56,7 @@ export default function SettingsPage() {
       description: "",
       whatsappNumber: "",
       currency: "USD",
+      category: "",
       theme: "light",
       deliveryEnabled: true,
       pickupEnabled: true,
@@ -70,6 +73,7 @@ export default function SettingsPage() {
         description: store.description,
         whatsappNumber: store.whatsappNumber || "",
         currency: store.currency,
+        category: store.category || "",
         theme: store.theme as any,
         deliveryEnabled: store.deliveryEnabled,
         pickupEnabled: store.pickupEnabled,
@@ -239,6 +243,43 @@ export default function SettingsPage() {
                       <FormLabel>Description</FormLabel>
                       <FormControl><Textarea className="resize-none min-h-[100px]" {...field} value={field.value || ""} /></FormControl>
                       <FormDescription>Displayed on your public storefront.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-primary" />
+                        Store Category
+                      </FormLabel>
+                      <FormDescription className="mt-0 mb-3">
+                        Choose a category so customers can find your store more easily in the browse directory.
+                      </FormDescription>
+                      <div className="flex flex-wrap gap-2">
+                        {STORE_CATEGORIES.map((cat) => {
+                          const active = field.value === cat.value;
+                          return (
+                            <button
+                              key={cat.value}
+                              type="button"
+                              onClick={() => field.onChange(active ? "" : cat.value)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-150 ${
+                                active
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                  : "bg-background text-foreground border-border hover:border-primary/50 hover:bg-muted/50"
+                              }`}
+                            >
+                              <span>{cat.emoji}</span>
+                              <span>{cat.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

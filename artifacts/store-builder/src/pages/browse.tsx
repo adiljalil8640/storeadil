@@ -5,6 +5,8 @@ import { Store, Search, ShoppingBag, ExternalLink, ArrowRight, ChevronLeft, Chev
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import { STORE_CATEGORIES, getCategoryLabel, getCategoryEmoji } from "@/lib/categories";
+import { cn } from "@/lib/utils";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -15,14 +17,8 @@ function StoreInitials({ name }: { name: string }) {
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
   const colors = [
-    "bg-emerald-500",
-    "bg-sky-500",
-    "bg-violet-500",
-    "bg-amber-500",
-    "bg-rose-500",
-    "bg-teal-500",
-    "bg-indigo-500",
-    "bg-orange-500",
+    "bg-emerald-500", "bg-sky-500", "bg-violet-500", "bg-amber-500",
+    "bg-rose-500", "bg-teal-500", "bg-indigo-500", "bg-orange-500",
   ];
   const color = colors[name.charCodeAt(0) % colors.length];
   return (
@@ -32,7 +28,20 @@ function StoreInitials({ name }: { name: string }) {
   );
 }
 
-function StoreCard({ store, index }: { store: { id: number; name: string; slug: string; description?: string | null; logoUrl?: string | null; orderCount: number }; index: number }) {
+type Store = {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  category?: string | null;
+  orderCount: number;
+};
+
+function StoreCard({ store, index }: { store: Store; index: number }) {
+  const emoji = getCategoryEmoji(store.category);
+  const catLabel = getCategoryLabel(store.category);
+
   return (
     <motion.a
       href={`${basePath}/store/${store.slug}`}
@@ -56,6 +65,11 @@ function StoreCard({ store, index }: { store: { id: number; name: string; slug: 
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">@{store.slug}</p>
+          {catLabel && (
+            <span className="inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              {emoji} {catLabel}
+            </span>
+          )}
         </div>
       </div>
 
@@ -85,6 +99,7 @@ function SkeletonCard() {
         <div className="flex-1 space-y-2 pt-1">
           <div className="h-4 bg-muted rounded w-3/4" />
           <div className="h-3 bg-muted/60 rounded w-1/3" />
+          <div className="h-5 bg-muted/40 rounded-full w-1/2 mt-1" />
         </div>
       </div>
       <div className="space-y-1.5">
@@ -99,16 +114,21 @@ function SkeletonCard() {
 export default function BrowsePage() {
   const [inputValue, setInputValue] = useState("");
   const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [page, setPage] = useState(1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, isFetching } = useBrowseStores(
-    { q: query || undefined, page },
+    {
+      q: query || undefined,
+      category: selectedCategory || undefined,
+      page,
+    },
     { query: { staleTime: 30_000 } }
   );
 
-  // Debounce search
+  // Debounce text search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -118,6 +138,12 @@ export default function BrowsePage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [inputValue]);
 
+  // Reset page when category changes
+  const handleCategoryChange = (cat: string) => {
+    setSelectedCategory((prev) => (prev === cat ? "" : cat));
+    setPage(1);
+  };
+
   // Scroll to top on page change
   useEffect(() => {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -126,7 +152,6 @@ export default function BrowsePage() {
   const stores = data?.stores ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
-  const showSkeleton = isLoading;
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground">
@@ -158,9 +183,7 @@ export default function BrowsePage() {
         {/* Header */}
         <div className="text-center mb-10">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Explore stores
-            </h1>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Explore stores</h1>
             <p className="text-muted-foreground text-lg max-w-lg mx-auto">
               Discover merchants selling on WhatsApp. Browse, shop, and see what's possible.
             </p>
@@ -168,7 +191,7 @@ export default function BrowsePage() {
         </div>
 
         {/* Search bar */}
-        <div className="max-w-xl mx-auto mb-10 relative">
+        <div className="max-w-xl mx-auto mb-6 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             className="pl-10 pr-10 h-12 rounded-xl text-base"
@@ -187,20 +210,44 @@ export default function BrowsePage() {
           )}
         </div>
 
-        {/* Result count */}
-        <div className="mb-6 flex items-center justify-between">
+        {/* Category filter chips */}
+        <div className="flex flex-wrap gap-2 justify-center mb-10">
+          {STORE_CATEGORIES.map((cat) => {
+            const active = selectedCategory === cat.value;
+            return (
+              <button
+                key={cat.value}
+                onClick={() => handleCategoryChange(cat.value)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-150",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-background text-foreground border-border hover:border-primary/50 hover:bg-muted/50"
+                )}
+              >
+                <span>{cat.emoji}</span>
+                <span>{cat.label}</span>
+                {active && <X className="w-3 h-3 ml-0.5 opacity-70" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active filters summary + result count */}
+        <div className="mb-6 flex items-center justify-between flex-wrap gap-2">
           <p className="text-sm text-muted-foreground">
             {isLoading ? (
               <span className="inline-block w-24 h-4 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                {total === 0
-                  ? "No stores found"
-                  : `${total.toLocaleString()} store${total === 1 ? "" : "s"} found`}
-                {query && (
+                {total === 0 ? "No stores found" : `${total.toLocaleString()} store${total === 1 ? "" : "s"} found`}
+                {query && <span> for <span className="font-medium text-foreground">"{query}"</span></span>}
+                {selectedCategory && (
                   <span>
-                    {" "}for{" "}
-                    <span className="font-medium text-foreground">"{query}"</span>
+                    {query ? " in " : " in "}
+                    <span className="font-medium text-foreground">
+                      {getCategoryEmoji(selectedCategory)} {getCategoryLabel(selectedCategory)}
+                    </span>
                   </span>
                 )}
               </>
@@ -209,10 +256,18 @@ export default function BrowsePage() {
           {isFetching && !isLoading && (
             <span className="text-xs text-muted-foreground animate-pulse">Searching…</span>
           )}
+          {(query || selectedCategory) && (
+            <button
+              onClick={() => { setInputValue(""); setSelectedCategory(""); setPage(1); }}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
+              <X className="w-3 h-3" /> Clear all filters
+            </button>
+          )}
         </div>
 
         {/* Grid */}
-        {showSkeleton ? (
+        {isLoading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
@@ -224,13 +279,15 @@ export default function BrowsePage() {
           >
             <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No stores match your search</h3>
-            <p className="text-muted-foreground mb-6">Try a different keyword or clear the search.</p>
-            <Button variant="outline" onClick={() => setInputValue("")}>Clear search</Button>
+            <p className="text-muted-foreground mb-6">Try a different keyword, category, or clear all filters.</p>
+            <Button variant="outline" onClick={() => { setInputValue(""); setSelectedCategory(""); }}>
+              Clear all filters
+            </Button>
           </motion.div>
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${query}-${page}`}
+              key={`${query}-${selectedCategory}-${page}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -248,8 +305,7 @@ export default function BrowsePage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 mt-12">
             <Button
-              variant="outline"
-              size="sm"
+              variant="outline" size="sm"
               disabled={page <= 1 || isFetching}
               onClick={() => setPage((p) => p - 1)}
               className="gap-1.5"
@@ -260,8 +316,7 @@ export default function BrowsePage() {
               Page {page} of {totalPages}
             </span>
             <Button
-              variant="outline"
-              size="sm"
+              variant="outline" size="sm"
               disabled={page >= totalPages || isFetching}
               onClick={() => setPage((p) => p + 1)}
               className="gap-1.5"
