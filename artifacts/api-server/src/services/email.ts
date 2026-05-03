@@ -94,8 +94,18 @@ export async function sendDigestEmail(params: {
   confirmedCount: number;
   completedCount: number;
   topProducts: { name: string; qty: number; revenue: number }[];
+  lowStockProducts?: { name: string; stock: number; threshold: number; category: string | null }[];
+  newReviews?: { productName: string; rating: number; customerName: string | null; comment: string | null }[];
+  appBaseUrl?: string;
 }): Promise<void> {
-  const { to, storeName, currency, periodLabel, frequency, totalOrders, totalRevenue, pendingCount, confirmedCount, completedCount, topProducts } = params;
+  const {
+    to, storeName, currency, periodLabel, frequency,
+    totalOrders, totalRevenue, pendingCount, confirmedCount, completedCount,
+    topProducts,
+    lowStockProducts = [],
+    newReviews = [],
+    appBaseUrl = "",
+  } = params;
 
   const subject = frequency === "daily"
     ? `Your daily sales summary — ${storeName}`
@@ -115,6 +125,68 @@ export async function sendDigestEmail(params: {
       <div style="font-size:26px;font-weight:800;color:#111827;">${value}</div>
       <div style="font-size:12px;color:#6b7280;margin-top:4px;">${label}</div>
     </div>`;
+
+  // Low-stock section
+  const lowStockSection = lowStockProducts.length > 0 ? `
+    <div style="margin-top:32px;">
+      <h3 style="margin:0 0 4px;font-size:15px;color:#111827;">⚠️ Stock Alerts</h3>
+      <p style="margin:0 0 12px;font-size:13px;color:#6b7280;">${lowStockProducts.length} product${lowStockProducts.length !== 1 ? "s" : ""} need restocking</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="color:#6b7280;font-size:12px;">
+            <th style="text-align:left;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Product</th>
+            <th style="text-align:center;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Stock</th>
+            <th style="text-align:right;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Threshold</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lowStockProducts.map(p => `
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;">
+              ${p.name}${p.category ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${p.category}</span>` : ""}
+            </td>
+            <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;text-align:center;">
+              <span style="background:${p.stock === 0 ? "#fef2f2" : "#fff7ed"};color:${p.stock === 0 ? "#ef4444" : "#ea580c"};padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;">
+                ${p.stock === 0 ? "Out of stock" : `${p.stock} left`}
+              </span>
+            </td>
+            <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:12px;color:#9ca3af;">≤ ${p.threshold}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+      ${appBaseUrl ? `
+      <a href="${appBaseUrl}/products" style="display:inline-block;margin-top:16px;background:#f59e0b;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;font-size:13px;">
+        Update Stock Levels →
+      </a>` : ""}
+    </div>` : "";
+
+  // New reviews section
+  const unrepliedReviews = newReviews.filter(r => true); // all new reviews are surfaced
+  const reviewsSection = unrepliedReviews.length > 0 ? `
+    <div style="margin-top:32px;">
+      <h3 style="margin:0 0 4px;font-size:15px;color:#111827;">⭐ New Reviews</h3>
+      <p style="margin:0 0 12px;font-size:13px;color:#6b7280;">${unrepliedReviews.length} new review${unrepliedReviews.length !== 1 ? "s" : ""} received — replying builds trust</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${unrepliedReviews.slice(0, 5).map(r => {
+          const stars = "★".repeat(r.rating) + "☆".repeat(5 - r.rating);
+          const ratingColor = r.rating >= 4 ? "#25D366" : r.rating === 3 ? "#f59e0b" : "#ef4444";
+          return `
+          <div style="padding:14px;background:#f9fafb;border-radius:8px;border-left:3px solid ${ratingColor};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:13px;font-weight:600;color:#111827;">${r.productName}</span>
+              <span style="font-size:15px;color:${ratingColor};letter-spacing:1px;">${stars}</span>
+            </div>
+            ${r.customerName ? `<div style="font-size:12px;color:#9ca3af;margin-bottom:4px;">by ${r.customerName}</div>` : ""}
+            ${r.comment ? `<div style="font-size:13px;color:#374151;font-style:italic;">"${r.comment}"</div>` : `<div style="font-size:12px;color:#9ca3af;">No comment left</div>`}
+          </div>`;
+        }).join("")}
+        ${unrepliedReviews.length > 5 ? `<p style="text-align:center;font-size:12px;color:#9ca3af;margin:4px 0;">and ${unrepliedReviews.length - 5} more...</p>` : ""}
+      </div>
+      ${appBaseUrl ? `
+      <a href="${appBaseUrl}/reviews" style="display:inline-block;margin-top:16px;background:#25D366;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;font-size:13px;">
+        Reply to Reviews →
+      </a>` : ""}
+    </div>` : "";
 
   const content = `
     <h2 style="margin:0 0 4px;font-size:22px;color:#111827;">
@@ -149,7 +221,10 @@ export async function sendDigestEmail(params: {
     ${totalOrders === 0 ? `
     <div style="margin-top:24px;padding:20px;background:#f9fafb;border-radius:8px;text-align:center;color:#6b7280;font-size:14px;">
       No orders were placed in this period. Keep sharing your store link! 🚀
-    </div>` : ""}`;
+    </div>` : ""}
+
+    ${lowStockSection}
+    ${reviewsSection}`;
 
   await sendEmail(to, subject, baseTemplate(content, storeName));
 }

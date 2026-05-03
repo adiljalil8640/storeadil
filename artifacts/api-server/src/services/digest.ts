@@ -1,8 +1,10 @@
 import { db } from "@workspace/db";
-import { storesTable, ordersTable } from "@workspace/db";
-import { eq, and, gte, lt, sql } from "drizzle-orm";
+import { storesTable, ordersTable, productsTable, reviewsTable } from "@workspace/db";
+import { eq, and, gte, lt, sql, isNull } from "drizzle-orm";
 import { sendDigestEmail } from "./email";
 import { logger } from "../lib/logger";
+
+const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
 async function runDigest(frequency: "daily" | "weekly") {
   const now = new Date();
@@ -39,9 +41,12 @@ async function runDigest(frequency: "daily" | "weekly") {
 
   logger.info({ count: stores.length, frequency }, "Running digest for stores");
 
+  const appBaseUrl = process.env.APP_BASE_URL ?? "";
+
   for (const store of stores) {
     if (!store.notificationEmail) continue;
     try {
+      // Orders in period
       const orders = await db
         .select()
         .from(ordersTable)
@@ -59,7 +64,7 @@ async function runDigest(frequency: "daily" | "weekly") {
       const confirmedCount = orders.filter(o => o.status === "confirmed").length;
       const completedCount = orders.filter(o => o.status === "completed").length;
 
-      // Top products
+      // Top products from order line items
       const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
       for (const order of orders) {
         for (const item of (order.items as any[])) {
@@ -74,6 +79,67 @@ async function runDigest(frequency: "daily" | "weekly") {
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
 
+      // Low-stock / out-of-stock active products
+      const storeProducts = await db
+        .select()
+        .from(productsTable)
+        .where(
+          and(
+            eq(productsTable.storeId, store.id),
+            eq(productsTable.isActive, true),
+            sql`${productsTable.stock} IS NOT NULL`
+          )
+        );
+
+      const lowStockProducts = storeProducts
+        .filter(p => {
+          const stock = p.stock ?? 0;
+          const threshold = p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+          return stock <= threshold;
+        })
+        .sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0))
+        .map(p => ({
+          name: p.name,
+          stock: p.stock ?? 0,
+          threshold: p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+          category: p.category,
+        }));
+
+      // New reviews received in this period (unreplied = needs attention)
+      const periodReviews = await db
+        .select({
+          rating: reviewsTable.rating,
+          comment: reviewsTable.comment,
+          customerName: reviewsTable.customerName,
+          merchantReply: reviewsTable.merchantReply,
+          productId: reviewsTable.productId,
+        })
+        .from(reviewsTable)
+        .where(
+          and(
+            eq(reviewsTable.storeId, store.id),
+            gte(reviewsTable.createdAt, periodStart),
+            lt(reviewsTable.createdAt, periodEnd)
+          )
+        );
+
+      // Resolve product names for the reviews
+      const productIds = [...new Set(periodReviews.map(r => r.productId))];
+      const reviewProducts = productIds.length > 0
+        ? await db
+            .select({ id: productsTable.id, name: productsTable.name })
+            .from(productsTable)
+            .where(sql`${productsTable.id} = ANY(ARRAY[${sql.raw(productIds.join(","))}]::int[])`)
+        : [];
+      const productNameById = Object.fromEntries(reviewProducts.map(p => [p.id, p.name]));
+
+      const newReviews = periodReviews.map(r => ({
+        productName: productNameById[r.productId] ?? "Unknown product",
+        rating: r.rating,
+        customerName: r.customerName,
+        comment: r.comment,
+      }));
+
       await sendDigestEmail({
         to: store.notificationEmail,
         storeName: store.name,
@@ -86,6 +152,9 @@ async function runDigest(frequency: "daily" | "weekly") {
         confirmedCount,
         completedCount,
         topProducts,
+        lowStockProducts,
+        newReviews,
+        appBaseUrl,
       });
     } catch (err) {
       logger.error({ err, storeId: store.id }, "Failed to send digest to store");
