@@ -21,7 +21,7 @@ import {
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGetMyStore, useGetBillingStatus } from "@workspace/api-client-react";
+import { useGetMyStore, useGetBillingStatus, useGetAnalyticsSummary } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -37,6 +37,8 @@ export function AppLayout({ children }: LayoutProps) {
 
   const { data: store } = useGetMyStore({ query: { enabled: !!user } });
   const { data: billingStatus } = useGetBillingStatus({ query: { enabled: !!user } });
+  const { data: analytics } = useGetAnalyticsSummary({ query: { enabled: !!user && !!store } });
+  const pendingOrders = analytics?.pendingOrders ?? 0;
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -45,7 +47,7 @@ export function AppLayout({ children }: LayoutProps) {
   const navItems = [
     { href: `${basePath}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
     { href: `${basePath}/products`, label: "Products", icon: Package },
-    { href: `${basePath}/orders`, label: "Orders", icon: ShoppingCart },
+    { href: `${basePath}/orders`, label: "Orders", icon: ShoppingCart, badge: pendingOrders > 0 ? pendingOrders : undefined },
     { href: `${basePath}/coupons`, label: "Coupons", icon: Tag },
     { href: `${basePath}/reviews`, label: "Reviews", icon: Star },
     { href: `${basePath}/waitlist`, label: "Waitlist", icon: Bell },
@@ -71,6 +73,11 @@ export function AppLayout({ children }: LayoutProps) {
       >
         <item.icon className="w-5 h-5 flex-shrink-0" />
         <span className="flex-1">{item.label}</span>
+        {item.badge !== undefined && (
+          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold leading-5 text-center tabular-nums">
+            {item.badge > 99 ? "99+" : item.badge}
+          </span>
+        )}
         {item.href.includes("/billing") && billingStatus?.isNearLimit && (
           <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
         )}
