@@ -177,6 +177,70 @@ router.get("/stores/public/:slug", async (req: any, res) => {
   }
 });
 
+// PATCH /stores/me/domain — set or clear custom domain
+router.patch("/stores/me/domain", requireAuth, async (req: any, res) => {
+  const raw: unknown = req.body?.domain;
+  const domain = raw === null || raw === undefined ? null : String(raw).trim().toLowerCase();
+
+  if (domain !== null) {
+    // Basic domain validation: must look like hostname.tld (no protocol, no path)
+    if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(domain) || !domain.includes(".")) {
+      return res.status(400).json({ error: "Invalid domain format. Use a hostname like shop.mybrand.com" });
+    }
+  }
+
+  try {
+    const [store] = await db
+      .update(storesTable)
+      .set({ customDomain: domain, updatedAt: new Date() })
+      .where(eq(storesTable.userId, req.userId))
+      .returning();
+    if (!store) return res.status(404).json({ error: "No store found" });
+    res.json(store);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /stores/me/domain-status — DNS verification
+router.get("/stores/me/domain-status", requireAuth, async (req: any, res) => {
+  try {
+    const [store] = await db
+      .select({ customDomain: storesTable.customDomain })
+      .from(storesTable)
+      .where(eq(storesTable.userId, req.userId));
+
+    if (!store) return res.status(404).json({ error: "No store found" });
+
+    const domain = store.customDomain;
+    const replitDomain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || null;
+
+    if (!domain) {
+      return res.json({ status: "unconfigured", domain: null, replitDomain });
+    }
+
+    const dns = await import("dns");
+    const { resolveCname } = dns.promises;
+
+    try {
+      const cnames = await resolveCname(domain);
+      const pointing = replitDomain
+        ? cnames.some((c) => c.includes(replitDomain) || c.endsWith(".replit.dev") || c.endsWith(".repl.co"))
+        : false;
+      return res.json({ status: pointing ? "pointing" : "not-pointing", domain, cnames, replitDomain });
+    } catch (dnsErr: any) {
+      if (dnsErr.code === "ENODATA" || dnsErr.code === "ENOTFOUND") {
+        return res.json({ status: "not-found", domain, cnames: [], replitDomain });
+      }
+      return res.json({ status: "error", domain, cnames: [], replitDomain });
+    }
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /stores/slug-check?slug=foo — check availability (auth required)
 router.get("/stores/slug-check", requireAuth, async (req: any, res) => {
   const slug = typeof req.query.slug === "string" ? req.query.slug.trim().toLowerCase() : "";

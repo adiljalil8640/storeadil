@@ -187,6 +187,8 @@ export interface Store {
   metaTitle?: string | null;
   /** Custom SEO/OG description for link previews and search results. Falls back to store description if not set. */
   metaDescription?: string | null;
+  /** Custom domain pointing to this store (e.g. shop.mybrand.com). */
+  customDomain?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -316,6 +318,34 @@ export interface SlugCheckResult {
   slug: string;
   /** Set to "current" if the slug matches the user's own store, otherwise null. */
   reason?: string | null;
+}
+
+export interface UpdateStoreDomainBody {
+  /** Custom domain to set (e.g. shop.mybrand.com). Pass null to remove. */
+  domain: string | null;
+}
+
+/**
+ * DNS resolution result
+ */
+export type DomainStatusResultStatus =
+  (typeof DomainStatusResultStatus)[keyof typeof DomainStatusResultStatus];
+
+export const DomainStatusResultStatus = {
+  pointing: "pointing",
+  "not-pointing": "not-pointing",
+  "not-found": "not-found",
+  error: "error",
+  unconfigured: "unconfigured",
+} as const;
+
+export interface DomainStatusResult {
+  domain?: string | null;
+  /** DNS resolution result */
+  status: DomainStatusResultStatus;
+  cnames?: string[] | null;
+  /** The Replit deployment domain to use as the CNAME target */
+  replitDomain?: string | null;
 }
 
 export interface CreateProductBody {

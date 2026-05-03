@@ -111,6 +111,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /stores/me/domain:
+    patch:
+      operationId: updateMyStoreDomain
+      tags: [stores]
+      summary: Set or clear a custom domain for the authenticated user's store
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoreDomainBody"
+      responses:
+        "200":
+          description: Updated store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
+  /stores/me/domain-status:
+    get:
+      operationId: getMyStoreDomainStatus
+      tags: [stores]
+      summary: Check DNS status of the custom domain for the authenticated user's store
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Domain DNS status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainStatusResult"
+
   /stores/slug-check:
     get:
       operationId: checkSlugAvailability
@@ -1337,6 +1373,10 @@ components:
           type: string
           nullable: true
           description: Custom SEO/OG description for link previews and search results. Falls back to store description if not set.
+        customDomain:
+          type: string
+          nullable: true
+          description: Custom domain pointing to this store (e.g. shop.mybrand.com).
         createdAt:
           type: string
           format: date-time
@@ -1533,6 +1573,36 @@ components:
           nullable: true
           description: Set to "current" if the slug matches the user's own store, otherwise null.
       required: [available, slug]
+
+    UpdateStoreDomainBody:
+      type: object
+      properties:
+        domain:
+          type: string
+          nullable: true
+          description: Custom domain to set (e.g. shop.mybrand.com). Pass null to remove.
+      required: [domain]
+
+    DomainStatusResult:
+      type: object
+      properties:
+        domain:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pointing, not-pointing, not-found, error, unconfigured]
+          description: DNS resolution result
+        cnames:
+          type: array
+          items:
+            type: string
+          nullable: true
+        replitDomain:
+          type: string
+          nullable: true
+          description: The Replit deployment domain to use as the CNAME target
+      required: [status]
 
     Product:
       type: object

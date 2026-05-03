@@ -28,6 +28,8 @@ export interface Store {
   metaTitle?: string | null;
   /** Custom SEO/OG description for link previews and search results. Falls back to store description if not set. */
   metaDescription?: string | null;
+  /** Custom domain pointing to this store (e.g. shop.mybrand.com). */
+  customDomain?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

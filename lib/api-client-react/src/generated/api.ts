@@ -33,6 +33,7 @@ import type {
   CreateOrderBody,
   CreateProductBody,
   CreateStoreBody,
+  DomainStatusResult,
   ErrorResponse,
   GenerateDescriptionBody,
   GenerateDescriptionResponse,
@@ -70,6 +71,7 @@ import type {
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdateStoreBody,
+  UpdateStoreDomainBody,
   UpdateStoreSlugBody,
   ValidateCouponBody,
   ValidateCouponResponse,
@@ -405,6 +407,168 @@ export const useUpdateMyStoreSlug = <
 > => {
   return useMutation(getUpdateMyStoreSlugMutationOptions(options));
 };
+
+/**
+ * @summary Set or clear a custom domain for the authenticated user's store
+ */
+export const getUpdateMyStoreDomainUrl = () => {
+  return `/api/stores/me/domain`;
+};
+
+export const updateMyStoreDomain = async (
+  updateStoreDomainBody: UpdateStoreDomainBody,
+  options?: RequestInit,
+): Promise<Store> => {
+  return customFetch<Store>(getUpdateMyStoreDomainUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateStoreDomainBody),
+  });
+};
+
+export const getUpdateMyStoreDomainMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreDomain>>,
+    TError,
+    { data: BodyType<UpdateStoreDomainBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyStoreDomain>>,
+  TError,
+  { data: BodyType<UpdateStoreDomainBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMyStoreDomain"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyStoreDomain>>,
+    { data: BodyType<UpdateStoreDomainBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyStoreDomain(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyStoreDomainMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyStoreDomain>>
+>;
+export type UpdateMyStoreDomainMutationBody = BodyType<UpdateStoreDomainBody>;
+export type UpdateMyStoreDomainMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set or clear a custom domain for the authenticated user's store
+ */
+export const useUpdateMyStoreDomain = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreDomain>>,
+    TError,
+    { data: BodyType<UpdateStoreDomainBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyStoreDomain>>,
+  TError,
+  { data: BodyType<UpdateStoreDomainBody> },
+  TContext
+> => {
+  return useMutation(getUpdateMyStoreDomainMutationOptions(options));
+};
+
+/**
+ * @summary Check DNS status of the custom domain for the authenticated user's store
+ */
+export const getGetMyStoreDomainStatusUrl = () => {
+  return `/api/stores/me/domain-status`;
+};
+
+export const getMyStoreDomainStatus = async (
+  options?: RequestInit,
+): Promise<DomainStatusResult> => {
+  return customFetch<DomainStatusResult>(getGetMyStoreDomainStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyStoreDomainStatusQueryKey = () => {
+  return [`/api/stores/me/domain-status`] as const;
+};
+
+export const getGetMyStoreDomainStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyStoreDomainStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStoreDomainStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMyStoreDomainStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMyStoreDomainStatus>>
+  > = ({ signal }) => getMyStoreDomainStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStoreDomainStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyStoreDomainStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyStoreDomainStatus>>
+>;
+export type GetMyStoreDomainStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Check DNS status of the custom domain for the authenticated user's store
+ */
+
+export function useGetMyStoreDomainStatus<
+  TData = Awaited<ReturnType<typeof getMyStoreDomainStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStoreDomainStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyStoreDomainStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Check if a store slug is available (auth required)

@@ -45,6 +45,10 @@ export const GetMyStoreResponse = zod.object({
     .describe(
       "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
     ),
+  customDomain: zod
+    .string()
+    .nullish()
+    .describe("Custom domain pointing to this store (e.g. shop.mybrand.com)."),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -105,6 +109,10 @@ export const UpdateMyStoreResponse = zod.object({
     .describe(
       "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
     ),
+  customDomain: zod
+    .string()
+    .nullish()
+    .describe("Custom domain pointing to this store (e.g. shop.mybrand.com)."),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -151,8 +159,75 @@ export const UpdateMyStoreSlugResponse = zod.object({
     .describe(
       "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
     ),
+  customDomain: zod
+    .string()
+    .nullish()
+    .describe("Custom domain pointing to this store (e.g. shop.mybrand.com)."),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Set or clear a custom domain for the authenticated user's store
+ */
+export const UpdateMyStoreDomainBody = zod.object({
+  domain: zod
+    .string()
+    .nullable()
+    .describe(
+      "Custom domain to set (e.g. shop.mybrand.com). Pass null to remove.",
+    ),
+});
+
+export const UpdateMyStoreDomainResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  name: zod.string(),
+  slug: zod.string(),
+  description: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  currency: zod.string(),
+  logoUrl: zod.string().nullish(),
+  theme: zod.enum(["light", "dark", "minimal"]),
+  deliveryEnabled: zod.boolean(),
+  pickupEnabled: zod.boolean(),
+  shippingNote: zod.string().nullish(),
+  notificationEmail: zod.string().nullish(),
+  digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
+  category: zod.string().nullish(),
+  metaTitle: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG title shown to search engines and social platforms. Falls back to store name if not set.",
+    ),
+  metaDescription: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
+    ),
+  customDomain: zod
+    .string()
+    .nullish()
+    .describe("Custom domain pointing to this store (e.g. shop.mybrand.com)."),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Check DNS status of the custom domain for the authenticated user's store
+ */
+export const GetMyStoreDomainStatusResponse = zod.object({
+  domain: zod.string().nullish(),
+  status: zod
+    .enum(["pointing", "not-pointing", "not-found", "error", "unconfigured"])
+    .describe("DNS resolution result"),
+  cnames: zod.array(zod.string()).nullish(),
+  replitDomain: zod
+    .string()
+    .nullish()
+    .describe("The Replit deployment domain to use as the CNAME target"),
 });
 
 /**

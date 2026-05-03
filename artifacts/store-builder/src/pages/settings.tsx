@@ -226,6 +226,64 @@ export default function SettingsPage() {
     finally { setSlugSaving(false); }
   };
 
+  // --- Custom domain ---
+  const [domainInput, setDomainInput] = useState("");
+  const [domainSaving, setDomainSaving] = useState(false);
+  const [domainChecking, setDomainChecking] = useState(false);
+  const [domainStatus, setDomainStatus] = useState<{
+    status: "pointing" | "not-pointing" | "not-found" | "error" | "unconfigured";
+    cnames?: string[];
+    replitDomain?: string | null;
+  } | null>(null);
+
+  const handleDomainSave = async () => {
+    const d = domainInput.trim().toLowerCase();
+    if (!d || !d.includes(".")) return;
+    setDomainSaving(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/domain`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: d }),
+      });
+      if (!r.ok) { toast.error((await r.json()).error ?? "Failed to save domain"); }
+      else {
+        toast.success("Custom domain saved!");
+        setDomainInput("");
+        setDomainStatus(null);
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+      }
+    } catch { toast.error("Failed to save domain"); }
+    finally { setDomainSaving(false); }
+  };
+
+  const handleDomainRemove = async () => {
+    setDomainSaving(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/domain`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: null }),
+      });
+      if (!r.ok) { toast.error((await r.json()).error ?? "Failed to remove domain"); }
+      else {
+        toast.success("Custom domain removed");
+        setDomainStatus(null);
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+      }
+    } catch { toast.error("Failed to remove domain"); }
+    finally { setDomainSaving(false); }
+  };
+
+  const handleDomainCheck = async () => {
+    setDomainChecking(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/domain-status`);
+      setDomainStatus(await r.json());
+    } catch { toast.error("DNS check failed"); }
+    finally { setDomainChecking(false); }
+  };
+
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
@@ -799,6 +857,184 @@ export default function SettingsPage() {
                   3–50 characters · lowercase letters, numbers, and hyphens only · cannot start or end with a hyphen
                 </p>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Custom Domain card */}
+        {store && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-primary" />
+                Custom Domain
+              </CardTitle>
+              <CardDescription>
+                Point your own domain (e.g. <code className="text-xs bg-muted px-1 py-0.5 rounded">shop.mybrand.com</code>) to your store so customers see a branded URL instead of a Replit address.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+
+              {store.customDomain ? (
+                /* --- Domain already set --- */
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground mb-0.5">Current custom domain</p>
+                      <p className="font-mono text-sm font-semibold truncate">{store.customDomain}</p>
+                    </div>
+                    {domainStatus && domainStatus.status !== "unconfigured" && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                        domainStatus.status === "pointing"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : domainStatus.status === "not-pointing"
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                      }`}>
+                        {domainStatus.status === "pointing" ? "✓ Pointing" :
+                         domainStatus.status === "not-pointing" ? "~ Wrong target" : "✕ Not found"}
+                      </span>
+                    )}
+                    <Button
+                      type="button" size="sm" variant="ghost"
+                      className="shrink-0 text-muted-foreground hover:text-destructive text-xs"
+                      disabled={domainSaving}
+                      onClick={handleDomainRemove}
+                    >
+                      {domainSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : "Remove"}
+                    </Button>
+                  </div>
+
+                  {/* DNS check result banner */}
+                  {domainStatus?.status === "pointing" && (
+                    <div className="rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 px-4 py-3 text-xs text-green-800 dark:text-green-300 flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <p>DNS is correctly configured. Your store is accessible at <strong>{store.customDomain}</strong> once deployed with this domain in Replit.</p>
+                    </div>
+                  )}
+                  {domainStatus?.status === "not-pointing" && (
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 px-4 py-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="font-medium">CNAME found but pointing to the wrong target.</p>
+                        <p>Current value: <code className="bg-amber-100 dark:bg-amber-900/30 px-1 rounded">{domainStatus.cnames?.[0]}</code></p>
+                        <p>Expected: <code className="bg-amber-100 dark:bg-amber-900/30 px-1 rounded">{domainStatus.replitDomain ?? window.location.hostname}</code></p>
+                      </div>
+                    </div>
+                  )}
+                  {(domainStatus?.status === "not-found" || domainStatus?.status === "error") && (
+                    <div className="rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 px-4 py-3 text-xs text-red-800 dark:text-red-300 flex items-start gap-2">
+                      <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <p>No DNS record found for <strong>{store.customDomain}</strong>. Add the CNAME below and wait a few minutes before checking again.</p>
+                    </div>
+                  )}
+
+                  <Button
+                    type="button" variant="outline" size="sm" className="gap-2"
+                    disabled={domainChecking}
+                    onClick={handleDomainCheck}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${domainChecking ? "animate-spin" : ""}`} />
+                    {domainChecking ? "Checking DNS…" : "Check DNS"}
+                  </Button>
+                </div>
+              ) : (
+                /* --- No domain set yet --- */
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Domain</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={domainInput}
+                      onChange={(e) =>
+                        setDomainInput(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/^https?:\/\//, "")
+                            .replace(/[^a-z0-9.-]/g, "")
+                        )
+                      }
+                      placeholder="shop.mybrand.com"
+                      className="font-mono flex-1"
+                    />
+                    <Button
+                      type="button"
+                      disabled={!domainInput.trim() || !domainInput.includes(".") || domainSaving}
+                      onClick={handleDomainSave}
+                      className="gap-2 shrink-0"
+                    >
+                      {domainSaving
+                        ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        : <Save className="w-3.5 h-3.5" />}
+                      {domainSaving ? "Saving…" : "Save Domain"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enter without <code className="bg-muted px-1 rounded">https://</code> — e.g. <code className="bg-muted px-1 rounded">shop.mybrand.com</code>
+                  </p>
+                </div>
+              )}
+
+              {/* DNS setup instructions — always visible */}
+              <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <Link2 className="w-3.5 h-3.5 text-primary" />
+                  DNS Setup Instructions
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Log in to your domain registrar (Cloudflare, Namecheap, GoDaddy, etc.) and add this record:
+                </p>
+
+                {/* CNAME record table */}
+                <div className="rounded-lg border bg-background overflow-x-auto text-xs font-mono">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Type</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Name</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Value</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">TTL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="px-3 py-2.5 text-foreground font-semibold">CNAME</td>
+                        <td className="px-3 py-2.5 text-foreground">@ <span className="text-muted-foreground font-normal">(or subdomain)</span></td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-primary font-semibold">{window.location.hostname}</span>
+                            <button
+                              type="button"
+                              title="Copy CNAME target"
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => { navigator.clipboard.writeText(window.location.hostname); toast.success("CNAME target copied!"); }}
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-muted-foreground">Auto</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <ul className="text-xs text-muted-foreground space-y-1 list-none">
+                  <li>• DNS changes can take <strong className="text-foreground">5–60 minutes</strong> to propagate globally.</li>
+                  <li>• After adding the record, use <strong className="text-foreground">Check DNS</strong> above to verify it's pointing correctly.</li>
+                  <li>• For the domain to serve your store publicly, also add it in your <strong className="text-foreground">Replit deployment settings</strong>.</li>
+                </ul>
+
+                <a
+                  href="https://docs.replit.com/hosting/deployments/custom-domains"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Replit custom domain guide
+                </a>
+              </div>
+
             </CardContent>
           </Card>
         )}

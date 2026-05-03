@@ -20,6 +20,7 @@ export const storesTable = pgTable("stores", {
   category: text("category"),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
+  customDomain: text("custom_domain"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
