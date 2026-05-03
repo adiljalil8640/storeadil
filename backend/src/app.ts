@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -13,6 +14,16 @@ import { logger } from "./lib/logger";
 import { errorHandler } from "./middlewares/errorHandler";
 import { seedPlans } from "./services/billing";
 import { HealthCheckResponse } from "@workspace/api-zod";
+
+const COMMIT_SHA = (() => {
+  try {
+    return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return "unknown";
+  }
+})();
 
 const app: Express = express();
 
@@ -33,9 +44,13 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
 
-// Health check — registered before Clerk so it is always reachable
+// Health check and version — registered before Clerk so they are always reachable
 app.get("/api/healthz", (_req, res) => {
   res.json(HealthCheckResponse.parse({ status: "ok" }));
+});
+
+app.get("/api/version", (_req, res) => {
+  res.json({ commit: COMMIT_SHA, env: process.env.NODE_ENV ?? "unknown" });
 });
 
 // Raw body for Stripe webhooks
