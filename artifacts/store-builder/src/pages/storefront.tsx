@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "wouter";
 import { useGetPublicStore, useCreateOrder, useJoinWaitlist, useValidateCoupon } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,66 @@ export default function StorefrontPage() {
 
   const createOrder = useCreateOrder();
   const validateCoupon = useValidateCoupon();
+
+  // Inject OG / social meta tags dynamically so Telegram, Discord, Slack and other
+  // JS-executing crawlers pick up the correct title, description and image.
+  useEffect(() => {
+    if (!store) return;
+
+    const prev = {
+      title: document.title,
+      desc: document.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
+    };
+
+    const setMeta = (sel: string, attr: string, value: string) => {
+      let el = document.querySelector<HTMLMetaElement>(sel);
+      if (!el) {
+        el = document.createElement("meta");
+        document.head.appendChild(el);
+      }
+      el.setAttribute(attr, value);
+      return el;
+    };
+
+    const description = store.description
+      ?? `Shop ${store.name} on Zapp Store — browse products and order via WhatsApp.`;
+    const origin = window.location.origin;
+    const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const storeUrl = `${origin}${basePath}/store/${store.slug}`;
+    const ogUrl = `${origin}${basePath}/api/og/${store.slug}`;
+
+    document.title = `${store.name} — Zapp Store`;
+    setMeta('meta[name="description"]', "content", description);
+
+    const metas: HTMLMetaElement[] = [
+      setMeta('meta[property="og:type"]', "content", "website"),
+      setMeta('meta[property="og:site_name"]', "content", "Zapp Store"),
+      setMeta('meta[property="og:url"]', "content", storeUrl),
+      setMeta('meta[property="og:title"]', "content", store.name),
+      setMeta('meta[property="og:description"]', "content", description),
+      setMeta('meta[name="twitter:card"]', "content", store.logoUrl ? "summary_large_image" : "summary"),
+      setMeta('meta[name="twitter:title"]', "content", store.name),
+      setMeta('meta[name="twitter:description"]', "content", description),
+      setMeta('meta[name="canonical"]', "href", storeUrl),
+    ];
+
+    if (store.logoUrl) {
+      metas.push(setMeta('meta[property="og:image"]', "content", store.logoUrl));
+      metas.push(setMeta('meta[name="twitter:image"]', "content", store.logoUrl));
+    }
+
+    // Also set property on the og: tags (some parsers need attribute="property")
+    document.querySelectorAll<HTMLMetaElement>('meta[property^="og:"]').forEach(el => {
+      el.setAttribute("property", el.getAttribute("property")!);
+    });
+
+    void ogUrl; // available for future use (QR, share links, etc.)
+
+    return () => {
+      document.title = prev.title;
+      metas.forEach(el => el.remove());
+    };
+  }, [store]);
 
   const categories = useMemo(() => {
     if (!store?.products) return [];

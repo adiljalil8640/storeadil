@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 
@@ -98,6 +98,7 @@ export default function SettingsPage() {
   };
 
   const publicUrl = store ? `${window.location.origin}${basePath}/store/${store.slug}` : "";
+  const ogPreviewUrl = store ? `${window.location.origin}${basePath}/api/og/${store.slug}` : "";
 
   const copyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -214,6 +215,54 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Social Preview Link */}
+        {store && (
+          <Card className="border-dashed">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Globe className="w-4 h-4 text-primary" />
+                Social Preview Link
+              </CardTitle>
+              <CardDescription>
+                Share this link on WhatsApp, Instagram, X, or any platform to show a rich preview card — with your store name, description, and logo automatically displayed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-3 py-2 border text-sm font-mono text-muted-foreground break-all">
+                <Globe className="w-3.5 h-3.5 shrink-0 text-primary" />
+                <span className="flex-1 truncate">{ogPreviewUrl}</span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(ogPreviewUrl);
+                    toast.success("Social preview link copied!");
+                  }}
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Link
+                </Button>
+                <Button
+                  className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white"
+                  onClick={() => {
+                    const msg = `🛍️ Check out my store *${store.name}*!\n\n${ogPreviewUrl}`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Share on WhatsApp
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
+                WhatsApp, iMessage, and Slack will show a preview card. Telegram and Discord see it too — even without running JavaScript.
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         <Form {...form}>

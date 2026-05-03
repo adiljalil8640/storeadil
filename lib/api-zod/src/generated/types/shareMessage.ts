@@ -10,4 +10,6 @@ export interface ShareMessage {
   message: string;
   whatsappUrl: string;
   storeUrl: string;
+  /** URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo. */
+  ogUrl: string;
 }
