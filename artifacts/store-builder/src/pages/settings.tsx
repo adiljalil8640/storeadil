@@ -903,6 +903,48 @@ export default function SettingsPage() {
                     );
                   }}
                 />
+                {/* Live Google/Bing snippet preview */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Search className="w-3.5 h-3.5 text-muted-foreground" />
+                    Search Result Preview
+                  </p>
+                  <div className="rounded-xl border bg-background px-5 py-4 shadow-sm space-y-3">
+                    {/* Google-style result */}
+                    <div className="space-y-0.5">
+                      {/* Site identity row */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-border flex items-center justify-center">
+                          <Globe className="w-2.5 h-2.5 text-primary" />
+                        </div>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-xs font-medium text-foreground leading-none">Zapp Store</span>
+                          <span className="text-[11px] text-muted-foreground leading-none mt-0.5">
+                            {store
+                              ? `${window.location.hostname} › store › ${store.slug}`
+                              : "zappstore.app › store › your-store"}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Title */}
+                      <p className="text-[#1a0dab] dark:text-[#8ab4f8] text-lg font-normal leading-snug line-clamp-1 cursor-pointer hover:underline">
+                        {previewName
+                          ? `${previewName} — Zapp Store`
+                          : `${store?.name ?? "Your Store"} — Zapp Store`}
+                      </p>
+                      {/* Description */}
+                      <p className="text-[13px] text-[#4d5156] dark:text-[#bdc1c6] leading-snug line-clamp-2">
+                        {previewDesc
+                          ? previewDesc.slice(0, 160)
+                          : `Shop ${store?.name ?? "Your Store"} on Zapp Store — browse products and order via WhatsApp.`}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground border-t pt-2">
+                      Updates live as you type above. This is how Google and Bing display your store.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="rounded-lg border bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-primary" /> How this works
