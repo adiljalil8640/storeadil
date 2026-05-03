@@ -19,8 +19,7 @@ router.get("/stores/me", requireAuth, async (req: any, res) => {
     if (!store) return res.status(404).json({ error: "No store found" });
     res.json(store);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -38,8 +37,7 @@ router.put("/stores/me", requireAuth, async (req: any, res) => {
     if (!store) return res.status(404).json({ error: "No store found" });
     res.json(store);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -55,11 +53,10 @@ router.post("/stores", requireAuth, async (req: any, res) => {
       .returning();
     res.status(201).json(store);
   } catch (err: any) {
-    req.log.error(err);
     if (err.code === "23505") {
       return res.status(409).json({ error: "Store slug already taken" });
     }
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -119,8 +116,7 @@ router.get("/stores/browse", publicStoreLimiter, async (req: any, res) => {
       totalPages: Math.ceil(Number(totalRow?.total ?? 0) / limit),
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -144,8 +140,7 @@ router.get("/stores/top", publicStoreLimiter, async (req: any, res) => {
       .limit(6);
     res.json(rows);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -166,8 +161,7 @@ router.get("/stores/public/:slug", publicStoreLimiter, async (req: any, res) => 
 
     res.json({ ...store, products });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -191,8 +185,7 @@ router.patch("/stores/me/hours", requireAuth, async (req: any, res) => {
     if (!store) return res.status(404).json({ error: "No store found" });
     return res.json(store);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -215,8 +208,7 @@ router.patch("/stores/me/temporarily-closed", requireAuth, async (req: any, res)
     if (!store) return res.status(404).json({ error: "No store found" });
     return res.json(store);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -241,8 +233,7 @@ router.patch("/stores/me/holidays", requireAuth, async (req: any, res) => {
     if (!store) return res.status(404).json({ error: "No store found" });
     return res.json(store);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -267,8 +258,7 @@ router.patch("/stores/me/domain", requireAuth, async (req: any, res) => {
     if (!store) return res.status(404).json({ error: "No store found" });
     res.json(store);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -305,8 +295,7 @@ router.get("/stores/me/domain-status", requireAuth, async (req: any, res) => {
       return res.json({ status: "error", domain, cnames: [], replitDomain });
     }
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -335,8 +324,7 @@ router.get("/stores/slug-check", requireAuth, async (req: any, res) => {
 
     res.json({ available: !existing, slug, reason: null });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -361,11 +349,10 @@ router.patch("/stores/me/slug", requireAuth, async (req: any, res) => {
     if (!store) return res.status(404).json({ error: "No store found" });
     return res.json(store);
   } catch (err: any) {
-    req.log.error(err);
     if (err.code === "23505") {
       return res.status(409).json({ error: "That URL handle is already taken" });
     }
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -384,8 +371,7 @@ router.patch("/stores/me/revenue-goal", requireAuth, validate(UpdateRevenueGoalB
     if (!store) return res.status(404).json({ error: "No store found" });
     return res.json(store);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -450,8 +436,7 @@ router.get("/stores/me/digest-preview", requireAuth, async (req: any, res) => {
       currency: store.currency,
     });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

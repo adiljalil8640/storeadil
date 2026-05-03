@@ -55,8 +55,7 @@ router.get("/analytics/summary", async (req: any, res) => {
       activeProducts: Number(productStats?.activeProducts ?? 0),
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -75,8 +74,7 @@ router.get("/analytics/recent-orders", async (req: any, res) => {
 
     res.json(orders);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -114,8 +112,7 @@ router.get("/analytics/top-products", async (req: any, res) => {
 
     res.json(topProducts);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -152,8 +149,7 @@ router.get("/analytics/orders-per-day", async (req: any, res) => {
 
     res.json(result);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -177,8 +173,7 @@ router.get("/analytics/order-heatmap", async (req: any, res) => {
 
     res.json(rows);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -241,8 +236,7 @@ router.get("/analytics/customer-insights", async (req: any, res) => {
 
     res.json({ newCustomers, returningCustomers, totalUniqueCustomers, avgOrderFrequency, topCustomers });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -300,8 +294,7 @@ router.get("/analytics/top-customers", async (req: any, res) => {
 
     res.json(result);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -346,8 +339,7 @@ router.get("/analytics/product-velocity", async (req: any, res) => {
 
     res.json(result);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -388,8 +380,7 @@ router.get("/analytics/coupon-performance", async (req: any, res) => {
 
     res.json(result);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -424,8 +415,7 @@ router.get("/analytics/revenue-trend", async (req: any, res) => {
 
     res.json(result);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -460,8 +450,7 @@ router.get("/analytics/revenue-by-day", async (req: any, res) => {
 
     res.json(result);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

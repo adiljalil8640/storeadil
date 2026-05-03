@@ -10,6 +10,7 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./api-routes";
 import { logger } from "./lib/logger";
+import { errorHandler } from "./middlewares/errorHandler";
 import { seedPlans } from "./services/billing";
 
 const app: Express = express();
@@ -46,6 +47,7 @@ app.use(
 );
 
 app.use("/api", router);
+app.use(errorHandler);
 
 // Seed plans on startup
 seedPlans().catch((err) => logger.error({ err }, "Failed to seed plans"));

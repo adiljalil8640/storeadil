@@ -109,8 +109,7 @@ router.get("/og/:slug", async (req: any, res) => {
 </body>
 </html>`);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).send("Internal server error");
+    throw err;
   }
 });
 
@@ -169,8 +168,7 @@ router.get("/og/:slug/meta", async (req: any, res) => {
     res.set("Cache-Control", "no-store");
     res.json({ slug: store.slug, storeUrl, tags });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

@@ -65,8 +65,7 @@ router.post("/coupons/validate", validate(ValidateCouponBody), async (req: any, 
       finalAmount,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ valid: false, error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -84,8 +83,7 @@ router.get("/coupons", requireAuth, async (req: any, res) => {
 
     res.json(coupons);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -129,8 +127,7 @@ router.post("/coupons", requireAuth, validate(CreateCouponBody), async (req: any
 
     res.status(201).json(coupon);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -166,8 +163,7 @@ router.put("/coupons/:id", requireAuth, async (req: any, res) => {
 
     res.json(updated);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -189,8 +185,7 @@ router.delete("/coupons/:id", requireAuth, async (req: any, res) => {
       .where(and(eq(couponsTable.id, id), eq(couponsTable.storeId, store.id)));
     res.status(204).end();
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

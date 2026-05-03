@@ -60,8 +60,7 @@ router.get("/referral/preview/:code", async (req: any, res) => {
       bonusOrders: REFERRAL_BONUS_ORDERS,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -91,8 +90,7 @@ router.get("/referral/me", requireAuth, async (req: any, res) => {
       bonusOrdersEarned: Number(rewardCount) * REFERRAL_BONUS_ORDERS,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -144,8 +142,7 @@ router.post("/referral/apply", requireAuth, validate(ApplyReferralCodeBody), asy
       bonusOrdersEarned: Number(rewardCount) * REFERRAL_BONUS_ORDERS,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

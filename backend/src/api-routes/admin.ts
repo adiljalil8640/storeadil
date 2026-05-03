@@ -49,8 +49,7 @@ router.get("/admin/stats", requireAdmin, async (req: any, res) => {
       planBreakdown,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -112,8 +111,7 @@ router.get("/admin/users", requireAdmin, async (req: any, res) => {
 
     res.json(results);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -152,8 +150,7 @@ router.patch("/admin/users/:userId/plan", requireAdmin, async (req: any, res) =>
       createdAt: new Date(),
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -165,8 +162,7 @@ router.get("/admin/ai-providers", requireAdmin, async (req: any, res) => {
     const providers = await db.select().from(aiProvidersTable).orderBy(desc(aiProvidersTable.isDefault), aiProvidersTable.createdAt);
     res.json(providers);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -185,8 +181,7 @@ router.post("/admin/ai-providers", requireAdmin, async (req: any, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -210,8 +205,7 @@ router.put("/admin/ai-providers/:id", requireAdmin, async (req: any, res) => {
     if (!updated) return res.status(404).json({ error: "Provider not found" });
     res.json(updated);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -224,8 +218,7 @@ router.delete("/admin/ai-providers/:id", requireAdmin, async (req: any, res) => 
     await db.delete(aiProvidersTable).where(eq(aiProvidersTable.id, id));
     res.json({ success: true });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -245,8 +238,7 @@ router.patch("/admin/ai-providers/:id/default", requireAdmin, async (req: any, r
     if (!updated) return res.status(404).json({ error: "Provider not found" });
     res.json(updated);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

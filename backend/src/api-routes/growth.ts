@@ -23,8 +23,7 @@ router.get("/growth/share-message", requireAuth, async (req: any, res) => {
 
     res.json({ message, whatsappUrl, storeUrl, ogUrl });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -48,8 +47,7 @@ router.get("/growth/qr-code", requireAuth, async (req: any, res) => {
     res.set("Content-Disposition", `attachment; filename="${store.slug}-qr.png"`);
     res.send(qrBuffer);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

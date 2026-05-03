@@ -51,8 +51,7 @@ router.get("/orders", requireAuth, requireStore, async (req: any, res) => {
 
     res.json(orders);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -239,8 +238,7 @@ router.post("/orders", publicOrderLimiter, async (req: any, res) => {
 
     res.status(201).json({ order, whatsappUrl });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -320,8 +318,7 @@ router.get("/orders/export", requireAuth, requireStore, async (req: any, res) =>
     res.setHeader("Content-Disposition", `attachment; filename="orders-${label}.csv"`);
     return res.send(rows.join("\n"));
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -364,8 +361,7 @@ router.get("/orders/track/:token", publicTrackLimiter, async (req: any, res) => 
       currency: order.currency,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -382,8 +378,7 @@ router.get("/orders/:id", requireAuth, requireStore, async (req: any, res) => {
     if (!order) return res.status(404).json({ error: "Order not found" });
     res.json(order);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -425,8 +420,7 @@ router.patch("/orders/:id", requireAuth, requireStore, async (req: any, res) => 
 
     res.json(order);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -474,8 +468,7 @@ router.get("/orders/customer-history", requireAuth, requireStore, async (req: an
       },
     });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -498,8 +491,7 @@ router.patch("/orders/:id/note", requireAuth, requireStore, validate(UpdateOrder
     if (!order) return res.status(404).json({ error: "Order not found" });
     return res.json(order);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -523,8 +515,7 @@ router.post("/orders/bulk-status", requireAuth, requireStore, validate(BulkUpdat
 
     return res.json({ updated: orderIds.length });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

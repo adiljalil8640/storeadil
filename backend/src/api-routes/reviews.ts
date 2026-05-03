@@ -41,8 +41,7 @@ router.get("/reviews", requireAuth, requireStore, async (req: any, res) => {
 
     return res.json(reviews);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -76,8 +75,7 @@ router.patch("/reviews/:id/reply", requireAuth, requireStore, validate(ReplyToRe
 
     return res.json(updated);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -155,8 +153,7 @@ router.post("/reviews", publicWriteLimiter, validate(SubmitReviewBody), async (r
     if (err?.code === "23505") {
       return res.status(409).json({ error: "You have already reviewed this product" });
     }
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -184,8 +181,7 @@ router.get("/stores/:slug/reviews", publicStoreLimiter, async (req: any, res) =>
 
     return res.json(reviews);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

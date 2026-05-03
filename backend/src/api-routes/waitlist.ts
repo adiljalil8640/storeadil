@@ -59,8 +59,7 @@ router.post("/stores/public/:slug/waitlist", publicWriteLimiter, async (req: any
 
     res.status(201).json({ message: "You're on the waitlist! We'll email you when it's back." });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -96,8 +95,7 @@ router.get("/products/waitlist", requireAuth, async (req: any, res) => {
 
     res.json(entries);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -157,8 +155,7 @@ router.post("/products/:id/waitlist/notify", requireAuth, async (req: any, res) 
     req.log.info({ productId, notified: waitlist.length }, "Manual back-in-stock notification sent");
     res.json({ notified: waitlist.length });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -193,8 +190,7 @@ router.get("/products/waitlist-counts", requireAuth, async (req: any, res) => {
 
     res.json({ counts });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

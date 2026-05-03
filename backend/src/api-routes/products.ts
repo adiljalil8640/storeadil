@@ -29,8 +29,7 @@ router.get("/products", async (req: any, res) => {
 
     res.json(products);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -66,8 +65,7 @@ router.post("/products", async (req: any, res) => {
 
     res.status(201).json(product);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -83,8 +81,7 @@ router.get("/products/categories", async (req: any, res) => {
 
     res.json(rows.map((r) => r.category).filter(Boolean));
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -172,8 +169,7 @@ router.post("/products/import", validate(ImportProductsBody), async (req: any, r
     req.log.info({ imported, storeId }, "Bulk CSV import completed");
     res.json({ imported, skipped: errors.length, errors });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -190,8 +186,7 @@ router.get("/products/:id", async (req: any, res) => {
     if (!product) return res.status(404).json({ error: "Product not found" });
     res.json(product);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -273,8 +268,7 @@ router.put("/products/:id", async (req: any, res) => {
 
     res.json(product);
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -289,8 +283,7 @@ router.delete("/products/:id", async (req: any, res) => {
 
     res.status(204).send();
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 

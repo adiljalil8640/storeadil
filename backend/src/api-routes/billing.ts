@@ -20,8 +20,7 @@ router.get("/billing/plans", async (req: any, res) => {
       features: (p.features as string[]) ?? [],
     })));
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
@@ -42,8 +41,7 @@ router.get("/billing/status", requireAuth, async (req: any, res) => {
       currentPeriodEnd: sub.currentPeriodEnd ?? null,
     });
   } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    throw err;
   }
 });
 
