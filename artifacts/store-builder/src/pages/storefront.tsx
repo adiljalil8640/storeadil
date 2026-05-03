@@ -203,6 +203,45 @@ export default function StorefrontPage() {
     return storeReviews.reduce((s, r) => s + r.rating, 0) / storeReviews.length;
   }, [storeReviews]);
 
+  const reviewHighlights = useMemo(() => {
+    const STOPWORDS = new Set([
+      "a","an","the","and","or","but","in","on","at","to","for","of","with",
+      "is","are","was","were","be","been","being","have","has","had","do","does",
+      "did","will","would","could","should","may","might","shall","can","not",
+      "no","so","if","as","by","it","its","this","that","these","those","my",
+      "your","his","her","our","their","i","we","you","he","she","they","me",
+      "him","us","them","what","which","who","how","when","where","very","just",
+      "also","even","only","really","quite","more","much","good","great","nice",
+      "here","there","then","than","too","up","out","about","from","get","got",
+      "all","any","some","one","two","time","well","still","now","new","s","t",
+    ]);
+    const withComments = storeReviews.filter(r => r.comment && r.comment.trim().length > 0);
+    if (withComments.length < 2) return null;
+    const freq: Record<string, number> = {};
+    for (const r of withComments) {
+      const words = (r.comment ?? "")
+        .toLowerCase()
+        .replace(/[^a-z\s'-]/g, " ")
+        .split(/\s+/)
+        .map(w => w.replace(/^['-]+|['-]+$/g, ""))
+        .filter(w => w.length > 3 && !STOPWORDS.has(w));
+      const seen = new Set<string>();
+      for (const w of words) {
+        if (!seen.has(w)) { freq[w] = (freq[w] ?? 0) + 1; seen.add(w); }
+      }
+    }
+    const top = Object.entries(freq)
+      .filter(([, c]) => c >= 2)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4)
+      .map(([w]) => w);
+    if (top.length < 2) return null;
+    const listed = top.length === 2
+      ? `${top[0]} and ${top[1]}`
+      : top.slice(0, -1).join(", ") + ", and " + top[top.length - 1];
+    return `Customers frequently mention ${listed}.`;
+  }, [storeReviews]);
+
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
@@ -817,6 +856,14 @@ export default function StorefrontPage() {
         {/* Customer Reviews Section */}
         {sortedReviews.length > 0 && (
           <section id="reviews" className="mt-12 pt-8 border-t space-y-5">
+            {reviewHighlights && (
+              <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-900 dark:text-amber-200 leading-snug">
+                  {reviewHighlights}
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-baseline gap-3">
                 <h2 className="text-xl font-bold">Customer Reviews</h2>
