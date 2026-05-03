@@ -43,6 +43,7 @@ import type {
   GetAdminUsersParams,
   GetRecentOrdersParams,
   GetStoreReviewsParams,
+  GetTopCustomersParams,
   GetTopProductsParams,
   HealthStatus,
   ImportProductsBody,
@@ -74,6 +75,7 @@ import type {
   StoreHoursMap,
   SuggestPriceBody,
   SuggestPriceResponse,
+  TopCustomerItem,
   TopStore,
   UpdateCouponBody,
   UpdateMyStoreHolidaysBody,
@@ -3724,6 +3726,100 @@ export function useGetProductVelocity<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetProductVelocityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get top customers by total spend
+ */
+export const getGetTopCustomersUrl = (params?: GetTopCustomersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analytics/top-customers?${stringifiedParams}`
+    : `/api/analytics/top-customers`;
+};
+
+export const getTopCustomers = async (
+  params?: GetTopCustomersParams,
+  options?: RequestInit,
+): Promise<TopCustomerItem[]> => {
+  return customFetch<TopCustomerItem[]>(getGetTopCustomersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTopCustomersQueryKey = (params?: GetTopCustomersParams) => {
+  return [`/api/analytics/top-customers`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetTopCustomersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTopCustomers>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetTopCustomersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTopCustomers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTopCustomersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTopCustomers>>> = ({
+    signal,
+  }) => getTopCustomers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTopCustomers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTopCustomersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTopCustomers>>
+>;
+export type GetTopCustomersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get top customers by total spend
+ */
+
+export function useGetTopCustomers<
+  TData = Awaited<ReturnType<typeof getTopCustomers>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetTopCustomersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTopCustomers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTopCustomersQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -955,6 +955,29 @@ paths:
                 items:
                   $ref: "#/components/schemas/ProductVelocityItem"
 
+  /analytics/top-customers:
+    get:
+      operationId: getTopCustomers
+      tags: [analytics]
+      summary: Get top customers by total spend
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 8
+      responses:
+        "200":
+          description: Top customers ranked by lifetime spend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopCustomerItem"
+
   # Billing endpoints
   /billing/plans:
     get:
@@ -2369,6 +2392,27 @@ components:
             type: integer
           description: Daily order counts for the last 14 days, oldest first
       required: [productId, counts]
+
+    TopCustomerItem:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Unique identifier (email, phone, or name)
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        orderCount:
+          type: integer
+        totalSpend:
+          type: number
+      required: [key, orderCount, totalSpend]
 
     Plan:
       type: object

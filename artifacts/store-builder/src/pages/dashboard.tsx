@@ -1,6 +1,6 @@
-import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts, useGetTopCustomers } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag, AlertTriangle } from "lucide-react";
+import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag, AlertTriangle, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
@@ -14,6 +14,7 @@ export default function Dashboard() {
   const { data: reviews = [], isLoading: reviewsLoading } = useListMerchantReviews();
   const { data: coupons = [], isLoading: couponsLoading } = useListCoupons();
   const { data: allProducts = [], isLoading: stockLoading } = useListProducts();
+  const { data: topCustomers = [], isLoading: customersLoading } = useGetTopCustomers({ limit: 8 });
 
   const DEFAULT_LOW_STOCK = 5;
   const outOfStock = allProducts.filter(
@@ -413,6 +414,76 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Top Customers */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Top Customers</CardTitle>
+              </div>
+              <Link href="/orders" className="text-xs text-primary hover:underline">View orders →</Link>
+            </CardHeader>
+            <CardContent>
+              {customersLoading ? (
+                <div className="text-center text-muted-foreground py-6 text-sm">Loading...</div>
+              ) : topCustomers.length === 0 ? (
+                <div className="text-center text-muted-foreground py-6 text-sm">No orders yet</div>
+              ) : (() => {
+                const maxSpend = topCustomers[0]?.totalSpend ?? 1;
+                const formatCurrency = (n: number) =>
+                  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+                const initials = (c: typeof topCustomers[0]) => {
+                  const name = c.name ?? c.email ?? c.phone ?? "G";
+                  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+                };
+                const displayName = (c: typeof topCustomers[0]) =>
+                  c.name ?? c.email ?? c.phone ?? "Guest";
+
+                return (
+                  <div className="space-y-3">
+                    {topCustomers.map((customer, idx) => {
+                      const pct = maxSpend > 0 ? (customer.totalSpend / maxSpend) * 100 : 0;
+                      return (
+                        <div key={customer.key} className="flex items-center gap-3">
+                          {/* Rank + avatar */}
+                          <span className="text-xs text-muted-foreground w-4 text-right shrink-0">{idx + 1}</span>
+                          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 select-none">
+                            {initials(customer)}
+                          </div>
+
+                          {/* Name + bar */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium truncate" title={displayName(customer)}>
+                                {displayName(customer)}
+                              </span>
+                              <span className="text-sm font-semibold text-primary ml-2 shrink-0">
+                                {formatCurrency(customer.totalSpend)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all duration-500"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                {customer.orderCount} {customer.orderCount === 1 ? "order" : "orders"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </motion.div>

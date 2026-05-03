@@ -168,6 +168,66 @@ router.get("/analytics/orders-per-day", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /analytics/top-customers
+router.get("/analytics/top-customers", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const limit = Math.min(parseInt(req.query.limit as string) || 8, 20);
+
+    const orders = await db
+      .select({
+        customerName: ordersTable.customerName,
+        customerEmail: ordersTable.customerEmail,
+        customerPhone: ordersTable.customerPhone,
+        total: ordersTable.total,
+      })
+      .from(ordersTable)
+      .where(eq(ordersTable.storeId, storeId));
+
+    // Group by best available identifier: email > phone > name > "Guest"
+    const map: Record<string, {
+      key: string; name: string | null; email: string | null;
+      phone: string | null; orderCount: number; totalSpend: number;
+    }> = {};
+
+    for (const order of orders) {
+      const key = order.customerEmail?.trim().toLowerCase()
+        ?? order.customerPhone?.trim()
+        ?? order.customerName?.trim()
+        ?? "__guest__";
+
+      if (!map[key]) {
+        map[key] = {
+          key,
+          name: order.customerName ?? null,
+          email: order.customerEmail ?? null,
+          phone: order.customerPhone ?? null,
+          orderCount: 0,
+          totalSpend: 0,
+        };
+      }
+      map[key].orderCount += 1;
+      map[key].totalSpend += Number(order.total);
+
+      // Prefer the most-informative name we've seen
+      if (!map[key].name && order.customerName) map[key].name = order.customerName;
+      if (!map[key].email && order.customerEmail) map[key].email = order.customerEmail;
+      if (!map[key].phone && order.customerPhone) map[key].phone = order.customerPhone;
+    }
+
+    const result = Object.values(map)
+      .sort((a, b) => b.totalSpend - a.totalSpend)
+      .slice(0, limit);
+
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /analytics/product-velocity
 router.get("/analytics/product-velocity", requireAuth, async (req: any, res) => {
   try {

@@ -1838,6 +1838,25 @@ export const GetProductVelocityResponse = zod.array(
 );
 
 /**
+ * @summary Get top customers by total spend
+ */
+export const getTopCustomersQueryLimitDefault = 8;
+
+export const GetTopCustomersQueryParams = zod.object({
+  limit: zod.coerce.number().default(getTopCustomersQueryLimitDefault),
+});
+
+export const GetTopCustomersResponseItem = zod.object({
+  key: zod.string().describe("Unique identifier (email, phone, or name)"),
+  name: zod.string().nullish(),
+  email: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  orderCount: zod.number(),
+  totalSpend: zod.number(),
+});
+export const GetTopCustomersResponse = zod.array(GetTopCustomersResponseItem);
+
+/**
  * @summary Get all available plans
  */
 export const GetBillingPlansResponseItem = zod.object({

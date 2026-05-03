@@ -626,6 +626,16 @@ export interface ProductVelocityItem {
   counts: number[];
 }
 
+export interface TopCustomerItem {
+  /** Unique identifier (email, phone, or name) */
+  key: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  orderCount: number;
+  totalSpend: number;
+}
+
 export interface Plan {
   id: number;
   name: string;
@@ -784,6 +794,10 @@ export type GetRecentOrdersParams = {
 };
 
 export type GetTopProductsParams = {
+  limit?: number;
+};
+
+export type GetTopCustomersParams = {
   limit?: number;
 };
 
