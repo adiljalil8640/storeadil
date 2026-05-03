@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send } from "lucide-react";
+import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -123,11 +124,35 @@ function WaitlistTab() {
 
 export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const queryClient = useQueryClient();
 
-  const { data: orders, isLoading } = useListOrders({
+  const { data: rawOrders, isLoading } = useListOrders({
     status: statusFilter !== "all" ? statusFilter as any : undefined,
   });
+
+  const orders = (() => {
+    let list = rawOrders ?? [];
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((o) =>
+        String(o.id).includes(q) ||
+        (o.customerName ?? "").toLowerCase().includes(q) ||
+        (o.customerPhone ?? "").toLowerCase().includes(q) ||
+        (o.customerEmail ?? "").toLowerCase().includes(q) ||
+        o.items.some((i) => i.productName.toLowerCase().includes(q))
+      );
+    }
+    list = [...list].sort((a, b) => {
+      if (sortBy === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "highest") return Number(b.total) - Number(a.total);
+      if (sortBy === "lowest") return Number(a.total) - Number(b.total);
+      return 0;
+    });
+    return list;
+  })();
 
   const updateStatus = useUpdateOrderStatus({
     mutation: {
@@ -182,14 +207,34 @@ export default function OrdersPage() {
           </TabsList>
 
           <TabsContent value="orders" className="mt-6">
-            <div className="flex justify-end mb-4">
-              <div className="w-[180px]">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search by customer, phone, email, product, or order #…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 pr-8"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status filter */}
+              <div className="w-full sm:w-[160px]">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Orders</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
@@ -197,7 +242,37 @@ export default function OrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Sort */}
+              <div className="w-full sm:w-[160px]">
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                  <SelectTrigger>
+                    <ArrowUpDown className="h-3.5 w-3.5 mr-2 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest first</SelectItem>
+                    <SelectItem value="oldest">Oldest first</SelectItem>
+                    <SelectItem value="highest">Highest total</SelectItem>
+                    <SelectItem value="lowest">Lowest total</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {/* Result count */}
+            {(search || statusFilter !== "all") && !isLoading && (
+              <p className="text-xs text-muted-foreground mb-3">
+                {orders.length === 0
+                  ? "No orders match your filters."
+                  : `${orders.length} order${orders.length !== 1 ? "s" : ""} found`}
+                {search && (
+                  <button onClick={() => setSearch("")} className="ml-2 text-primary hover:underline">
+                    Clear search
+                  </button>
+                )}
+              </p>
+            )}
 
             <Card>
               <CardContent className="p-0">
