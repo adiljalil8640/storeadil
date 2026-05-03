@@ -84,6 +84,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/Store"
 
+  /stores/me/slug:
+    patch:
+      operationId: updateMyStoreSlug
+      tags: [stores]
+      summary: Change the authenticated user's store slug (URL handle)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoreSlugBody"
+      responses:
+        "200":
+          description: Updated store with new slug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+        "409":
+          description: Slug already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stores/slug-check:
+    get:
+      operationId: checkSlugAvailability
+      tags: [stores]
+      summary: Check if a store slug is available (auth required)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: The slug to check for availability
+      responses:
+        "200":
+          description: Availability result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlugCheckResult"
+
   /stores:
     post:
       operationId: createStore
@@ -1461,6 +1510,29 @@ components:
           type: string
           nullable: true
           description: Custom SEO/OG description. Falls back to store description if not set.
+
+    UpdateStoreSlugBody:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: New URL handle — lowercase letters, numbers, and hyphens only.
+      required: [slug]
+
+    SlugCheckResult:
+      type: object
+      properties:
+        available:
+          type: boolean
+        slug:
+          type: string
+        reason:
+          type: string
+          nullable: true
+          description: Set to "current" if the slug matches the user's own store, otherwise null.
+      required: [available, slug]
 
     Product:
       type: object

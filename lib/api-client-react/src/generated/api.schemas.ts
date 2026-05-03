@@ -302,6 +302,22 @@ export interface UpdateStoreBody {
   metaDescription?: string | null;
 }
 
+export interface UpdateStoreSlugBody {
+  /**
+   * New URL handle — lowercase letters, numbers, and hyphens only.
+   * @minLength 3
+   * @maxLength 50
+   */
+  slug: string;
+}
+
+export interface SlugCheckResult {
+  available: boolean;
+  slug: string;
+  /** Set to "current" if the slug matches the user's own store, otherwise null. */
+  reason?: string | null;
+}
+
 export interface CreateProductBody {
   name: string;
   description?: string | null;
@@ -593,6 +609,13 @@ export interface ShareMessage {
   /** URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo. */
   ogUrl: string;
 }
+
+export type CheckSlugAvailabilityParams = {
+  /**
+   * The slug to check for availability
+   */
+  slug: string;
+};
 
 export type BrowseStoresParams = {
   /**

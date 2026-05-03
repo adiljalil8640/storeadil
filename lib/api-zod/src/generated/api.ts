@@ -110,6 +110,70 @@ export const UpdateMyStoreResponse = zod.object({
 });
 
 /**
+ * @summary Change the authenticated user's store slug (URL handle)
+ */
+export const updateMyStoreSlugBodySlugMin = 3;
+export const updateMyStoreSlugBodySlugMax = 50;
+
+export const UpdateMyStoreSlugBody = zod.object({
+  slug: zod
+    .string()
+    .min(updateMyStoreSlugBodySlugMin)
+    .max(updateMyStoreSlugBodySlugMax)
+    .describe("New URL handle — lowercase letters, numbers, and hyphens only."),
+});
+
+export const UpdateMyStoreSlugResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  name: zod.string(),
+  slug: zod.string(),
+  description: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  currency: zod.string(),
+  logoUrl: zod.string().nullish(),
+  theme: zod.enum(["light", "dark", "minimal"]),
+  deliveryEnabled: zod.boolean(),
+  pickupEnabled: zod.boolean(),
+  shippingNote: zod.string().nullish(),
+  notificationEmail: zod.string().nullish(),
+  digestFrequency: zod.enum(["none", "daily", "weekly"]).nullish(),
+  category: zod.string().nullish(),
+  metaTitle: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG title shown to search engines and social platforms. Falls back to store name if not set.",
+    ),
+  metaDescription: zod
+    .string()
+    .nullish()
+    .describe(
+      "Custom SEO\/OG description for link previews and search results. Falls back to store description if not set.",
+    ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Check if a store slug is available (auth required)
+ */
+export const CheckSlugAvailabilityQueryParams = zod.object({
+  slug: zod.coerce.string().describe("The slug to check for availability"),
+});
+
+export const CheckSlugAvailabilityResponse = zod.object({
+  available: zod.boolean(),
+  slug: zod.string(),
+  reason: zod
+    .string()
+    .nullish()
+    .describe(
+      'Set to \"current\" if the slug matches the user\'s own store, otherwise null.',
+    ),
+});
+
+/**
  * @summary Create a new store for the authenticated user
  */
 export const createStoreBodyCurrencyDefault = `USD`;

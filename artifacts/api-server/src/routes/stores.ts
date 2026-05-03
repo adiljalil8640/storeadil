@@ -177,4 +177,63 @@ router.get("/stores/public/:slug", async (req: any, res) => {
   }
 });
 
+// GET /stores/slug-check?slug=foo — check availability (auth required)
+router.get("/stores/slug-check", requireAuth, async (req: any, res) => {
+  const slug = typeof req.query.slug === "string" ? req.query.slug.trim().toLowerCase() : "";
+
+  if (!slug || slug.length < 3 || slug.length > 50 || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug)) {
+    return res.json({ available: false, slug, reason: "invalid" });
+  }
+
+  try {
+    const [mine] = await db
+      .select({ slug: storesTable.slug })
+      .from(storesTable)
+      .where(eq(storesTable.userId, req.userId));
+
+    if (mine?.slug === slug) {
+      return res.json({ available: false, slug, reason: "current" });
+    }
+
+    const [existing] = await db
+      .select({ id: storesTable.id })
+      .from(storesTable)
+      .where(eq(storesTable.slug, slug));
+
+    res.json({ available: !existing, slug, reason: null });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /stores/me/slug — change URL handle
+router.patch("/stores/me/slug", requireAuth, async (req: any, res) => {
+  const raw = req.body?.slug;
+  if (!raw || typeof raw !== "string") {
+    return res.status(400).json({ error: "slug is required" });
+  }
+  const slug = raw.trim().toLowerCase();
+  if (slug.length < 3 || slug.length > 50 || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug)) {
+    return res.status(400).json({ error: "Invalid slug: 3–50 chars, lowercase letters, numbers, and hyphens only" });
+  }
+
+  try {
+    const [store] = await db
+      .update(storesTable)
+      .set({ slug, updatedAt: new Date() })
+      .where(eq(storesTable.userId, req.userId))
+      .returning();
+
+    if (!store) return res.status(404).json({ error: "No store found" });
+    res.json(store);
+  } catch (err: any) {
+    req.log.error(err);
+    if (err.code === "23505") {
+      return res.status(409).json({ error: "That URL handle is already taken" });
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

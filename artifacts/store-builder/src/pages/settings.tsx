@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2 } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 
@@ -182,6 +182,49 @@ export default function SettingsPage() {
   const ringR = 38;
   const ringCircumference = 2 * Math.PI * ringR;
   const ringOffset = ringCircumference * (1 - seoScore / 100);
+
+  // --- Slug customisation ---
+  const [slugInput, setSlugInput] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "current">("idle");
+  const [slugSaving, setSlugSaving] = useState(false);
+
+  useEffect(() => {
+    if (!slugInput || !store) { setSlugStatus("idle"); return; }
+    if (slugInput === store.slug) { setSlugStatus("current"); return; }
+    if (slugInput.length < 3) { setSlugStatus("idle"); return; }
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slugInput)) { setSlugStatus("invalid"); return; }
+    setSlugStatus("checking");
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${basePath}/api/stores/slug-check?slug=${encodeURIComponent(slugInput)}`);
+        const d = await r.json();
+        setSlugStatus(d.available ? "available" : d.reason === "current" ? "current" : "taken");
+      } catch { setSlugStatus("idle"); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [slugInput, store, basePath]);
+
+  const handleSlugSave = async () => {
+    if (slugStatus !== "available" || slugSaving) return;
+    setSlugSaving(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/slug`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: slugInput }),
+      });
+      if (!r.ok) {
+        const e = await r.json();
+        toast.error(e.error ?? "Failed to change URL");
+      } else {
+        toast.success("Store URL updated!");
+        setSlugInput("");
+        setSlugStatus("idle");
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+      }
+    } catch { toast.error("Failed to change URL"); }
+    finally { setSlugSaving(false); }
+  };
 
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
   const [verifying, setVerifying] = useState(false);
@@ -667,6 +710,95 @@ export default function SettingsPage() {
                 <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
                 WhatsApp, iMessage, and Slack will show a preview card. Telegram and Discord see it too — even without running JavaScript.
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Store URL / slug customisation card */}
+        {store && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-primary" />
+                Store URL
+              </CardTitle>
+              <CardDescription>
+                Your storefront is live at the address below. You can change the handle at any time — but note that existing shared links will stop working immediately.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current URL read-only display */}
+              <div className="flex items-center gap-2 rounded-lg bg-muted/60 border px-3 py-2.5 text-sm font-mono">
+                <Globe className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <span className="text-muted-foreground truncate">
+                  {window.location.origin}{basePath}/store/
+                </span>
+                <span className="font-semibold text-foreground">{store.slug}</span>
+                <button
+                  type="button"
+                  className="ml-auto shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => { navigator.clipboard.writeText(publicUrl); toast.success("URL copied!"); }}
+                  title="Copy URL"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* New slug input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none">Change Handle</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      value={slugInput}
+                      onChange={(e) =>
+                        setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+                      }
+                      placeholder={store.slug}
+                      className="pr-8 font-mono"
+                      maxLength={50}
+                    />
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {slugStatus === "checking" && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                      {slugStatus === "available" && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                      {(slugStatus === "taken" || slugStatus === "invalid") && <XCircle className="w-3.5 h-3.5 text-destructive" />}
+                      {slugStatus === "current" && <AlertCircle className="w-3.5 h-3.5 text-amber-500" />}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    disabled={slugStatus !== "available" || slugSaving}
+                    onClick={handleSlugSave}
+                    className="gap-2 shrink-0"
+                  >
+                    {slugSaving
+                      ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      : <Save className="w-3.5 h-3.5" />}
+                    {slugSaving ? "Saving…" : "Change URL"}
+                  </Button>
+                </div>
+
+                {/* Inline status message */}
+                {slugInput.length > 0 && (
+                  <p className={`text-xs flex items-center gap-1.5 ${
+                    slugStatus === "available" ? "text-green-600 dark:text-green-400" :
+                    slugStatus === "taken" || slugStatus === "invalid" ? "text-destructive" :
+                    slugStatus === "current" ? "text-amber-600 dark:text-amber-500" :
+                    "text-muted-foreground"
+                  }`}>
+                    {slugStatus === "available" && <><CheckCircle2 className="w-3 h-3 shrink-0" /> <strong>{slugInput}</strong> is available — click "Change URL" to save</>}
+                    {slugStatus === "taken"     && <><XCircle className="w-3 h-3 shrink-0" /> <strong>{slugInput}</strong> is already taken — try a different name</>}
+                    {slugStatus === "invalid"   && <><XCircle className="w-3 h-3 shrink-0" /> Use 3–50 lowercase letters, numbers, and hyphens (no leading/trailing hyphens)</>}
+                    {slugStatus === "current"   && <><AlertCircle className="w-3 h-3 shrink-0" /> That's already your current handle</>}
+                    {slugStatus === "checking"  && "Checking availability…"}
+                    {slugStatus === "idle"      && slugInput.length >= 1 && slugInput.length < 3 && "Keep typing — minimum 3 characters"}
+                  </p>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  3–50 characters · lowercase letters, numbers, and hyphens only · cannot start or end with a hyphen
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}

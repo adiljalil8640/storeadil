@@ -25,6 +25,7 @@ import type {
   BrowseStoresParams,
   BrowseStoresResult,
   ChangeUserPlanBody,
+  CheckSlugAvailabilityParams,
   CheckoutSession,
   Coupon,
   CreateCheckoutBody,
@@ -60,6 +61,7 @@ import type {
   ReferralInfo,
   ReferralPreview,
   ShareMessage,
+  SlugCheckResult,
   Store,
   SuggestPriceBody,
   SuggestPriceResponse,
@@ -68,6 +70,7 @@ import type {
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdateStoreBody,
+  UpdateStoreSlugBody,
   ValidateCouponBody,
   ValidateCouponResponse,
   WaitlistCountsResponse,
@@ -316,6 +319,192 @@ export const useUpdateMyStore = <
 > => {
   return useMutation(getUpdateMyStoreMutationOptions(options));
 };
+
+/**
+ * @summary Change the authenticated user's store slug (URL handle)
+ */
+export const getUpdateMyStoreSlugUrl = () => {
+  return `/api/stores/me/slug`;
+};
+
+export const updateMyStoreSlug = async (
+  updateStoreSlugBody: UpdateStoreSlugBody,
+  options?: RequestInit,
+): Promise<Store> => {
+  return customFetch<Store>(getUpdateMyStoreSlugUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateStoreSlugBody),
+  });
+};
+
+export const getUpdateMyStoreSlugMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreSlug>>,
+    TError,
+    { data: BodyType<UpdateStoreSlugBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyStoreSlug>>,
+  TError,
+  { data: BodyType<UpdateStoreSlugBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMyStoreSlug"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyStoreSlug>>,
+    { data: BodyType<UpdateStoreSlugBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyStoreSlug(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyStoreSlugMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyStoreSlug>>
+>;
+export type UpdateMyStoreSlugMutationBody = BodyType<UpdateStoreSlugBody>;
+export type UpdateMyStoreSlugMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Change the authenticated user's store slug (URL handle)
+ */
+export const useUpdateMyStoreSlug = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreSlug>>,
+    TError,
+    { data: BodyType<UpdateStoreSlugBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyStoreSlug>>,
+  TError,
+  { data: BodyType<UpdateStoreSlugBody> },
+  TContext
+> => {
+  return useMutation(getUpdateMyStoreSlugMutationOptions(options));
+};
+
+/**
+ * @summary Check if a store slug is available (auth required)
+ */
+export const getCheckSlugAvailabilityUrl = (
+  params: CheckSlugAvailabilityParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/stores/slug-check?${stringifiedParams}`
+    : `/api/stores/slug-check`;
+};
+
+export const checkSlugAvailability = async (
+  params: CheckSlugAvailabilityParams,
+  options?: RequestInit,
+): Promise<SlugCheckResult> => {
+  return customFetch<SlugCheckResult>(getCheckSlugAvailabilityUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getCheckSlugAvailabilityQueryKey = (
+  params?: CheckSlugAvailabilityParams,
+) => {
+  return [`/api/stores/slug-check`, ...(params ? [params] : [])] as const;
+};
+
+export const getCheckSlugAvailabilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof checkSlugAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: CheckSlugAvailabilityParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof checkSlugAvailability>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getCheckSlugAvailabilityQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof checkSlugAvailability>>
+  > = ({ signal }) =>
+    checkSlugAvailability(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof checkSlugAvailability>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type CheckSlugAvailabilityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof checkSlugAvailability>>
+>;
+export type CheckSlugAvailabilityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Check if a store slug is available (auth required)
+ */
+
+export function useCheckSlugAvailability<
+  TData = Awaited<ReturnType<typeof checkSlugAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: CheckSlugAvailabilityParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof checkSlugAvailability>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getCheckSlugAvailabilityQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Create a new store for the authenticated user
