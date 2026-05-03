@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, reviewsTable, productsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
+import { sendNewReviewNotification } from "../services/email";
 
 const router = Router();
 
@@ -138,6 +139,34 @@ router.post("/reviews", async (req: any, res) => {
         comment: comment?.trim() || null,
       })
       .returning();
+
+    // Fire-and-forget merchant notification
+    (async () => {
+      try {
+        const [store] = await db
+          .select({ name: storesTable.name, notificationEmail: storesTable.notificationEmail })
+          .from(storesTable)
+          .where(eq(storesTable.id, order.storeId));
+
+        if (!store?.notificationEmail) return;
+
+        const [product] = await db
+          .select({ name: productsTable.name })
+          .from(productsTable)
+          .where(eq(productsTable.id, Number(productId)));
+
+        const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+        await sendNewReviewNotification({
+          to: store.notificationEmail,
+          storeName: store.name,
+          productName: product?.name ?? "Unknown product",
+          customerName: order.customerName ?? null,
+          rating,
+          comment: comment?.trim() || null,
+          appBaseUrl,
+        });
+      } catch {}
+    })();
 
     return res.status(201).json(review);
   } catch (err: any) {

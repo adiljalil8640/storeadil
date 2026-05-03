@@ -352,6 +352,58 @@ export async function sendOrderConfirmation(params: {
   await sendEmail(to, `Order #${orderId} confirmed — ${storeName}`, baseTemplate(content, storeName));
 }
 
+export async function sendNewReviewNotification(params: {
+  to: string;
+  storeName: string;
+  productName: string;
+  customerName: string | null;
+  rating: number;
+  comment: string | null;
+  appBaseUrl: string;
+}): Promise<void> {
+  const { to, storeName, productName, customerName, rating, comment, appBaseUrl } = params;
+
+  const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+  const ratingColor = rating >= 4 ? "#25D366" : rating === 3 ? "#f59e0b" : "#ef4444";
+
+  const content = `
+    <h2 style="margin:0 0 8px;font-size:22px;color:#111827;">⭐ New Review Received</h2>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:14px;">
+      A customer just left a review on <strong>${storeName}</strong>.
+    </p>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;">
+      <div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Product</div>
+      <div style="font-weight:700;font-size:16px;color:#111827;margin-bottom:12px;">${productName}</div>
+
+      <div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Rating</div>
+      <div style="font-size:22px;letter-spacing:2px;color:${ratingColor};margin-bottom:4px;">${stars}</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:${comment ? "12px" : "0"};">
+        ${rating} out of 5${customerName ? ` · by ${customerName}` : ""}
+      </div>
+
+      ${comment ? `
+      <div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Comment</div>
+      <div style="font-size:14px;color:#374151;line-height:1.6;padding:12px;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;">
+        "${comment}"
+      </div>` : ""}
+    </div>
+
+    <a href="${appBaseUrl}/reviews" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;">
+      View &amp; Reply →
+    </a>
+
+    <p style="margin-top:20px;font-size:12px;color:#9ca3af;">
+      Tip: replying to reviews builds customer trust and can boost future sales.
+    </p>`;
+
+  await sendEmail(
+    to,
+    `New ${rating}★ review for "${productName}" — ${storeName}`,
+    baseTemplate(content, storeName)
+  );
+}
+
 export async function sendStatusUpdateEmail(params: {
   to: string;
   customerName: string | null;
