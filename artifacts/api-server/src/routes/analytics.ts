@@ -168,6 +168,32 @@ router.get("/analytics/orders-per-day", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /analytics/order-heatmap
+router.get("/analytics/order-heatmap", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const rows = await db
+      .select({
+        dayOfWeek: sql<number>`EXTRACT(DOW FROM ${ordersTable.createdAt})::int`,
+        hour: sql<number>`EXTRACT(HOUR FROM ${ordersTable.createdAt})::int`,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(ordersTable)
+      .where(eq(ordersTable.storeId, storeId))
+      .groupBy(
+        sql`EXTRACT(DOW FROM ${ordersTable.createdAt})`,
+        sql`EXTRACT(HOUR FROM ${ordersTable.createdAt})`
+      );
+
+    res.json(rows);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /analytics/top-customers
 router.get("/analytics/top-customers", requireAuth, async (req: any, res) => {
   try {

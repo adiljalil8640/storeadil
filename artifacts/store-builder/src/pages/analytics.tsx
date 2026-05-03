@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import {
@@ -44,6 +44,7 @@ export default function AnalyticsPage() {
   const { data: ordersPerDay, isLoading: chartLoading } = useGetOrdersPerDay();
   const { data: topProducts, isLoading: topLoading } = useGetTopProducts({ limit: 10 });
   const { data: referral, isLoading: referralLoading } = useGetMyReferral();
+  const { data: heatmapData = [], isLoading: heatmapLoading } = useGetOrderHeatmap();
 
   const chartData = (ordersPerDay ?? []).map((d) => ({
     date: format(new Date(d.date + "T00:00:00"), "MMM d"),
@@ -359,6 +360,127 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
         </motion.div>
+      {/* Order Heatmap */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              Order Activity Heatmap
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">Orders by day &amp; hour</span>
+          </CardHeader>
+          <CardContent>
+            {heatmapLoading ? (
+              <div className="text-center text-muted-foreground py-10 text-sm">Loading heatmap…</div>
+            ) : (() => {
+              const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+              const HOURS = Array.from({ length: 24 }, (_, i) => i);
+              const HOUR_LABELS: Record<number, string> = {
+                0: "12a", 3: "3a", 6: "6a", 9: "9a",
+                12: "12p", 15: "3p", 18: "6p", 21: "9p",
+              };
+
+              // Build lookup: [day][hour] = count
+              const grid: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
+              for (const cell of heatmapData) {
+                grid[cell.dayOfWeek][cell.hour] = cell.count;
+              }
+              const maxCount = Math.max(...heatmapData.map((c) => c.count), 1);
+              const totalOrders = heatmapData.reduce((s, c) => s + c.count, 0);
+
+              // Find the busiest slot
+              let busiestDay = 0, busiestHour = 0;
+              for (const cell of heatmapData) {
+                if (cell.count === maxCount) { busiestDay = cell.dayOfWeek; busiestHour = cell.hour; }
+              }
+              const fmt12 = (h: number) => {
+                const suffix = h < 12 ? "am" : "pm";
+                const h12 = h % 12 === 0 ? 12 : h % 12;
+                return `${h12}${suffix}`;
+              };
+
+              if (totalOrders === 0) {
+                return <div className="text-center text-muted-foreground py-10 text-sm">No orders yet — the heatmap will populate as orders come in.</div>;
+              }
+
+              return (
+                <div className="space-y-4">
+                  {/* Insight strip */}
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-4 py-2 flex flex-wrap gap-x-6 gap-y-1">
+                    <span>Busiest slot: <span className="font-semibold text-foreground">{DAYS[busiestDay]} {fmt12(busiestHour)}</span></span>
+                    <span>Peak orders: <span className="font-semibold text-foreground">{maxCount}</span></span>
+                    <span>Total orders plotted: <span className="font-semibold text-foreground">{totalOrders}</span></span>
+                  </div>
+
+                  {/* Grid */}
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[560px]">
+                      {/* Hour axis */}
+                      <div className="flex mb-1 ml-10">
+                        {HOURS.map((h) => (
+                          <div key={h} className="flex-1 text-center text-[10px] text-muted-foreground leading-none">
+                            {HOUR_LABELS[h] ?? ""}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Rows */}
+                      {DAYS.map((day, d) => (
+                        <div key={d} className="flex items-center gap-0 mb-[3px]">
+                          <span className="w-10 text-[11px] text-muted-foreground text-right pr-2 shrink-0">{day}</span>
+                          {HOURS.map((h) => {
+                            const count = grid[d][h];
+                            const intensity = count > 0 ? Math.max(0.1, count / maxCount) : 0;
+                            return (
+                              <div key={h} className="flex-1 group relative">
+                                <div
+                                  className="h-5 rounded-[3px] mx-[1px] transition-transform duration-150 group-hover:scale-110 cursor-default"
+                                  style={{
+                                    backgroundColor: count > 0
+                                      ? `rgba(37, 211, 102, ${0.15 + intensity * 0.85})`
+                                      : "rgba(0,0,0,0.04)",
+                                  }}
+                                />
+                                {count > 0 && (
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-10 hidden group-hover:block pointer-events-none">
+                                    <div className="bg-popover border text-popover-foreground text-[11px] rounded-md px-2 py-1 shadow-md whitespace-nowrap">
+                                      <span className="font-semibold">{day} {fmt12(h)}</span>
+                                      <span className="text-muted-foreground ml-1">— {count} order{count !== 1 ? "s" : ""}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+
+                      {/* Legend */}
+                      <div className="flex items-center gap-2 mt-3 ml-10">
+                        <span className="text-[10px] text-muted-foreground">Less</span>
+                        {[0.04, 0.2, 0.4, 0.6, 0.8, 1].map((a, i) => (
+                          <div
+                            key={i}
+                            className="h-3 w-5 rounded-sm"
+                            style={{
+                              backgroundColor: a === 0.04
+                                ? "rgba(0,0,0,0.04)"
+                                : `rgba(37,211,102,${0.15 + a * 0.85})`,
+                            }}
+                          />
+                        ))}
+                        <span className="text-[10px] text-muted-foreground">More</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      </motion.div>
+
       </div>
     </AppLayout>
   );

@@ -626,6 +626,14 @@ export interface ProductVelocityItem {
   counts: number[];
 }
 
+export interface HeatmapCell {
+  /** 0 = Sunday … 6 = Saturday */
+  dayOfWeek: number;
+  /** 0 – 23 (local hour of order creation) */
+  hour: number;
+  count: number;
+}
+
 export interface TopCustomerItem {
   /** Unique identifier (email, phone, or name) */
   key: string;

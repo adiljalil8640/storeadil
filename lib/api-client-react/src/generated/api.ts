@@ -46,6 +46,7 @@ import type {
   GetTopCustomersParams,
   GetTopProductsParams,
   HealthStatus,
+  HeatmapCell,
   ImportProductsBody,
   ImportProductsResponse,
   JoinWaitlistBody,
@@ -3726,6 +3727,81 @@ export function useGetProductVelocity<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetProductVelocityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get order counts grouped by day-of-week and hour-of-day
+ */
+export const getGetOrderHeatmapUrl = () => {
+  return `/api/analytics/order-heatmap`;
+};
+
+export const getOrderHeatmap = async (
+  options?: RequestInit,
+): Promise<HeatmapCell[]> => {
+  return customFetch<HeatmapCell[]>(getGetOrderHeatmapUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOrderHeatmapQueryKey = () => {
+  return [`/api/analytics/order-heatmap`] as const;
+};
+
+export const getGetOrderHeatmapQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOrderHeatmap>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getOrderHeatmap>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOrderHeatmapQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrderHeatmap>>> = ({
+    signal,
+  }) => getOrderHeatmap({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOrderHeatmap>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOrderHeatmapQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOrderHeatmap>>
+>;
+export type GetOrderHeatmapQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get order counts grouped by day-of-week and hour-of-day
+ */
+
+export function useGetOrderHeatmap<
+  TData = Awaited<ReturnType<typeof getOrderHeatmap>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getOrderHeatmap>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOrderHeatmapQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

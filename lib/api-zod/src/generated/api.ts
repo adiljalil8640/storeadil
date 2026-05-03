@@ -1838,6 +1838,16 @@ export const GetProductVelocityResponse = zod.array(
 );
 
 /**
+ * @summary Get order counts grouped by day-of-week and hour-of-day
+ */
+export const GetOrderHeatmapResponseItem = zod.object({
+  dayOfWeek: zod.number().describe("0 = Sunday … 6 = Saturday"),
+  hour: zod.number().describe("0 – 23 (local hour of order creation)"),
+  count: zod.number(),
+});
+export const GetOrderHeatmapResponse = zod.array(GetOrderHeatmapResponseItem);
+
+/**
  * @summary Get top customers by total spend
  */
 export const getTopCustomersQueryLimitDefault = 8;

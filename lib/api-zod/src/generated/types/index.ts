@@ -44,6 +44,7 @@ export * from "./getStoreReviewsParams";
 export * from "./getTopCustomersParams";
 export * from "./getTopProductsParams";
 export * from "./healthStatus";
+export * from "./heatmapCell";
 export * from "./importProductsBody";
 export * from "./importProductsResponse";
 export * from "./joinWaitlistBody";

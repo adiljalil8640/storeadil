@@ -955,6 +955,23 @@ paths:
                 items:
                   $ref: "#/components/schemas/ProductVelocityItem"
 
+  /analytics/order-heatmap:
+    get:
+      operationId: getOrderHeatmap
+      tags: [analytics]
+      summary: Get order counts grouped by day-of-week and hour-of-day
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Heatmap cells with order counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HeatmapCell"
+
   /analytics/top-customers:
     get:
       operationId: getTopCustomers
@@ -2392,6 +2409,19 @@ components:
             type: integer
           description: Daily order counts for the last 14 days, oldest first
       required: [productId, counts]
+
+    HeatmapCell:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+          description: 0 = Sunday … 6 = Saturday
+        hour:
+          type: integer
+          description: 0 – 23 (local hour of order creation)
+        count:
+          type: integer
+      required: [dayOfWeek, hour, count]
 
     TopCustomerItem:
       type: object
