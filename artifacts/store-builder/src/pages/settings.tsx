@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2 } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
+import QRCode from "qrcode";
 
 const settingsSchema = z.object({
   name: z.string().min(2, "Store name is required"),
@@ -400,6 +401,100 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(html);
     setBadgeCopied(true);
     setTimeout(() => setBadgeCopied(false), 2000);
+  };
+
+  // --- QR Code ---
+  const [qrTarget, setQrTarget] = useState<"store" | "whatsapp">("store");
+  const [qrScheme, setQrScheme] = useState<"green" | "black" | "dark">("green");
+  const [qrWithLogo, setQrWithLogo] = useState(true);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrGenerating, setQrGenerating] = useState(false);
+
+  const qrUrl = store
+    ? qrTarget === "store"
+      ? `${window.location.origin}${basePath}/s/${store.slug}`
+      : `https://wa.me/${(store.whatsappNumber ?? "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi, I'd like to order from your store!")}`
+    : "";
+
+  useEffect(() => {
+    if (!store || !qrUrl) return;
+    let cancelled = false;
+    setQrGenerating(true);
+
+    const dark = qrScheme === "green" ? "#25D366" : qrScheme === "dark" ? "#e5e7eb" : "#111827";
+    const light = qrScheme === "dark" ? "#111827" : "#ffffff";
+
+    async function generate() {
+      try {
+        const baseUrl = await QRCode.toDataURL(qrUrl, {
+          width: 600,
+          margin: 2,
+          errorCorrectionLevel: "H",
+          color: { dark, light },
+        });
+
+        if (cancelled) return;
+
+        const logoSrc = qrWithLogo && store?.logoUrl ? store.logoUrl : null;
+        if (!logoSrc) {
+          if (!cancelled) { setQrDataUrl(baseUrl); setQrGenerating(false); }
+          return;
+        }
+
+        const qrImg = new Image();
+        qrImg.onerror = () => { if (!cancelled) { setQrDataUrl(baseUrl); setQrGenerating(false); } };
+        qrImg.onload = () => {
+          if (cancelled) return;
+          const sz = 600;
+          const canvas = document.createElement("canvas");
+          canvas.width = sz; canvas.height = sz;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(qrImg, 0, 0, sz, sz);
+
+          const logoSize = sz / 5;
+          const cx = sz / 2, cy = sz / 2;
+
+          ctx.fillStyle = light;
+          ctx.beginPath();
+          ctx.arc(cx, cy, logoSize / 2 + 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          const logoImg = new Image();
+          logoImg.crossOrigin = "anonymous";
+          logoImg.onerror = () => { if (!cancelled) { setQrDataUrl(canvas.toDataURL("image/png")); setQrGenerating(false); } };
+          logoImg.onload = () => {
+            if (cancelled) return;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, logoSize / 2, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(logoImg, cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize);
+            ctx.restore();
+            if (!cancelled) { setQrDataUrl(canvas.toDataURL("image/png")); setQrGenerating(false); }
+          };
+          logoImg.src = logoSrc;
+        };
+        qrImg.src = baseUrl;
+      } catch {
+        if (!cancelled) setQrGenerating(false);
+      }
+    }
+
+    generate();
+    return () => { cancelled = true; };
+  }, [store, qrUrl, qrScheme, qrWithLogo]);
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `${store?.slug ?? "store"}-qr-code.png`;
+    a.click();
+  };
+
+  const handleCopyQrUrl = () => {
+    navigator.clipboard.writeText(qrUrl);
+    toast.success("URL copied to clipboard!");
   };
 
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
@@ -1254,6 +1349,140 @@ export default function SettingsPage() {
               {/* Usage hint */}
               <p className="text-xs text-muted-foreground">
                 <strong>HTML snippet</strong> works on any website or Linktree-style page. <strong>PNG</strong> works in email signatures, Instagram bios, and print. The badge links back to your store.
+              </p>
+
+            </CardContent>
+          </Card>
+        )}
+
+        {/* QR Code card */}
+        {store && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <QrCode className="w-4 h-4 text-primary" />
+                Store QR Code
+              </CardTitle>
+              <CardDescription>
+                Generate a branded QR code customers can scan to open your store page or start a WhatsApp chat instantly.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+
+              {/* What the QR links to */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Links to</p>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { id: "store", label: "Store page" },
+                    { id: "whatsapp", label: "WhatsApp chat" },
+                  ] as const).map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setQrTarget(id)}
+                      className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                        qrTarget === id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {qrTarget === "whatsapp" && !store.whatsappNumber && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    No WhatsApp number saved — add one in the store settings below.
+                  </p>
+                )}
+              </div>
+
+              {/* Colour scheme */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Colour</p>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { id: "green", label: "Green", dotClass: "bg-[#25D366]" },
+                    { id: "black", label: "Black", dotClass: "bg-black dark:bg-white" },
+                    { id: "dark",  label: "Dark",  dotClass: "bg-gray-800 border border-gray-600" },
+                  ] as const).map(({ id, label, dotClass }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setQrScheme(id)}
+                      className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                        qrScheme === id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                      }`}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotClass}`} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logo toggle */}
+              {store.logoUrl && (
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={qrWithLogo}
+                    onCheckedChange={setQrWithLogo}
+                    id="qr-logo-toggle"
+                  />
+                  <label htmlFor="qr-logo-toggle" className="text-sm cursor-pointer select-none">
+                    Embed store logo in centre
+                  </label>
+                </div>
+              )}
+
+              {/* Live QR preview */}
+              <div className={`rounded-xl p-8 flex flex-col items-center gap-4 transition-colors ${qrScheme === "dark" ? "bg-gray-950" : "bg-gray-100"}`}>
+                {qrGenerating || !qrDataUrl ? (
+                  <div className="w-48 h-48 flex items-center justify-center">
+                    <RefreshCw className="w-7 h-7 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <img
+                    src={qrDataUrl}
+                    alt={`QR code for ${store.name}`}
+                    className="w-48 h-48 rounded-xl shadow-sm"
+                  />
+                )}
+                <p className={`text-[10px] text-center font-mono max-w-xs break-all leading-relaxed ${qrScheme === "dark" ? "text-gray-400" : "text-muted-foreground"}`}>
+                  {qrUrl}
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-2"
+                  disabled={!qrDataUrl || qrGenerating}
+                  onClick={handleDownloadQr}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download PNG
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleCopyQrUrl}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copy URL
+                </Button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Print this QR code on packaging, receipts, business cards, or display it in your shop window so customers can scan and order instantly.
               </p>
 
             </CardContent>
