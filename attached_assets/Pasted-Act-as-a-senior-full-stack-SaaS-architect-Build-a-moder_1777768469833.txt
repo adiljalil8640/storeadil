@@ -1,0 +1,102 @@
+Act as a senior full-stack SaaS architect.
+
+Build a modern WhatsApp Store Builder web app similar to Store.link.
+
+GOAL:
+Users can create an online store that sends orders directly to WhatsApp.
+
+TECH STACK:
+- Frontend: Next.js (App Router) + Tailwind + ShadCN UI
+- Backend: FastAPI (Python)
+- Database: PostgreSQL (or SQLite for MVP)
+- Storage: Cloudinary or local file storage
+- Integration: WhatsApp click-to-chat (wa.me links)
+- Google Sheets API (for product sync)
+
+CORE FEATURES:
+
+1. AUTH SYSTEM
+- Email/password login
+- JWT authentication
+- Multi-tenant (each user has their own store)
+
+2. STORE CREATION (AI-POWERED) 
+- Multi ai model, (Gemini, Groq, Openroutor, Openai, Deepseek, etc)
+- Input: "Describe your business"
+- Use AI to generate:
+  - Store name
+  - Categories
+  - Sample products
+- Save store config
+
+3. PRODUCT MANAGEMENT
+- CRUD products:
+  - name
+  - price
+  - image
+  - category
+  - variants (size/color)
+  - stock
+- Bulk upload via CSV / Google Sheets
+- Each row = product
+
+4. STOREFRONT (PUBLIC PAGE)
+- Clean modern UI (mobile-first)
+- Product listing + categories
+- Product detail page
+- Add to cart system
+
+5. WHATSAPP ORDER SYSTEM (CORE)
+- On checkout:
+  - Generate WhatsApp message like:
+    "Order:
+     Product A x2
+     Product B x1
+     Total: $XX"
+- Redirect to:
+  https://wa.me/<phone>?text=<encoded_message>
+
+6. DASHBOARD
+- Orders tracking
+- Revenue metrics
+- Product performance
+- Simple analytics
+
+7. PAYMENT (OPTIONAL MVP+)
+- Stripe integration
+- COD option
+
+8. SEO + CUSTOMIZATION
+- Custom domain support
+- Meta tags
+- Store themes (light/dark/minimal)
+
+9. ADMIN SETTINGS
+- WhatsApp number config
+- Currency
+- Shipping options
+- Pickup/delivery toggle
+
+UX REQUIREMENTS:
+- Extremely simple onboarding (like 3 steps max)
+- Mobile-first design
+- Fast load (optimized images)
+- Clean modern SaaS UI
+
+API DESIGN:
+- RESTful endpoints:
+  /auth
+  /store
+  /products
+  /orders
+
+DELIVERABLE:
+- Full folder structure
+- Backend + frontend code
+- Sample UI pages
+- WhatsApp checkout logic
+- Clean architecture (scalable SaaS)
+
+IMPORTANT:
+Focus on simplicity, speed, and real-world usability.
+Avoid over-engineering. MVP-first approach.

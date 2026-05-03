@@ -1,0 +1,202 @@
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ClerkProvider, Show, useClerk } from "@clerk/react";
+import { publishableKeyFromHost } from "@clerk/react/internal";
+import { shadcn } from "@clerk/themes";
+import { useEffect, useRef } from "react";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { queryClient } from "@/lib/queryClient";
+
+// Pages
+import LandingPage from "@/pages/landing";
+import { SignInPage, SignUpPage } from "@/pages/auth";
+import OnboardingPage from "@/pages/onboarding";
+import DashboardPage from "@/pages/dashboard";
+import ProductsPage from "@/pages/products";
+import OrdersPage from "@/pages/orders";
+import SettingsPage from "@/pages/settings";
+import StorefrontPage from "@/pages/storefront";
+import NotFound from "@/pages/not-found";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+);
+
+if (!clerkPubKey) {
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: "clerk",
+  options: {
+    logoPlacement: "inside" as const,
+    logoLinkUrl: basePath || "/",
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: "#25D366", // WhatsApp green
+    colorForeground: "#111827",
+    colorMutedForeground: "#6B7280",
+    colorDanger: "#EF4444",
+    colorBackground: "#FFFFFF",
+    colorInput: "#F9FAFB",
+    colorInputForeground: "#111827",
+    colorNeutral: "#E5E7EB",
+    fontFamily: "Inter, sans-serif",
+    borderRadius: "0.5rem",
+  },
+  elements: {
+    rootBox: "w-full flex justify-center",
+    cardBox: "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-lg",
+    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    headerTitle: "text-gray-900 font-semibold",
+    headerSubtitle: "text-gray-500",
+    socialButtonsBlockButtonText: "text-gray-700",
+    formFieldLabel: "text-gray-700",
+    footerActionLink: "text-[#25D366]",
+    footerActionText: "text-gray-500",
+    dividerText: "text-gray-400",
+    identityPreviewEditButton: "text-[#25D366]",
+    formFieldSuccessText: "text-[#25D366]",
+    alertText: "text-gray-700",
+    logoBox: "flex justify-center mb-2",
+    formButtonPrimary: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
+    formFieldInput: "border-gray-200 focus:border-[#25D366] focus:ring-[#25D366]",
+    footerAction: "bg-gray-50",
+    dividerLine: "bg-gray-200",
+    alert: "bg-red-50 border-red-200",
+    otpCodeFieldInput: "border-gray-200",
+    formFieldRow: "",
+    main: "",
+  },
+};
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null;
+      if (
+        prevUserIdRef.current !== undefined &&
+        prevUserIdRef.current !== userId
+      ) {
+        queryClient.clear();
+      }
+      prevUserIdRef.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener]);
+
+  return null;
+}
+
+// Redirect helpers
+function HomeRedirect() {
+  const [, setLocation] = useLocation();
+  return (
+    <>
+      <Show when="signed-in">
+        {() => {
+          setLocation(`${basePath}/dashboard`);
+          return null;
+        }}
+      </Show>
+      <Show when="signed-out">
+        <LandingPage />
+      </Show>
+    </>
+  );
+}
+
+function ProtectedRoute({ component: Component }: { component: any }) {
+  const [, setLocation] = useLocation();
+  return (
+    <>
+      <Show when="signed-in">
+        <Component />
+      </Show>
+      <Show when="signed-out">
+        {() => {
+          setLocation(`${basePath}/`);
+          return null;
+        }}
+      </Show>
+    </>
+  );
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+  
+  function stripBase(path: string): string {
+    return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
+  }
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
+      appearance={clerkAppearance}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      localization={{ 
+        signIn: { start: { title: "Welcome back", subtitle: "Sign in to manage your store" } }, 
+        signUp: { start: { title: "Create your store", subtitle: "Start selling on WhatsApp today" } } 
+      }}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ClerkQueryClientCacheInvalidator />
+        <Switch>
+          <Route path="/" component={HomeRedirect} />
+          <Route path="/sign-in/*?" component={SignInPage} />
+          <Route path="/sign-up/*?" component={SignUpPage} />
+          
+          {/* Public Storefront */}
+          <Route path="/store/:slug" component={StorefrontPage} />
+
+          {/* Protected Routes */}
+          <Route path="/onboarding">
+            <ProtectedRoute component={OnboardingPage} />
+          </Route>
+          <Route path="/dashboard">
+            <ProtectedRoute component={DashboardPage} />
+          </Route>
+          <Route path="/products">
+            <ProtectedRoute component={ProductsPage} />
+          </Route>
+          <Route path="/orders">
+            <ProtectedRoute component={OrdersPage} />
+          </Route>
+          <Route path="/settings">
+            <ProtectedRoute component={SettingsPage} />
+          </Route>
+
+          <Route component={NotFound} />
+        </Switch>
+      </QueryClientProvider>
+    </ClerkProvider>
+  );
+}
+
+function App() {
+  return (
+    <TooltipProvider>
+      <WouterRouter base={basePath}>
+        <ClerkProviderWithRoutes />
+      </WouterRouter>
+      <Toaster />
+    </TooltipProvider>
+  );
+}
+
+export default App;

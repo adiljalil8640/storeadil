@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "WhatsApp Store Builder"
+version = "1.0.0"
+id = "artifacts/store-builder"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18973
+
+[services.development]
+run = "pnpm --filter @workspace/store-builder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/store-builder", "run", "build" ]
+publicDir = "artifacts/store-builder/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18973"
+BASE_PATH = "/"
