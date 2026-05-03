@@ -15,7 +15,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { injectReqId } from "./middlewares/injectReqId";
 import { seedPlans } from "./services/billing";
 import { HealthCheckResponse } from "@workspace/api-zod";
-import { pool } from "@workspace/db";
+import { checkDb } from "./lib/health";
 
 const COMMIT_SHA = (() => {
   try {
@@ -50,26 +50,14 @@ app.use(cors({ credentials: true, origin: true }));
 
 // Health check and version — registered before Clerk so they are always reachable
 app.get("/api/healthz", async (_req, res) => {
-  let dbStatus: "ok" | "error" = "ok";
-  try {
-    await pool.query("SELECT 1");
-  } catch {
-    dbStatus = "error";
-  }
-
-  const status = dbStatus === "ok" ? "ok" : "degraded";
+  const db = await checkDb();
+  const status = db === "ok" ? "ok" : "degraded";
   const body = HealthCheckResponse.parse({ status });
-  const httpStatus = status === "ok" ? 200 : 503;
-  res.status(httpStatus).json({ ...body, db: dbStatus });
+  res.status(db === "ok" ? 200 : 503).json({ ...body, db });
 });
 
 app.get("/api/version", async (_req, res) => {
-  let db: "ok" | "error" = "ok";
-  try {
-    await pool.query("SELECT 1");
-  } catch {
-    db = "error";
-  }
+  const db = await checkDb();
   res.json({ commit: COMMIT_SHA, env: process.env.NODE_ENV ?? "unknown", db });
 });
 
