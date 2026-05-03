@@ -22,6 +22,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   DollarSign, ShoppingBag, ShoppingCart, Clock, Star, Tag,
   Users, Target, Pencil, Check, X, MessageCircle, AlertTriangle, TrendingUp,
+  Copy, ExternalLink,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -75,6 +76,19 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const storeUrl = store?.slug
+    ? `${window.location.origin}/store/${store.slug}`
+    : null;
+
+  function copyStoreLink() {
+    if (!storeUrl) return;
+    navigator.clipboard.writeText(storeUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   const updateGoal = useUpdateRevenueGoal({
     mutation: {
@@ -114,9 +128,38 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your store's performance.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">Overview of your store's performance.</p>
+          </div>
+          {storeUrl && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyStoreLink}
+                className="gap-1.5"
+              >
+                {copied ? (
+                  <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied!</>
+                ) : (
+                  <><Copy className="h-3.5 w-3.5" /> Copy store link</>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="gap-1.5"
+              >
+                <a href={storeUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View store
+                </a>
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* KPI Cards */}
