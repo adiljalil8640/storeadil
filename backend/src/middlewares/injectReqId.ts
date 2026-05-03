@@ -1,6 +1,8 @@
 import type { RequestHandler } from "express";
 
 export const injectReqId: RequestHandler = (req, res, next) => {
+  (req as any).startedAt = Date.now();
+
   const originalJson = res.json.bind(res);
 
   res.json = function (body: unknown) {

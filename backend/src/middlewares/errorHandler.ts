@@ -4,6 +4,7 @@ import { logger } from "../lib/logger";
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const r = req as any;
   const log = r.log ?? logger;
+  const responseTimeMs = r.startedAt != null ? Date.now() - r.startedAt : undefined;
 
   log.error(
     {
@@ -11,6 +12,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
       userId: r.userId ?? undefined,
       storeId: r.storeId ?? undefined,
       status: 500,
+      responseTimeMs,
     },
     "Unhandled route error",
   );
