@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { storesTable, ordersTable, reviewsTable, productsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { sendNewReviewNotification } from "../services/email";
+import { publicStoreLimiter, publicWriteLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
 
@@ -97,7 +98,7 @@ router.patch("/reviews/:id/reply", requireAuth, async (req: any, res) => {
 });
 
 // POST /reviews — public, submit a product review using order tracking token
-router.post("/reviews", async (req: any, res) => {
+router.post("/reviews", publicWriteLimiter, async (req: any, res) => {
   const { trackingToken, productId, rating, comment } = req.body ?? {};
 
   if (!trackingToken || !productId || typeof rating !== "number") {
@@ -179,7 +180,7 @@ router.post("/reviews", async (req: any, res) => {
 });
 
 // GET /stores/:slug/reviews — public, get all reviews for a store's products
-router.get("/stores/:slug/reviews", async (req: any, res) => {
+router.get("/stores/:slug/reviews", publicStoreLimiter, async (req: any, res) => {
   try {
     const { slug } = req.params;
     const productIdParam = req.query.productId ? parseInt(req.query.productId as string) : undefined;

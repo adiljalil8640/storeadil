@@ -3,7 +3,7 @@ import healthRouter from "./health";
 import storesRouter from "./stores";
 import productsRouter from "./products";
 import ordersRouter from "./orders";
-import aiRouter from "./ai";
+import aiRouter from "../ai-brain";
 import analyticsRouter from "./analytics";
 import billingRouter from "./billing";
 import referralRouter from "./referral";

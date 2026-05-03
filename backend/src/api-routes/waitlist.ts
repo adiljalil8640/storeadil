@@ -3,13 +3,14 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, productsTable, stockWaitlistTable } from "@workspace/db";
 import { eq, and, isNull, sql } from "drizzle-orm";
+import { publicWriteLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // POST /stores/public/:slug/waitlist
-router.post("/stores/public/:slug/waitlist", async (req: any, res) => {
+router.post("/stores/public/:slug/waitlist", publicWriteLimiter, async (req: any, res) => {
   const { productId, email, name } = req.body ?? {};
   if (!Number.isInteger(productId) || !email || !EMAIL_RE.test(email)) {
     return res.status(400).json({ error: "productId (integer) and a valid email are required" });

@@ -19,7 +19,7 @@ run = "pnpm --filter @workspace/store-builder run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/store-builder", "run", "build" ]
-publicDir = "artifacts/store-builder/dist/public"
+publicDir = "frontend/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]

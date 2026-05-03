@@ -7,6 +7,7 @@ import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
 import { productsTable } from "@workspace/db";
+import { publicOrderLimiter, publicTrackLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
 
@@ -72,7 +73,7 @@ router.get("/orders", requireAuth, async (req: any, res) => {
 });
 
 // POST /orders (public - from storefront, tracks usage per store owner)
-router.post("/orders", async (req: any, res) => {
+router.post("/orders", publicOrderLimiter, async (req: any, res) => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
@@ -342,7 +343,7 @@ router.get("/orders/export", requireAuth, async (req: any, res) => {
 });
 
 // GET /orders/track/:token (public — customer order tracking)
-router.get("/orders/track/:token", async (req: any, res) => {
+router.get("/orders/track/:token", publicTrackLimiter, async (req: any, res) => {
   try {
     const { token } = req.params;
     if (!UUID_RE.test(token)) return res.status(404).json({ error: "Order not found" });

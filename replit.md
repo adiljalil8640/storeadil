@@ -4,6 +4,39 @@
 
 A multi-tenant SaaS platform where merchants create online stores and customers order via WhatsApp. Built on a pnpm monorepo with React+Vite frontend and Express backend.
 
+## Project Structure
+
+```
+/
+├── frontend/          React + Vite merchant dashboard & public storefront (@workspace/store-builder)
+│   └── src/
+│       ├── pages/     All route-level page components
+│       ├── components/ Shared UI components (ShadCN + custom)
+│       ├── hooks/     Custom React hooks
+│       └── lib/       Frontend utilities (queryClient, categories, etc.)
+│
+├── backend/           Express 5 API server (@workspace/api-server)
+│   └── src/
+│       ├── api-routes/ All Express route handlers (one file per domain)
+│       ├── ai-brain/   AI provider abstraction & generation endpoints
+│       ├── middlewares/ Shared middleware (auth, rate limiters, Clerk proxy)
+│       ├── services/   Business logic (email, billing, usage, digest, WhatsApp)
+│       └── lib/        Logger and other backend utilities
+│
+├── db/                PostgreSQL schema + Drizzle ORM (@workspace/db)
+│   └── src/schema/    One schema file per table
+│
+├── lib/
+│   ├── api-spec/      OpenAPI spec + Orval codegen config (@workspace/api-spec)
+│   ├── api-client-react/ Generated React Query hooks (@workspace/api-client-react)
+│   └── api-zod/       Generated Zod validation schemas (@workspace/api-zod)
+│
+├── artifacts/
+│   └── mockup-sandbox/ Isolated Vite server for canvas UI prototyping
+│
+└── scripts/           Post-merge setup script
+```
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
@@ -25,7 +58,7 @@ A multi-tenant SaaS platform where merchants create online stores and customers 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/db run push` — push DB schema changes to `db/` (dev only)
 
 ## Features
 

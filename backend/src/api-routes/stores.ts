@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { storesTable, ordersTable, productsTable } from "@workspace/db";
 import { eq, sql, desc, and, gte } from "drizzle-orm";
 import { CreateStoreBody, UpdateMyStoreBody } from "@workspace/api-zod";
+import { publicStoreLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
 
@@ -70,7 +71,7 @@ router.post("/stores", requireAuth, async (req: any, res) => {
 });
 
 // GET /stores/browse — public search/browse, no auth
-router.get("/stores/browse", async (req: any, res) => {
+router.get("/stores/browse", publicStoreLimiter, async (req: any, res) => {
   try {
     const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
     const cat = typeof req.query.category === "string" ? req.query.category.trim() : "";
@@ -131,7 +132,7 @@ router.get("/stores/browse", async (req: any, res) => {
 });
 
 // GET /stores/top — public, no auth
-router.get("/stores/top", async (req: any, res) => {
+router.get("/stores/top", publicStoreLimiter, async (req: any, res) => {
   try {
     const rows = await db
       .select({
@@ -156,7 +157,7 @@ router.get("/stores/top", async (req: any, res) => {
 });
 
 // GET /stores/public/:slug
-router.get("/stores/public/:slug", async (req: any, res) => {
+router.get("/stores/public/:slug", publicStoreLimiter, async (req: any, res) => {
   try {
     const { productsTable } = await import("@workspace/db");
     const [store] = await db

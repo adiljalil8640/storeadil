@@ -8,7 +8,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
-import router from "./routes";
+import router from "./api-routes";
 import { logger } from "./lib/logger";
 import { seedPlans } from "./services/billing";
 
