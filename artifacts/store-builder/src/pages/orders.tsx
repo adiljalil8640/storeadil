@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
+import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, useGetCustomerHistory, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download, StickyNote } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download, StickyNote, User, Phone, TrendingUp, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -133,6 +135,7 @@ export default function OrdersPage() {
   const [bulkStatus, setBulkStatus] = useState<string>("completed");
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<{ name: string | null; phone: string | null; email: string | null } | null>(null);
   const queryClient = useQueryClient();
 
   const { data: rawOrders, isLoading } = useListOrders({
@@ -180,6 +183,14 @@ export default function OrdersPage() {
       onError: () => toast.error("Failed to save note"),
     },
   });
+
+  const { data: history, isLoading: historyLoading } = useGetCustomerHistory(
+    {
+      phone: selectedCustomer?.phone ?? undefined,
+      email: selectedCustomer?.email ?? undefined,
+    },
+    { query: { enabled: !!selectedCustomer } }
+  );
 
   const openNoteEditor = (order: any) => {
     setNoteText(order.ownerNote ?? "");
@@ -439,12 +450,15 @@ export default function OrdersPage() {
                           </TableCell>
                           <TableCell>{format(new Date(order.createdAt), "MMM d, yyyy")}</TableCell>
                           <TableCell>
-                            <div>
-                              <p>{order.customerName || "Guest"}</p>
+                            <button
+                              className="text-left hover:underline focus:outline-none group"
+                              onClick={() => setSelectedCustomer({ name: order.customerName ?? null, phone: order.customerPhone ?? null, email: order.customerEmail ?? null })}
+                            >
+                              <p className="font-medium group-hover:text-primary transition-colors">{order.customerName || "Guest"}</p>
                               {order.customerPhone && (
                                 <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
                               )}
-                            </div>
+                            </button>
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate" title={order.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}>
                             {order.items.reduce((acc, curr) => acc + curr.quantity, 0)} items
@@ -549,6 +563,94 @@ export default function OrdersPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Customer history sheet */}
+      <Sheet open={!!selectedCustomer} onOpenChange={(open) => { if (!open) setSelectedCustomer(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <SheetTitle className="text-lg">{selectedCustomer?.name || "Guest"}</SheetTitle>
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                  {selectedCustomer?.phone && (
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5" />{selectedCustomer.phone}
+                    </span>
+                  )}
+                  {selectedCustomer?.email && (
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5" />{selectedCustomer.email}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <Separator />
+
+          {historyLoading ? (
+            <div className="flex items-center justify-center flex-1 text-muted-foreground text-sm py-16">
+              Loading history…
+            </div>
+          ) : history ? (
+            <div className="flex flex-col gap-0 overflow-y-auto flex-1">
+              {/* Stats strip */}
+              <div className="grid grid-cols-3 divide-x px-0">
+                <div className="flex flex-col items-center gap-1 py-4">
+                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xl font-bold">{history.stats.totalOrders}</p>
+                  <p className="text-xs text-muted-foreground">Orders</p>
+                </div>
+                <div className="flex flex-col items-center gap-1 py-4">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xl font-bold">{formatCurrency(history.stats.totalSpend)}</p>
+                  <p className="text-xs text-muted-foreground">Total spent</p>
+                </div>
+                <div className="flex flex-col items-center gap-1 py-4">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground opacity-50" />
+                  <p className="text-xl font-bold">{formatCurrency(history.stats.avgOrderValue)}</p>
+                  <p className="text-xs text-muted-foreground">Avg order</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Order list */}
+              <div className="flex flex-col divide-y overflow-y-auto">
+                {history.orders.map((o: any) => (
+                  <div key={o.id} className="px-6 py-4 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">Order #{o.id}</span>
+                      <Badge variant="outline" className={getStatusColor(o.status)}>
+                        {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{format(new Date(o.createdAt), "MMM d, yyyy · h:mm a")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {o.items.map((i: any) => `${i.productName} ×${i.quantity}`).join(", ")}
+                    </p>
+                    <p className="text-sm font-semibold">{formatCurrency(o.total)}</p>
+                    {o.ownerNote && (
+                      <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                        <StickyNote className="h-3 w-3 shrink-0" />{o.ownerNote}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground py-16">
+              <Package className="h-8 w-8 opacity-30" />
+              <p className="text-sm">No order history found</p>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Floating bulk action bar */}
       <AnimatePresence>

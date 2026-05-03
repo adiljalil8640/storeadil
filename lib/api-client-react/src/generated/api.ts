@@ -36,6 +36,7 @@ import type {
   CreateProductBody,
   CreateReviewBody,
   CreateStoreBody,
+  CustomerHistory,
   DomainStatusResult,
   ErrorResponse,
   GenerateDescriptionBody,
@@ -43,6 +44,7 @@ import type {
   GenerateStoreBody,
   GeneratedStore,
   GetAdminUsersParams,
+  GetCustomerHistoryParams,
   GetRecentOrdersParams,
   GetStoreReviewsParams,
   GetTopCustomersParams,
@@ -3236,6 +3238,103 @@ export const useUpdateOrderNote = <
 > => {
   return useMutation(getUpdateOrderNoteMutationOptions(options));
 };
+
+/**
+ * @summary Get all orders and stats for a customer identified by phone or email
+ */
+export const getGetCustomerHistoryUrl = (params?: GetCustomerHistoryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/orders/customer-history?${stringifiedParams}`
+    : `/api/orders/customer-history`;
+};
+
+export const getCustomerHistory = async (
+  params?: GetCustomerHistoryParams,
+  options?: RequestInit,
+): Promise<CustomerHistory> => {
+  return customFetch<CustomerHistory>(getGetCustomerHistoryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCustomerHistoryQueryKey = (
+  params?: GetCustomerHistoryParams,
+) => {
+  return [`/api/orders/customer-history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCustomerHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCustomerHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCustomerHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCustomerHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerHistory>>
+  > = ({ signal }) => getCustomerHistory(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerHistory>>
+>;
+export type GetCustomerHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all orders and stats for a customer identified by phone or email
+ */
+
+export function useGetCustomerHistory<
+  TData = Awaited<ReturnType<typeof getCustomerHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCustomerHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCustomerHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Update status for multiple orders at once

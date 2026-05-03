@@ -448,6 +448,56 @@ router.patch("/orders/:id", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /orders/customer-history — all orders + stats for a customer
+router.get("/orders/customer-history", requireAuth, async (req: any, res) => {
+  const { phone, email } = req.query as { phone?: string; email?: string };
+
+  if (!phone && !email) {
+    return res.status(400).json({ error: "Provide phone or email" });
+  }
+
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const allOrders = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.storeId, storeId))
+      .orderBy(desc(ordersTable.createdAt));
+
+    const customerOrders = allOrders.filter((o) => {
+      if (phone && o.customerPhone === phone) return true;
+      if (email && o.customerEmail === email) return true;
+      return false;
+    });
+
+    if (customerOrders.length === 0) {
+      return res.status(404).json({ error: "No orders found for this customer" });
+    }
+
+    const first = customerOrders[0];
+    const totalSpend = customerOrders.reduce((sum, o) => sum + Number(o.total), 0);
+
+    return res.json({
+      customer: {
+        name: first.customerName ?? null,
+        phone: first.customerPhone ?? null,
+        email: first.customerEmail ?? null,
+      },
+      orders: customerOrders,
+      stats: {
+        totalOrders: customerOrders.length,
+        totalSpend,
+        avgOrderValue: totalSpend / customerOrders.length,
+      },
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /orders/:id/note — set or clear the owner-only internal note
 router.patch("/orders/:id/note", requireAuth, async (req: any, res) => {
   const orderId = Number(req.params.id);

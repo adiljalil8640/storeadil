@@ -556,6 +556,24 @@ export interface OrderWithWhatsApp {
   whatsappUrl: string;
 }
 
+export type CustomerHistoryCustomer = {
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+};
+
+export type CustomerHistoryStats = {
+  totalOrders: number;
+  totalSpend: number;
+  avgOrderValue: number;
+};
+
+export interface CustomerHistory {
+  customer: CustomerHistoryCustomer;
+  orders: Order[];
+  stats: CustomerHistoryStats;
+}
+
 export interface UpdateOrderNoteBody {
   ownerNote: string | null;
 }
@@ -807,6 +825,11 @@ export const ListOrdersStatus = {
   completed: "completed",
   cancelled: "cancelled",
 } as const;
+
+export type GetCustomerHistoryParams = {
+  phone?: string;
+  email?: string;
+};
 
 export type BulkUpdateOrderStatusBodyStatus =
   (typeof BulkUpdateOrderStatusBodyStatus)[keyof typeof BulkUpdateOrderStatusBodyStatus];

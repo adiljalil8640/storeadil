@@ -1895,6 +1895,52 @@ export const UpdateOrderNoteResponse = zod.object({
 });
 
 /**
+ * @summary Get all orders and stats for a customer identified by phone or email
+ */
+export const GetCustomerHistoryQueryParams = zod.object({
+  phone: zod.coerce.string().optional(),
+  email: zod.coerce.string().optional(),
+});
+
+export const GetCustomerHistoryResponse = zod.object({
+  customer: zod.object({
+    name: zod.string().nullable(),
+    phone: zod.string().nullable(),
+    email: zod.string().nullable(),
+  }),
+  orders: zod.array(
+    zod.object({
+      id: zod.number(),
+      storeId: zod.number(),
+      customerName: zod.string().nullish(),
+      customerEmail: zod.string().nullish(),
+      customerPhone: zod.string().nullish(),
+      customerNote: zod.string().nullish(),
+      items: zod.array(
+        zod.object({
+          productId: zod.number(),
+          productName: zod.string(),
+          quantity: zod.number(),
+          price: zod.number(),
+          selectedVariants: zod.record(zod.string(), zod.string()).optional(),
+        }),
+      ),
+      total: zod.number(),
+      status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
+      deliveryType: zod.enum(["delivery", "pickup"]).nullish(),
+      trackingToken: zod.string(),
+      ownerNote: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  stats: zod.object({
+    totalOrders: zod.number(),
+    totalSpend: zod.number(),
+    avgOrderValue: zod.number(),
+  }),
+});
+
+/**
  * @summary Update status for multiple orders at once
  */
 export const BulkUpdateOrderStatusBody = zod.object({

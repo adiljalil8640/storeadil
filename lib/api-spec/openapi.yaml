@@ -848,6 +848,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /orders/customer-history:
+    get:
+      operationId: getCustomerHistory
+      tags: [orders]
+      summary: Get all orders and stats for a customer identified by phone or email
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: phone
+          in: query
+          schema:
+            type: string
+        - name: email
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerHistory"
+
   /orders/bulk-status:
     post:
       operationId: bulkUpdateOrderStatus
@@ -2366,6 +2390,38 @@ components:
         whatsappUrl:
           type: string
       required: [order, whatsappUrl]
+
+    CustomerHistory:
+      type: object
+      properties:
+        customer:
+          type: object
+          properties:
+            name:
+              type: string
+              nullable: true
+            phone:
+              type: string
+              nullable: true
+            email:
+              type: string
+              nullable: true
+          required: [name, phone, email]
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        stats:
+          type: object
+          properties:
+            totalOrders:
+              type: integer
+            totalSpend:
+              type: number
+            avgOrderValue:
+              type: number
+          required: [totalOrders, totalSpend, avgOrderValue]
+      required: [customer, orders, stats]
 
     UpdateOrderNoteBody:
       type: object
