@@ -77,6 +77,7 @@ export default function Dashboard() {
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
   const [copied, setCopied] = useState(false);
+  const [stockAlertDismissed, setStockAlertDismissed] = useState(false);
 
   const storeUrl = store?.slug
     ? `${window.location.origin}/store/${store.slug}`
@@ -161,6 +162,39 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Low-stock alert banner */}
+        {!stockAlertDismissed && lowStockProducts.length > 0 && (
+          <motion.div {...fadeUp}>
+            <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">
+                  {lowStockProducts.length === 1
+                    ? "1 product is running low on stock"
+                    : `${lowStockProducts.length} products are running low on stock`}
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5 truncate">
+                  {lowStockProducts.map((p: any) => p.name).join(", ")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link href="/products">
+                  <Button variant="outline" size="sm" className="h-7 text-xs border-amber-300 bg-white hover:bg-amber-50 text-amber-900">
+                    Manage stock
+                  </Button>
+                </Link>
+                <button
+                  onClick={() => setStockAlertDismissed(true)}
+                  className="text-amber-500 hover:text-amber-700 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* KPI Cards */}
         <motion.div
