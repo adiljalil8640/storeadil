@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DollarSign, ShoppingCart, Package, TrendingUp, Download } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import {
   AreaChart,
@@ -42,6 +43,7 @@ export default function AnalyticsPage() {
   const { data: summary, isLoading: summaryLoading } = useGetAnalyticsSummary();
   const { data: ordersPerDay, isLoading: chartLoading } = useGetOrdersPerDay();
   const { data: topProducts, isLoading: topLoading } = useGetTopProducts({ limit: 10 });
+  const { data: referral, isLoading: referralLoading } = useGetMyReferral();
 
   const chartData = (ordersPerDay ?? []).map((d) => ({
     date: format(new Date(d.date + "T00:00:00"), "MMM d"),
@@ -230,6 +232,133 @@ export default function AnalyticsPage() {
             )}
           </CardContent>
         </Card>
+        {/* Referral Conversion Funnel */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="h-4 w-4 text-primary" />
+                Referral Conversion Funnel
+              </CardTitle>
+              <Link href="/referrals" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Manage →
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {referralLoading ? (
+                <div className="text-center text-muted-foreground py-6">Loading...</div>
+              ) : (() => {
+                const referred = referral?.referredCount ?? 0;
+                const bonus = referral?.bonusOrdersEarned ?? 0;
+
+                const stages = [
+                  {
+                    icon: Share2,
+                    label: "Link created",
+                    sublabel: "Your referral link is live",
+                    value: null,
+                    badge: "Active",
+                    badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+                    barPct: 100,
+                    barColor: "bg-primary",
+                  },
+                  {
+                    icon: Users,
+                    label: "Merchants joined",
+                    sublabel: "Signed up using your link",
+                    value: referred,
+                    badge: null,
+                    badgeColor: "",
+                    barPct: referred === 0 ? 4 : 65,
+                    barColor: "bg-violet-500",
+                  },
+                  {
+                    icon: Zap,
+                    label: "Bonus orders unlocked",
+                    sublabel: "50 orders per successful referral",
+                    value: bonus,
+                    badge: null,
+                    badgeColor: "",
+                    barPct: bonus === 0 ? 4 : 40,
+                    barColor: "bg-amber-500",
+                  },
+                ];
+
+                return (
+                  <div className="space-y-5">
+                    {/* Funnel bars */}
+                    <div className="space-y-3">
+                      {stages.map((stage, i) => (
+                        <div key={stage.label}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                                <stage.icon className="w-3 h-3 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium">{stage.label}</span>
+                                <span className="text-xs text-muted-foreground ml-2">{stage.sublabel}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {stage.badge ? (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stage.badgeColor}`}>
+                                  {stage.badge}
+                                </span>
+                              ) : (
+                                <span className="text-sm font-bold tabular-nums">{stage.value}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${stage.barColor}`}
+                              style={{ width: `${stage.barPct}%` }}
+                            />
+                          </div>
+                          {i < stages.length - 1 && (
+                            <div className="flex items-center gap-1 mt-2 ml-8">
+                              <ChevronRight className="w-3 h-3 text-muted-foreground/40" />
+                              {i === 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {referred === 0
+                                    ? "No signups yet — share your link!"
+                                    : `${referred} merchant${referred !== 1 ? "s" : ""} converted`}
+                                </span>
+                              )}
+                              {i === 1 && referred > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {bonus} bonus orders earned ({referred} × 50)
+                                </span>
+                              )}
+                              {i === 1 && referred === 0 && (
+                                <span className="text-xs text-muted-foreground">Bonus orders unlock on first referral</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Summary strip */}
+                    <div className="flex items-center justify-between pt-3 border-t text-sm">
+                      <span className="text-muted-foreground">
+                        Your code: <span className="font-mono font-semibold text-foreground">{referral?.referralCode ?? "—"}</span>
+                      </span>
+                      {referred === 0 ? (
+                        <Link href="/referrals">
+                          <span className="text-xs text-primary hover:underline cursor-pointer">Share your link →</span>
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">{referred} referral{referred !== 1 ? "s" : ""} · {bonus} bonus orders</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </AppLayout>
   );
