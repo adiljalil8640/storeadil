@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingCart, Package, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DollarSign, ShoppingCart, Package, TrendingUp, Download } from "lucide-react";
+import { toast } from "sonner";
 import {
   AreaChart,
   Area,
@@ -45,6 +49,29 @@ export default function AnalyticsPage() {
     revenue: Number(d.revenue),
   }));
 
+  const today         = new Date().toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const [exportFrom, setExportFrom] = useState(thirtyDaysAgo);
+  const [exportTo,   setExportTo]   = useState(today);
+  const [exporting,  setExporting]  = useState(false);
+
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const r = await fetch(`${basePath}/api/orders/export?from=${exportFrom}&to=${exportTo}`);
+      if (!r.ok) { toast.error("Export failed — please try again."); return; }
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `orders-${exportFrom}-to-${exportTo}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch { toast.error("Export failed — please try again."); }
+    finally { setExporting(false); }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -75,6 +102,50 @@ export default function AnalyticsPage() {
             </motion.div>
           ))}
         </div>
+
+        {/* CSV Export */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-primary" />
+              Export Orders
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">From</label>
+                <Input
+                  type="date"
+                  value={exportFrom}
+                  max={exportTo}
+                  onChange={(e) => setExportFrom(e.target.value)}
+                  className="h-9 w-40"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">To</label>
+                <Input
+                  type="date"
+                  value={exportTo}
+                  min={exportFrom}
+                  max={today}
+                  onChange={(e) => setExportTo(e.target.value)}
+                  className="h-9 w-40"
+                />
+              </div>
+              <Button size="sm" className="gap-2 h-9" disabled={exporting} onClick={handleExport}>
+                {exporting
+                  ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin inline-block" />
+                  : <Download className="w-3.5 h-3.5" />}
+                {exporting ? "Exporting…" : "Download CSV"}
+              </Button>
+              <p className="text-xs text-muted-foreground self-center">
+                One row per line item · includes a revenue-by-product summary at the bottom
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Orders Per Day - Area Chart */}
         <Card>

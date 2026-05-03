@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, couponsTable } from "@workspace/db";
-import { eq, and, desc, sql, ilike } from "drizzle-orm";
+import { eq, and, desc, sql, ilike, gte, lte } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
@@ -260,6 +260,86 @@ router.post("/orders", async (req: any, res) => {
 });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// GET /orders/export — download orders as CSV (optional ?from=YYYY-MM-DD&to=YYYY-MM-DD)
+router.get("/orders/export", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const fromStr = req.query.from as string | undefined;
+    const toStr   = req.query.to   as string | undefined;
+
+    const conditions: any[] = [eq(ordersTable.storeId, storeId)];
+    if (fromStr) conditions.push(gte(ordersTable.createdAt, new Date(fromStr + "T00:00:00.000Z")));
+    if (toStr)   conditions.push(lte(ordersTable.createdAt, new Date(toStr   + "T23:59:59.999Z")));
+
+    const orders = await db
+      .select()
+      .from(ordersTable)
+      .where(and(...conditions))
+      .orderBy(ordersTable.createdAt);
+
+    // CSV escaping
+    const esc = (v: any): string => {
+      const s = v == null ? "" : String(v);
+      return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const rows: string[] = [
+      ["Order ID","Date","Customer Name","Customer Email","Customer Phone",
+       "Delivery","Status","Product","Qty","Unit Price","Line Total","Order Total"].join(","),
+    ];
+
+    const productMap: Record<string, { orders: Set<number>; qty: number; revenue: number }> = {};
+
+    for (const order of orders) {
+      const items  = (order.items as any[]) ?? [];
+      const date   = order.createdAt.toISOString().slice(0, 10);
+      const common = [
+        esc(order.id), esc(date), esc(order.customerName), esc(order.customerEmail),
+        esc(order.customerPhone), esc(order.deliveryType), esc(order.status),
+      ];
+
+      if (items.length === 0) {
+        rows.push([...common, "", "", "", "", esc(Number(order.total).toFixed(2))].join(","));
+      } else {
+        for (const item of items) {
+          const unitPrice = Number(item.price ?? 0);
+          const qty       = Number(item.quantity ?? 1);
+          const lineTotal = unitPrice * qty;
+          rows.push([
+            ...common,
+            esc(item.productName), esc(qty),
+            esc(unitPrice.toFixed(2)), esc(lineTotal.toFixed(2)),
+            esc(Number(order.total).toFixed(2)),
+          ].join(","));
+          const key = String(item.productName || "Unknown");
+          if (!productMap[key]) productMap[key] = { orders: new Set(), qty: 0, revenue: 0 };
+          productMap[key].orders.add(order.id);
+          productMap[key].qty     += qty;
+          productMap[key].revenue += lineTotal;
+        }
+      }
+    }
+
+    // Product revenue summary
+    rows.push("", "Revenue by Product",
+      ["Product", "Orders", "Units Sold", "Revenue"].join(","));
+    for (const [name, d] of Object.entries(productMap)
+        .sort((a, b) => b[1].revenue - a[1].revenue)) {
+      rows.push([esc(name), esc(d.orders.size), esc(d.qty), esc(d.revenue.toFixed(2))].join(","));
+    }
+
+    const label = `${fromStr ?? "all"}-to-${toStr ?? "now"}`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="orders-${label}.csv"`);
+    return res.send(rows.join("\n"));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // GET /orders/track/:token (public — customer order tracking)
 router.get("/orders/track/:token", async (req: any, res) => {
