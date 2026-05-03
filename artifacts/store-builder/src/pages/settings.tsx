@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 
@@ -105,6 +105,33 @@ export default function SettingsPage() {
   const previewDesc = form.watch("description") || store?.description || "";
   const previewLogo = store?.logoUrl ?? null;
   const previewDomain = store ? window.location.hostname : "zappstore.app";
+
+  type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyOpen, setVerifyOpen] = useState(true);
+
+  const REQUIRED_TAGS = ["og:title", "og:description", "og:url", "og:type"];
+  const RECOMMENDED_TAGS = ["og:image", "og:site_name", "twitter:card", "twitter:title", "twitter:description"];
+
+  const handleVerify = async () => {
+    if (!store) return;
+    setVerifying(true);
+    setVerifyResult(null);
+    setVerifyError(null);
+    try {
+      const res = await fetch(`${basePath}/api/og/${store.slug}/meta`);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data: VerifyResult = await res.json();
+      setVerifyResult(data);
+      setVerifyOpen(true);
+    } catch (e: any) {
+      setVerifyError(e?.message ?? "Could not reach the preview endpoint.");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const copyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -334,6 +361,102 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Verify button */}
+              <div className="pt-1 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={handleVerify}
+                  disabled={verifying || !store}
+                >
+                  {verifying ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                  )}
+                  {verifying ? "Checking live tags…" : "Verify My Preview"}
+                </Button>
+
+                {/* Error state */}
+                {verifyError && (
+                  <div className="mt-3 flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                    <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>{verifyError}</span>
+                  </div>
+                )}
+
+                {/* Results panel */}
+                {verifyResult && (
+                  <div className="mt-3 rounded-lg border overflow-hidden">
+                    {/* Header */}
+                    <button
+                      type="button"
+                      onClick={() => setVerifyOpen(o => !o)}
+                      className="w-full flex items-center justify-between px-3 py-2 bg-muted/50 text-xs font-semibold hover:bg-muted transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                        Live tags confirmed — what crawlers see right now
+                      </span>
+                      {verifyOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                    </button>
+
+                    {verifyOpen && (
+                      <div className="divide-y text-xs">
+                        {Object.entries(verifyResult.tags).map(([key, value]) => {
+                          const isRequired = REQUIRED_TAGS.includes(key);
+                          const isRecommended = RECOMMENDED_TAGS.includes(key);
+                          const present = value !== null && value !== "";
+                          return (
+                            <div key={key} className="flex items-start gap-2 px-3 py-2 hover:bg-muted/30">
+                              <div className="mt-0.5 shrink-0">
+                                {present ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                                ) : isRequired ? (
+                                  <XCircle className="w-3.5 h-3.5 text-destructive" />
+                                ) : (
+                                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <code className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded text-foreground">{key}</code>
+                                  {isRequired && (
+                                    <span className="text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-medium">required</span>
+                                  )}
+                                  {isRecommended && (
+                                    <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">recommended</span>
+                                  )}
+                                </div>
+                                {present ? (
+                                  <p className="mt-0.5 text-muted-foreground truncate">{value}</p>
+                                ) : (
+                                  <p className="mt-0.5 text-destructive/70 italic">
+                                    {isRequired ? "Missing — required for previews to work" : "Not set — add a logo or description to fill this"}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Summary footer */}
+                    <div className="px-3 py-2 bg-muted/30 text-[10px] text-muted-foreground flex items-center justify-between border-t">
+                      <span>
+                        {Object.values(verifyResult.tags).filter(v => v !== null && v !== "").length} of {Object.keys(verifyResult.tags).length} tags present
+                      </span>
+                      <button type="button" onClick={handleVerify} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                        <RefreshCw className="w-2.5 h-2.5" /> Re-check
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <p className="text-xs text-muted-foreground text-center">
                 Preview updates as you type — save your settings to publish changes.

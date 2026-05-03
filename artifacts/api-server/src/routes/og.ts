@@ -107,4 +107,57 @@ router.get("/og/:slug", async (req: any, res) => {
   }
 });
 
+// GET /api/og/:slug/meta — public, no auth
+// Returns the OG meta tags for a store as JSON, always — regardless of User-Agent.
+// Used by the frontend "Verify My Preview" feature to show merchants what crawlers will see.
+router.get("/og/:slug/meta", async (req: any, res) => {
+  const { slug } = req.params;
+
+  try {
+    const [store] = await db
+      .select({
+        name: storesTable.name,
+        slug: storesTable.slug,
+        description: storesTable.description,
+        logoUrl: storesTable.logoUrl,
+      })
+      .from(storesTable)
+      .where(eq(storesTable.slug, slug));
+
+    if (!store) {
+      return res.status(404).json({ error: "Store not found" });
+    }
+
+    const host = req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost";
+    const proto = req.headers["x-forwarded-proto"] ?? "https";
+    const origin = `${proto}://${host}`;
+
+    const storeUrl = `${origin}/store/${store.slug}`;
+    const description = store.description
+      ? store.description.slice(0, 160)
+      : `Shop ${store.name} on Zapp Store — browse products and order via WhatsApp.`;
+
+    const tags: Record<string, string | null> = {
+      "title": `${store.name} — Zapp Store`,
+      "description": description,
+      "og:type": "website",
+      "og:site_name": "Zapp Store",
+      "og:url": storeUrl,
+      "og:title": store.name,
+      "og:description": description,
+      "og:image": store.logoUrl ?? null,
+      "twitter:card": store.logoUrl ? "summary_large_image" : "summary",
+      "twitter:title": store.name,
+      "twitter:description": description,
+      "twitter:image": store.logoUrl ?? null,
+    };
+
+    res.set("Cache-Control", "no-store");
+    res.json({ slug: store.slug, storeUrl, tags });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
