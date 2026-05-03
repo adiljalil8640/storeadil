@@ -23,6 +23,7 @@ import AnalyticsPage from "@/pages/analytics";
 import AdminPage from "@/pages/admin";
 import TrackPage from "@/pages/track";
 import CouponsPage from "@/pages/coupons";
+import ReviewsPage from "@/pages/reviews";
 import WaitlistPage from "@/pages/waitlist";
 import ReferralsPage from "@/pages/referrals";
 import BrowsePage from "@/pages/browse";
@@ -173,6 +174,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/products"><ProtectedRoute component={ProductsPage} /></Route>
           <Route path="/orders"><ProtectedRoute component={OrdersPage} /></Route>
           <Route path="/coupons"><ProtectedRoute component={CouponsPage} /></Route>
+          <Route path="/reviews"><ProtectedRoute component={ReviewsPage} /></Route>
           <Route path="/waitlist"><ProtectedRoute component={WaitlistPage} /></Route>
           <Route path="/referrals"><ProtectedRoute component={ReferralsPage} /></Route>
           <Route path="/analytics"><ProtectedRoute component={AnalyticsPage} /></Route>

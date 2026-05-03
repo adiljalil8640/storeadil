@@ -18,6 +18,7 @@ import {
   Tag,
   Bell,
   Gift,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGetMyStore, useGetBillingStatus } from "@workspace/api-client-react";
@@ -46,6 +47,7 @@ export function AppLayout({ children }: LayoutProps) {
     { href: `${basePath}/products`, label: "Products", icon: Package },
     { href: `${basePath}/orders`, label: "Orders", icon: ShoppingCart },
     { href: `${basePath}/coupons`, label: "Coupons", icon: Tag },
+    { href: `${basePath}/reviews`, label: "Reviews", icon: Star },
     { href: `${basePath}/waitlist`, label: "Waitlist", icon: Bell },
     { href: `${basePath}/referrals`, label: "Referrals", icon: Gift },
     { href: `${basePath}/analytics`, label: "Analytics", icon: TrendingUp },

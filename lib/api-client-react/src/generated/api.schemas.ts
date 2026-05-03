@@ -102,6 +102,25 @@ export interface Review {
    */
   rating: number;
   comment?: string | null;
+  merchantReply?: string | null;
+  repliedAt?: string | null;
+  createdAt: string;
+}
+
+export interface MerchantReview {
+  id: number;
+  orderId: number;
+  productId: number;
+  productName?: string | null;
+  customerName?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  comment?: string | null;
+  merchantReply?: string | null;
+  repliedAt?: string | null;
   createdAt: string;
 }
 
@@ -765,6 +784,18 @@ export type GetTopProductsParams = {
 export type GetAdminUsersParams = {
   limit?: number;
   offset?: number;
+};
+
+export type ListMerchantReviewsParams = {
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating?: number;
+};
+
+export type ReplyToReviewBody = {
+  reply: string | null;
 };
 
 export type GetStoreReviewsParams = {

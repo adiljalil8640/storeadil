@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Review {
+export interface MerchantReview {
   id: number;
-  storeId: number;
   orderId: number;
   productId: number;
+  productName?: string | null;
   customerName?: string | null;
   /**
    * @minimum 1

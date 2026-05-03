@@ -11,6 +11,8 @@ export const reviewsTable = pgTable("reviews", {
   customerName: text("customer_name"),
   rating: integer("rating").notNull(),
   comment: text("comment"),
+  merchantReply: text("merchant_reply"),
+  repliedAt: timestamp("replied_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => [
   unique().on(t.orderId, t.productId),

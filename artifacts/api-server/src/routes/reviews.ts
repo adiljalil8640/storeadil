@@ -1,9 +1,99 @@
 import { Router } from "express";
+import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, ordersTable, reviewsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { storesTable, ordersTable, reviewsTable, productsTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 
 const router = Router();
+
+function requireAuth(req: any, res: any, next: any) {
+  const auth = getAuth(req);
+  const userId = auth?.userId;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  req.userId = userId;
+  next();
+}
+
+async function getStoreId(userId: string): Promise<number | null> {
+  const [store] = await db
+    .select({ id: storesTable.id })
+    .from(storesTable)
+    .where(eq(storesTable.userId, userId));
+  return store?.id ?? null;
+}
+
+// GET /reviews — authenticated merchant, list all reviews for their store
+router.get("/reviews", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const ratingFilter = req.query.rating ? parseInt(req.query.rating as string) : undefined;
+    const conditions: any[] = [eq(reviewsTable.storeId, storeId)];
+    if (ratingFilter && ratingFilter >= 1 && ratingFilter <= 5) {
+      conditions.push(eq(reviewsTable.rating, ratingFilter));
+    }
+
+    const reviews = await db
+      .select({
+        id: reviewsTable.id,
+        orderId: reviewsTable.orderId,
+        productId: reviewsTable.productId,
+        productName: productsTable.name,
+        customerName: reviewsTable.customerName,
+        rating: reviewsTable.rating,
+        comment: reviewsTable.comment,
+        merchantReply: reviewsTable.merchantReply,
+        repliedAt: reviewsTable.repliedAt,
+        createdAt: reviewsTable.createdAt,
+      })
+      .from(reviewsTable)
+      .leftJoin(productsTable, eq(reviewsTable.productId, productsTable.id))
+      .where(and(...conditions))
+      .orderBy(desc(reviewsTable.createdAt));
+
+    return res.json(reviews);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /reviews/:id/reply — authenticated merchant, add/update/remove their reply
+router.patch("/reviews/:id/reply", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid review id" });
+
+    const { reply } = req.body ?? {};
+
+    const [existing] = await db
+      .select({ id: reviewsTable.id })
+      .from(reviewsTable)
+      .where(and(eq(reviewsTable.id, id), eq(reviewsTable.storeId, storeId)));
+
+    if (!existing) return res.status(404).json({ error: "Review not found" });
+
+    const trimmedReply = typeof reply === "string" ? reply.trim() : null;
+
+    const [updated] = await db
+      .update(reviewsTable)
+      .set({
+        merchantReply: trimmedReply || null,
+        repliedAt: trimmedReply ? new Date() : null,
+      })
+      .where(eq(reviewsTable.id, id))
+      .returning();
+
+    return res.json(updated);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // POST /reviews — public, submit a product review using order tracking token
 router.post("/reviews", async (req: any, res) => {
@@ -59,7 +149,7 @@ router.post("/reviews", async (req: any, res) => {
   }
 });
 
-// GET /stores/:slug/reviews — public, get reviews for all products in a store
+// GET /stores/:slug/reviews — public, get all reviews for a store's products
 router.get("/stores/:slug/reviews", async (req: any, res) => {
   try {
     const { slug } = req.params;

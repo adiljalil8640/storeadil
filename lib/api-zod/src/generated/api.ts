@@ -1998,6 +1998,37 @@ export const GetShareMessageResponse = zod.object({
 });
 
 /**
+ * @summary List all reviews for the authenticated merchant's store
+ */
+export const listMerchantReviewsQueryRatingMax = 5;
+
+export const ListMerchantReviewsQueryParams = zod.object({
+  rating: zod.coerce
+    .number()
+    .min(1)
+    .max(listMerchantReviewsQueryRatingMax)
+    .optional(),
+});
+
+export const listMerchantReviewsResponseRatingMax = 5;
+
+export const ListMerchantReviewsResponseItem = zod.object({
+  id: zod.number(),
+  orderId: zod.number(),
+  productId: zod.number(),
+  productName: zod.string().nullish(),
+  customerName: zod.string().nullish(),
+  rating: zod.number().min(1).max(listMerchantReviewsResponseRatingMax),
+  comment: zod.string().nullish(),
+  merchantReply: zod.string().nullish(),
+  repliedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListMerchantReviewsResponse = zod.array(
+  ListMerchantReviewsResponseItem,
+);
+
+/**
  * @summary Submit a product review using an order tracking token
  */
 export const submitReviewBodyRatingMax = 5;
@@ -2007,6 +2038,32 @@ export const SubmitReviewBody = zod.object({
   productId: zod.number(),
   rating: zod.number().min(1).max(submitReviewBodyRatingMax),
   comment: zod.string().nullish(),
+});
+
+/**
+ * @summary Add or update the merchant reply on a review
+ */
+export const ReplyToReviewParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ReplyToReviewBody = zod.object({
+  reply: zod.string().nullable(),
+});
+
+export const replyToReviewResponseRatingMax = 5;
+
+export const ReplyToReviewResponse = zod.object({
+  id: zod.number(),
+  storeId: zod.number(),
+  orderId: zod.number(),
+  productId: zod.number(),
+  customerName: zod.string().nullish(),
+  rating: zod.number().min(1).max(replyToReviewResponseRatingMax),
+  comment: zod.string().nullish(),
+  merchantReply: zod.string().nullish(),
+  repliedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
 });
 
 /**
@@ -2030,6 +2087,8 @@ export const GetStoreReviewsResponseItem = zod.object({
   customerName: zod.string().nullish(),
   rating: zod.number().min(1).max(getStoreReviewsResponseRatingMax),
   comment: zod.string().nullish(),
+  merchantReply: zod.string().nullish(),
+  repliedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const GetStoreReviewsResponse = zod.array(GetStoreReviewsResponseItem);

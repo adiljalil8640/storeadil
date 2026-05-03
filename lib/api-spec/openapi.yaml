@@ -1180,6 +1180,29 @@ paths:
                 format: binary
 
   /reviews:
+    get:
+      operationId: listMerchantReviews
+      tags: [reviews]
+      summary: "List all reviews for the authenticated merchant's store"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: rating
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      responses:
+        "200":
+          description: List of reviews with product names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MerchantReview"
     post:
       operationId: submitReview
       tags: [reviews]
@@ -1209,6 +1232,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /reviews/{id}/reply:
+    patch:
+      operationId: replyToReview
+      tags: [reviews]
+      summary: "Add or update the merchant reply on a review"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reply:
+                  type: string
+                  nullable: true
+              required: [reply]
+      responses:
+        "200":
+          description: Updated review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
 
   /stores/{slug}/reviews:
     get:
@@ -1382,10 +1437,51 @@ components:
         comment:
           type: string
           nullable: true
+        merchantReply:
+          type: string
+          nullable: true
+        repliedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
       required: [id, storeId, orderId, productId, rating, createdAt]
+
+    MerchantReview:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+          nullable: true
+        customerName:
+          type: string
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        merchantReply:
+          type: string
+          nullable: true
+        repliedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, orderId, productId, rating, createdAt]
 
     CreateReviewBody:
       type: object

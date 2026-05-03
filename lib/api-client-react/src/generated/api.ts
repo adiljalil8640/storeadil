@@ -50,8 +50,10 @@ import type {
   JoinWaitlistBody,
   JoinWaitlistResponse,
   LimitReachedError,
+  ListMerchantReviewsParams,
   ListOrdersParams,
   ListProductsParams,
+  MerchantReview,
   NotifyWaitlistResponse,
   Order,
   OrderTrackingInfo,
@@ -63,6 +65,7 @@ import type {
   PublicStore,
   ReferralInfo,
   ReferralPreview,
+  ReplyToReviewBody,
   Review,
   ShareMessage,
   SlugCheckResult,
@@ -4697,6 +4700,106 @@ export function useGetQrCode<
 }
 
 /**
+ * @summary List all reviews for the authenticated merchant's store
+ */
+export const getListMerchantReviewsUrl = (
+  params?: ListMerchantReviewsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reviews?${stringifiedParams}`
+    : `/api/reviews`;
+};
+
+export const listMerchantReviews = async (
+  params?: ListMerchantReviewsParams,
+  options?: RequestInit,
+): Promise<MerchantReview[]> => {
+  return customFetch<MerchantReview[]>(getListMerchantReviewsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMerchantReviewsQueryKey = (
+  params?: ListMerchantReviewsParams,
+) => {
+  return [`/api/reviews`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMerchantReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMerchantReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListMerchantReviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMerchantReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListMerchantReviewsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMerchantReviews>>
+  > = ({ signal }) =>
+    listMerchantReviews(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMerchantReviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMerchantReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMerchantReviews>>
+>;
+export type ListMerchantReviewsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all reviews for the authenticated merchant's store
+ */
+
+export function useListMerchantReviews<
+  TData = Awaited<ReturnType<typeof listMerchantReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListMerchantReviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMerchantReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMerchantReviewsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Submit a product review using an order tracking token
  */
 export const getSubmitReviewUrl = () => {
@@ -4780,6 +4883,93 @@ export const useSubmitReview = <
   TContext
 > => {
   return useMutation(getSubmitReviewMutationOptions(options));
+};
+
+/**
+ * @summary Add or update the merchant reply on a review
+ */
+export const getReplyToReviewUrl = (id: number) => {
+  return `/api/reviews/${id}/reply`;
+};
+
+export const replyToReview = async (
+  id: number,
+  replyToReviewBody: ReplyToReviewBody,
+  options?: RequestInit,
+): Promise<Review> => {
+  return customFetch<Review>(getReplyToReviewUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(replyToReviewBody),
+  });
+};
+
+export const getReplyToReviewMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyToReview>>,
+    TError,
+    { id: number; data: BodyType<ReplyToReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyToReview>>,
+  TError,
+  { id: number; data: BodyType<ReplyToReviewBody> },
+  TContext
+> => {
+  const mutationKey = ["replyToReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyToReview>>,
+    { id: number; data: BodyType<ReplyToReviewBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return replyToReview(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyToReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replyToReview>>
+>;
+export type ReplyToReviewMutationBody = BodyType<ReplyToReviewBody>;
+export type ReplyToReviewMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add or update the merchant reply on a review
+ */
+export const useReplyToReview = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyToReview>>,
+    TError,
+    { id: number; data: BodyType<ReplyToReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof replyToReview>>,
+  TError,
+  { id: number; data: BodyType<ReplyToReviewBody> },
+  TContext
+> => {
+  return useMutation(getReplyToReviewMutationOptions(options));
 };
 
 /**
