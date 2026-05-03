@@ -1,6 +1,6 @@
-import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons, useListProducts } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag } from "lucide-react";
+import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
@@ -13,6 +13,21 @@ export default function Dashboard() {
   const { data: topProducts, isLoading: productsLoading } = useGetTopProducts({ limit: 5 });
   const { data: reviews = [], isLoading: reviewsLoading } = useListMerchantReviews();
   const { data: coupons = [], isLoading: couponsLoading } = useListCoupons();
+  const { data: allProducts = [], isLoading: stockLoading } = useListProducts();
+
+  const DEFAULT_LOW_STOCK = 5;
+  const outOfStock = allProducts.filter(
+    (p) => p.isActive && p.stock !== null && p.stock !== undefined && p.stock === 0
+  );
+  const lowStock = allProducts.filter((p) => {
+    if (!p.isActive || p.stock === null || p.stock === undefined || p.stock === 0) return false;
+    const threshold = p.lowStockThreshold ?? DEFAULT_LOW_STOCK;
+    return p.stock <= threshold;
+  });
+  const stockAlerts = [
+    ...outOfStock.map((p) => ({ ...p, alertType: "out" as const })),
+    ...lowStock.map((p) => ({ ...p, alertType: "low" as const })),
+  ].sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0));
 
   const totalReviews = reviews.length;
   const avgRating = totalReviews
@@ -291,6 +306,113 @@ export default function Dashboard() {
                   </div>
                 );
               })()}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Stock Alerts
+                {!stockLoading && stockAlerts.length > 0 && (
+                  <span className="ml-1 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                    {stockAlerts.length}
+                  </span>
+                )}
+              </CardTitle>
+              <Link href="/products" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Manage →
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {stockLoading ? (
+                <div className="text-center text-muted-foreground py-6">Loading...</div>
+              ) : allProducts.every((p) => p.stock === null || p.stock === undefined) ? (
+                <div className="text-center text-muted-foreground py-6 space-y-1">
+                  <p className="text-sm">Stock tracking is not enabled.</p>
+                  <Link href="/products" className="text-xs text-primary hover:underline">
+                    Set stock levels on your products →
+                  </Link>
+                </div>
+              ) : stockAlerts.length === 0 ? (
+                <div className="flex items-center gap-3 py-4">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                    <Package className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">All products are well-stocked</p>
+                    <p className="text-xs text-muted-foreground">No low-stock or out-of-stock items right now</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  {/* Summary badges */}
+                  <div className="flex items-center gap-2 pb-3 mb-1">
+                    {outOfStock.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-destructive/10 text-destructive">
+                        {outOfStock.length} out of stock
+                      </span>
+                    )}
+                    {lowStock.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                        {lowStock.length} running low
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Alert rows */}
+                  {stockAlerts.slice(0, 6).map((product) => {
+                    const isOut = product.alertType === "out";
+                    const threshold = product.lowStockThreshold ?? DEFAULT_LOW_STOCK;
+                    const pct = isOut ? 0 : Math.min(100, Math.round(((product.stock ?? 0) / threshold) * 100));
+                    return (
+                      <div key={product.id} className="flex items-center gap-3 py-2.5 border-b last:border-0">
+                        {/* Product image / placeholder */}
+                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                          {product.imageUrl ? (
+                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+
+                        {/* Name + mini stock bar */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{product.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${isOut ? "w-0" : "bg-amber-400"}`}
+                                style={isOut ? undefined : { width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stock count + badge */}
+                        <div className="shrink-0 text-right">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            isOut
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                          }`}>
+                            {isOut ? "Out of stock" : `${product.stock} left`}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {stockAlerts.length > 6 && (
+                    <p className="text-xs text-muted-foreground text-center pt-3">
+                      +{stockAlerts.length - 6} more —{" "}
+                      <Link href="/products" className="text-primary hover:underline">view all products</Link>
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
