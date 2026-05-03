@@ -6,6 +6,7 @@ import { CreateStoreBody, UpdateMyStoreBody, UpdateRevenueGoalBody } from "@work
 import { validate } from "../middlewares/validate";
 import { publicStoreLimiter } from "../middlewares/rateLimiter";
 import { requireAuth } from "../middlewares/auth";
+import { sendNewOrderNotification } from "../services/email";
 
 const router = Router();
 
@@ -36,6 +37,39 @@ router.put("/stores/me", requireAuth, async (req: any, res) => {
       .returning();
     if (!store) return res.status(404).json({ error: "No store found" });
     res.json(store);
+  } catch (err) {
+    throw err;
+  }
+});
+
+// POST /stores/me/send-test-notification
+router.post("/stores/me/send-test-notification", requireAuth, async (req: any, res) => {
+  try {
+    const [store] = await db.select().from(storesTable).where(eq(storesTable.userId, req.userId));
+    if (!store) return res.status(404).json({ error: "No store found" });
+    if (!store.notificationEmail) {
+      return res.status(400).json({ error: "No notification email configured. Add one in Settings first." });
+    }
+    const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+    await sendNewOrderNotification({
+      to: store.notificationEmail,
+      orderId: 0,
+      trackingToken: "test-token-000",
+      customerName: "Jane Customer",
+      customerEmail: "jane@example.com",
+      customerPhone: "+1234567890",
+      items: [
+        { productName: "Sample Product A", quantity: 2, price: 12.5 },
+        { productName: "Sample Product B", quantity: 1, price: 34.0 },
+      ],
+      total: 59.0,
+      currency: store.currency,
+      storeName: store.name,
+      deliveryType: "delivery",
+      customerNote: "This is a test order — no action needed.",
+      appBaseUrl,
+    });
+    res.json({ ok: true, sentTo: store.notificationEmail });
   } catch (err) {
     throw err;
   }

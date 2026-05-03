@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle, Eye, EyeOff, TrendingUp, ShoppingCart, Package, Bot, Zap, WifiOff, ScanLine } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle, Eye, EyeOff, TrendingUp, ShoppingCart, Package, Bot, Zap, WifiOff, ScanLine, SendHorizonal } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
@@ -41,6 +41,8 @@ export default function SettingsPage() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const [qrBlob, setQrBlob] = useState<string | null>(null);
   const [digestPreviewOpen, setDigestPreviewOpen] = useState(false);
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailSent, setTestEmailSent] = useState(false);
 
   const { data: store, isLoading } = useGetMyStore();
   const { data: digestData, isFetching: digestFetching, refetch: refetchDigest } = useGetMyStoreDigestPreview({
@@ -104,6 +106,25 @@ export default function SettingsPage() {
       .then(blob => { if (blob) setQrBlob(URL.createObjectURL(blob)); })
       .catch(() => {});
   }, [store, basePath]);
+
+  async function sendTestEmail() {
+    setTestEmailSending(true);
+    try {
+      const res = await fetch(`${basePath}/api/stores/me/send-test-notification`, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body.error ?? "Failed to send test email");
+      } else {
+        toast.success(`Test email sent to ${body.sentTo}`);
+        setTestEmailSent(true);
+        setTimeout(() => setTestEmailSent(false), 4000);
+      }
+    } catch {
+      toast.error("Failed to send test email");
+    } finally {
+      setTestEmailSending(false);
+    }
+  }
 
   const onSubmit = (values: SettingsFormValues) => {
     updateStore.mutate({ data: values });
@@ -2106,6 +2127,24 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+                {store?.notificationEmail && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 w-fit"
+                    onClick={sendTestEmail}
+                    disabled={testEmailSending}
+                  >
+                    {testEmailSent ? (
+                      <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Test email sent!</>
+                    ) : testEmailSending ? (
+                      <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Sending…</>
+                    ) : (
+                      <><SendHorizonal className="h-3.5 w-3.5" /> Send test email</>
+                    )}
+                  </Button>
+                )}
                 <FormField
                   control={form.control}
                   name="digestFrequency"
