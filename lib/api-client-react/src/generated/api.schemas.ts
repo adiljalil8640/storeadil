@@ -9,6 +9,16 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface JoinWaitlistBody {
+  productId: number;
+  email: string;
+  name?: string | null;
+}
+
+export interface JoinWaitlistResponse {
+  message: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }

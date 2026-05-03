@@ -130,6 +130,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /stores/public/{slug}/waitlist:
+    post:
+      operationId: joinWaitlist
+      tags: [stores]
+      summary: Sign up for back-in-stock alert (public, no auth required)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinWaitlistBody"
+      responses:
+        "201":
+          description: Successfully joined waitlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinWaitlistResponse"
+        "409":
+          description: Already on the waitlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Store or product not found
+
   # Product endpoints
   /products:
     get:
@@ -757,6 +790,25 @@ components:
         status:
           type: string
       required: [status]
+
+    JoinWaitlistBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+      required: [productId, email]
+
+    JoinWaitlistResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
 
     ErrorResponse:
       type: object

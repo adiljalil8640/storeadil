@@ -37,6 +37,8 @@ import type {
   GetRecentOrdersParams,
   GetTopProductsParams,
   HealthStatus,
+  JoinWaitlistBody,
+  JoinWaitlistResponse,
   LimitReachedError,
   ListOrdersParams,
   ListProductsParams,
@@ -473,6 +475,93 @@ export function useGetPublicStore<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Sign up for back-in-stock alert (public, no auth required)
+ */
+export const getJoinWaitlistUrl = (slug: string) => {
+  return `/api/stores/public/${slug}/waitlist`;
+};
+
+export const joinWaitlist = async (
+  slug: string,
+  joinWaitlistBody: JoinWaitlistBody,
+  options?: RequestInit,
+): Promise<JoinWaitlistResponse> => {
+  return customFetch<JoinWaitlistResponse>(getJoinWaitlistUrl(slug), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(joinWaitlistBody),
+  });
+};
+
+export const getJoinWaitlistMutationOptions = <
+  TError = ErrorType<void | ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinWaitlist>>,
+    TError,
+    { slug: string; data: BodyType<JoinWaitlistBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinWaitlist>>,
+  TError,
+  { slug: string; data: BodyType<JoinWaitlistBody> },
+  TContext
+> => {
+  const mutationKey = ["joinWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinWaitlist>>,
+    { slug: string; data: BodyType<JoinWaitlistBody> }
+  > = (props) => {
+    const { slug, data } = props ?? {};
+
+    return joinWaitlist(slug, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinWaitlist>>
+>;
+export type JoinWaitlistMutationBody = BodyType<JoinWaitlistBody>;
+export type JoinWaitlistMutationError = ErrorType<void | ErrorResponse>;
+
+/**
+ * @summary Sign up for back-in-stock alert (public, no auth required)
+ */
+export const useJoinWaitlist = <
+  TError = ErrorType<void | ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinWaitlist>>,
+    TError,
+    { slug: string; data: BodyType<JoinWaitlistBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinWaitlist>>,
+  TError,
+  { slug: string; data: BodyType<JoinWaitlistBody> },
+  TContext
+> => {
+  return useMutation(getJoinWaitlistMutationOptions(options));
+};
 
 /**
  * @summary List all products for the authenticated user's store

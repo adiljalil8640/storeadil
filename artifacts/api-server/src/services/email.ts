@@ -154,6 +154,48 @@ export async function sendDigestEmail(params: {
   await sendEmail(to, subject, baseTemplate(content, storeName));
 }
 
+export async function sendBackInStockEmail(params: {
+  to: string;
+  name: string | null;
+  storeName: string;
+  productName: string;
+  productPrice: number;
+  currency: string;
+  storeSlug: string;
+  appBaseUrl: string;
+}): Promise<void> {
+  const { to, name, storeName, productName, productPrice, currency, storeSlug, appBaseUrl } = params;
+
+  const price = new Intl.NumberFormat("en-US", { style: "currency", currency }).format(productPrice);
+  const storefrontUrl = `${appBaseUrl}/store/${storeSlug}`;
+
+  const content = `
+    <h2 style="margin:0 0 8px;font-size:22px;color:#111827;">🎉 Good news — it's back!</h2>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:15px;">
+      Hey${name ? ` ${name}` : ""}! You asked us to let you know when <strong>${productName}</strong> came back in stock at <strong>${storeName}</strong>. It's available again — grab it before it sells out.
+    </p>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:28px;">
+      <div style="font-weight:700;font-size:16px;color:#111827;margin-bottom:4px;">${productName}</div>
+      <div style="font-size:20px;font-weight:800;color:#25D366;">${price}</div>
+    </div>
+
+    <a href="${storefrontUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;">
+      Shop Now →
+    </a>
+
+    <p style="margin-top:24px;font-size:12px;color:#9ca3af;">
+      You're receiving this because you signed up for back-in-stock alerts at ${storeName}. 
+      Stock is limited and available on a first-come, first-served basis.
+    </p>`;
+
+  await sendEmail(
+    to,
+    `✅ ${productName} is back in stock at ${storeName}!`,
+    baseTemplate(content, storeName)
+  );
+}
+
 export async function sendLowStockAlert(params: {
   to: string;
   storeName: string;

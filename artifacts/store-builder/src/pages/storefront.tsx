@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useParams } from "wouter";
-import { useGetPublicStore, useCreateOrder } from "@workspace/api-client-react";
+import { useGetPublicStore, useCreateOrder, useJoinWaitlist } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy } from "lucide-react";
+import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -21,6 +21,81 @@ type OrderConfirmation = {
   whatsappUrl: string;
   storeName: string;
 };
+
+function WaitlistButton({ product, slug }: { product: any; slug: string }) {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [open, setOpen] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const join = useJoinWaitlist({
+    mutation: {
+      onSuccess: () => {
+        setDone(true);
+        toast.success("You're on the list! We'll email you when it's back.");
+      },
+      onError: (e: any) => {
+        const msg = e?.response?.data?.error ?? "Something went wrong.";
+        toast.error(msg);
+      },
+    },
+  });
+
+  if (done) {
+    return (
+      <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+        <CheckCircle className="w-3 h-3" /> On the list
+      </span>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="rounded-full h-8 px-3 gap-1.5 text-xs">
+          <Bell className="w-3 h-3" /> Notify Me
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[380px]">
+        <DialogHeader>
+          <DialogTitle>Notify me when back</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          <strong>{product.name}</strong> is currently out of stock. Enter your email and we'll alert you the moment it's available again.
+        </p>
+        <div className="space-y-3 pt-2">
+          <div>
+            <Label className="text-xs mb-1.5 block">Email <span className="text-destructive">*</span></Label>
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label className="text-xs mb-1.5 block">Name <span className="text-muted-foreground">(optional)</span></Label>
+            <Input
+              placeholder="Jane"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+          <Button
+            className="w-full gap-2"
+            disabled={!email || join.isPending}
+            onClick={() =>
+              join.mutate({ slug, data: { productId: product.id, email, name: name || null } })
+            }
+          >
+            <Bell className="w-4 h-4" />
+            {join.isPending ? "Saving…" : "Alert Me When Back"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function StorefrontPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -412,14 +487,17 @@ export default function StorefrontPage() {
                 )}
                 <div className="mt-auto pt-3 flex items-center justify-between">
                   <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-                  <Button
-                    size="sm"
-                    className="rounded-full h-8 px-3"
-                    disabled={product.stock !== null && product.stock <= 0}
-                    onClick={() => addToCart(product)}
-                  >
-                    Add
-                  </Button>
+                  {product.stock !== null && product.stock <= 0 ? (
+                    <WaitlistButton product={product} slug={slug || ""} />
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="rounded-full h-8 px-3"
+                      onClick={() => addToCart(product)}
+                    >
+                      Add
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

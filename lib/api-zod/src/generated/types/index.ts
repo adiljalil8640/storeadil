@@ -31,6 +31,8 @@ export * from "./getAdminUsersParams";
 export * from "./getRecentOrdersParams";
 export * from "./getTopProductsParams";
 export * from "./healthStatus";
+export * from "./joinWaitlistBody";
+export * from "./joinWaitlistResponse";
 export * from "./limitReachedError";
 export * from "./limitReachedErrorCode";
 export * from "./listOrdersParams";

@@ -137,6 +137,19 @@ export const GetPublicStoreResponse = zod.object({
 });
 
 /**
+ * @summary Sign up for back-in-stock alert (public, no auth required)
+ */
+export const JoinWaitlistParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const JoinWaitlistBody = zod.object({
+  productId: zod.number(),
+  email: zod.string(),
+  name: zod.string().nullish(),
+});
+
+/**
  * @summary List all products for the authenticated user's store
  */
 export const ListProductsQueryParams = zod.object({

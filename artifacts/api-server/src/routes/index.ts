@@ -9,11 +9,13 @@ import billingRouter from "./billing";
 import referralRouter from "./referral";
 import adminRouter from "./admin";
 import growthRouter from "./growth";
+import waitlistRouter from "./waitlist";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(storesRouter);
+router.use(waitlistRouter);
 router.use(productsRouter);
 router.use(ordersRouter);
 router.use(aiRouter);

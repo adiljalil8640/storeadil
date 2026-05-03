@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, productsTable } from "@workspace/db";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { storesTable, productsTable, stockWaitlistTable } from "@workspace/db";
+import { eq, and, ilike, sql, isNull } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
 import { checkProductLimit } from "../services/usage";
+import { sendBackInStockEmail } from "../services/email";
 
 const router = Router();
 
@@ -136,6 +137,12 @@ router.put("/products/:id", requireAuth, async (req: any, res) => {
     if (updateData.price !== undefined) updateData.price = String(updateData.price);
     if (updateData.variants !== undefined) updateData.variants = updateData.variants as any;
 
+    // Fetch current stock before update to detect back-in-stock transition
+    const [before] = await db
+      .select({ stock: productsTable.stock })
+      .from(productsTable)
+      .where(and(eq(productsTable.id, parseInt(req.params.id)), eq(productsTable.storeId, storeId)));
+
     const [product] = await db
       .update(productsTable)
       .set(updateData)
@@ -143,6 +150,57 @@ router.put("/products/:id", requireAuth, async (req: any, res) => {
       .returning();
 
     if (!product) return res.status(404).json({ error: "Product not found" });
+
+    // Back-in-stock: was 0 (or null), now > 0 — notify waitlist (fire-and-forget)
+    const wasOutOfStock = before && (before.stock === 0 || before.stock === null);
+    const isNowInStock = product.stock !== null && product.stock > 0;
+    if (wasOutOfStock && isNowInStock) {
+      (async () => {
+        try {
+          const waitlist = await db
+            .select()
+            .from(stockWaitlistTable)
+            .where(
+              and(
+                eq(stockWaitlistTable.productId, product.id),
+                isNull(stockWaitlistTable.notifiedAt)
+              )
+            );
+          if (waitlist.length === 0) return;
+
+          const [store] = await db
+            .select({ name: storesTable.name, slug: storesTable.slug, currency: storesTable.currency })
+            .from(storesTable)
+            .where(eq(storesTable.id, storeId));
+          if (!store) return;
+
+          const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+          const now = new Date();
+
+          for (const entry of waitlist) {
+            sendBackInStockEmail({
+              to: entry.email,
+              name: entry.name,
+              storeName: store.name,
+              productName: product.name,
+              productPrice: Number(product.price),
+              currency: store.currency,
+              storeSlug: store.slug,
+              appBaseUrl,
+            }).catch(() => {});
+
+            // Mark as notified
+            await db
+              .update(stockWaitlistTable)
+              .set({ notifiedAt: now })
+              .where(eq(stockWaitlistTable.id, entry.id));
+          }
+
+          req.log.info({ productId: product.id, notified: waitlist.length }, "Back-in-stock emails queued");
+        } catch {}
+      })();
+    }
+
     res.json(product);
   } catch (err) {
     req.log.error(err);
