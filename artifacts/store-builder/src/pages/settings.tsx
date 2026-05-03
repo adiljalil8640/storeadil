@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useGetMyStore, useUpdateMyStore, getGetMyStoreQueryKey } from "@workspace/api-client-react";
+import { useEffect, useState } from "react";
+import { useGetMyStore, useUpdateMyStore, getGetMyStoreQueryKey, useGetShareMessage, useGetQrCode } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const settingsSchema = z.object({
@@ -31,16 +31,18 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const [qrBlob, setQrBlob] = useState<string | null>(null);
 
   const { data: store, isLoading } = useGetMyStore();
+  const { data: shareData } = useGetShareMessage({ query: { enabled: !!store } });
 
   const updateStore = useUpdateMyStore({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
         toast.success("Settings saved successfully");
-      }
-    }
+      },
+    },
   });
 
   const form = useForm<SettingsFormValues>({
@@ -72,6 +74,15 @@ export default function SettingsPage() {
     }
   }, [store, form]);
 
+  // Load QR code blob
+  useEffect(() => {
+    if (!store) return;
+    fetch(`${basePath}/api/growth/qr-code`, { headers: { "Accept": "image/png" } })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => { if (blob) setQrBlob(URL.createObjectURL(blob)); })
+      .catch(() => {});
+  }, [store, basePath]);
+
   const onSubmit = (values: SettingsFormValues) => {
     updateStore.mutate({ data: values });
   };
@@ -81,6 +92,21 @@ export default function SettingsPage() {
   const copyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
     toast.success("Store link copied to clipboard");
+  };
+
+  const downloadQr = () => {
+    if (!qrBlob) return;
+    const a = document.createElement("a");
+    a.href = qrBlob;
+    a.download = `${store?.slug ?? "store"}-qr.png`;
+    a.click();
+    toast.success("QR code downloaded!");
+  };
+
+  const shareOnWhatsApp = () => {
+    const msg = shareData?.message ?? `Check out my store: ${publicUrl}`;
+    const encoded = encodeURIComponent(msg);
+    window.open(`https://wa.me/?text=${encoded}`, "_blank");
   };
 
   if (isLoading) {
@@ -107,20 +133,77 @@ export default function SettingsPage() {
                   <Store className="w-5 h-5 text-primary" />
                   Your Public Store Link
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1 break-all">
-                  {publicUrl}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1 break-all">{publicUrl}</p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button variant="outline" className="flex-1 sm:flex-none gap-2 bg-background" onClick={copyUrl}>
                   <Copy className="w-4 h-4" /> Copy
                 </Button>
-                <Button className="flex-1 sm:flex-none gap-2" onClick={() => window.open(publicUrl, '_blank')}>
+                <Button className="flex-1 sm:flex-none gap-2" onClick={() => window.open(publicUrl, "_blank")}>
                   <ExternalLink className="w-4 h-4" /> Visit
                 </Button>
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Growth: QR Code + WhatsApp Share */}
+        {store && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <QrCode className="w-4 h-4 text-primary" />
+                  QR Code
+                </CardTitle>
+                <CardDescription>Print or share this QR code to drive traffic to your store.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-4">
+                {qrBlob ? (
+                  <img src={qrBlob} alt="Store QR Code" className="w-40 h-40 rounded-lg border" />
+                ) : (
+                  <div className="w-40 h-40 rounded-lg border bg-muted flex items-center justify-center text-muted-foreground text-sm">
+                    Loading QR…
+                  </div>
+                )}
+                <Button variant="outline" className="gap-2 w-full" onClick={downloadQr} disabled={!qrBlob}>
+                  <Download className="w-4 h-4" />
+                  Download QR Code
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Share2 className="w-4 h-4 text-primary" />
+                  Share Your Store
+                </CardTitle>
+                <CardDescription>Send a pre-written message to your contacts on WhatsApp.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                {shareData?.message && (
+                  <div className="bg-muted/60 rounded-lg p-3 text-sm text-muted-foreground italic line-clamp-4 border">
+                    "{shareData.message}"
+                  </div>
+                )}
+                <Button
+                  className="gap-2 w-full bg-[#25D366] hover:bg-[#20bd5a] text-white"
+                  onClick={shareOnWhatsApp}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Share on WhatsApp
+                </Button>
+                <Button variant="outline" className="gap-2 w-full" onClick={() => {
+                  navigator.clipboard.writeText(shareData?.message ?? publicUrl);
+                  toast.success("Share message copied!");
+                }}>
+                  <Copy className="w-4 h-4" />
+                  Copy Message
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         <Form {...form}>
@@ -148,7 +231,7 @@ export default function SettingsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Description</FormLabel>
-                      <FormControl><Textarea className="resize-none min-h-[100px]" {...field} value={field.value || ''} /></FormControl>
+                      <FormControl><Textarea className="resize-none min-h-[100px]" {...field} value={field.value || ""} /></FormControl>
                       <FormDescription>Displayed on your public storefront.</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -159,7 +242,7 @@ export default function SettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Contact & Localization</CardTitle>
+                <CardTitle>Contact &amp; Localization</CardTitle>
                 <CardDescription>How customers reach you and how prices are displayed.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -184,9 +267,7 @@ export default function SettingsPage() {
                         <FormLabel>Currency</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="USD">USD ($)</SelectItem>
@@ -248,7 +329,14 @@ export default function SettingsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Shipping / Delivery Policy (Optional)</FormLabel>
-                      <FormControl><Textarea placeholder="E.g. Free delivery within 5 miles. Orders take 2 days to process." className="resize-none" {...field} value={field.value || ''} /></FormControl>
+                      <FormControl>
+                        <Textarea
+                          placeholder="E.g. Free delivery within 5 miles. Orders take 2 days to process."
+                          className="resize-none"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

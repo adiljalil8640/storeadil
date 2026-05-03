@@ -20,6 +20,14 @@ tags:
     description: AI-powered features
   - name: analytics
     description: Store analytics and reporting
+  - name: billing
+    description: Subscription and billing management
+  - name: referral
+    description: Referral program
+  - name: admin
+    description: Admin panel
+  - name: growth
+    description: Growth and sharing tools
 
 paths:
   /healthz:
@@ -171,6 +179,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Product"
+        "403":
+          description: Plan limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitReachedError"
 
   /products/{id}:
     get:
@@ -342,7 +356,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
-  # AI endpoint
+  # AI endpoints
   /ai/generate-store:
     post:
       operationId: generateStore
@@ -364,12 +378,54 @@ paths:
               schema:
                 $ref: "#/components/schemas/GeneratedStore"
 
+  /ai/generate-description:
+    post:
+      operationId: generateProductDescription
+      tags: [ai]
+      summary: AI-generate a product description
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateDescriptionBody"
+      responses:
+        "200":
+          description: AI-generated description
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateDescriptionResponse"
+
+  /ai/suggest-price:
+    post:
+      operationId: suggestProductPrice
+      tags: [ai]
+      summary: AI-suggest a price for a product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestPriceBody"
+      responses:
+        "200":
+          description: AI price suggestion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestPriceResponse"
+
   # Analytics endpoints
   /analytics/summary:
     get:
       operationId: getAnalyticsSummary
       tags: [analytics]
-      summary: Get store analytics summary (revenue, orders, top products)
+      summary: Get store analytics summary
       security:
         - bearerAuth: []
       responses:
@@ -384,7 +440,7 @@ paths:
     get:
       operationId: getRecentOrders
       tags: [analytics]
-      summary: Get recent orders for dashboard activity feed
+      summary: Get recent orders for dashboard
       security:
         - bearerAuth: []
       parameters:
@@ -407,7 +463,7 @@ paths:
     get:
       operationId: getTopProducts
       tags: [analytics]
-      summary: Get best-performing products by order count
+      summary: Get best-performing products
       security:
         - bearerAuth: []
       parameters:
@@ -418,13 +474,250 @@ paths:
             default: 5
       responses:
         "200":
-          description: Top products with order counts
+          description: Top products
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProductWithStats"
+
+  /analytics/orders-per-day:
+    get:
+      operationId: getOrdersPerDay
+      tags: [analytics]
+      summary: Get orders and revenue per day (last 30 days)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Orders per day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrdersPerDayItem"
+
+  # Billing endpoints
+  /billing/plans:
+    get:
+      operationId: getBillingPlans
+      tags: [billing]
+      summary: Get all available plans
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [billing]
+      summary: Get the current user's billing status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatus"
+
+  /billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: [billing]
+      summary: Create a Stripe checkout session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutBody"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+
+  /billing/portal:
+    post:
+      operationId: createBillingPortal
+      tags: [billing]
+      summary: Create a Stripe customer portal session
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Portal session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+
+  /billing/webhook:
+    post:
+      operationId: handleBillingWebhook
+      tags: [billing]
+      summary: Stripe webhook handler
+      responses:
+        "200":
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # Referral endpoints
+  /referral/me:
+    get:
+      operationId: getMyReferral
+      tags: [referral]
+      summary: Get the current user's referral info
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Referral info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralInfo"
+
+  /referral/apply:
+    post:
+      operationId: applyReferralCode
+      tags: [referral]
+      summary: Apply a referral code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyReferralBody"
+      responses:
+        "200":
+          description: Referral applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralInfo"
+
+  # Admin endpoints
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get platform-wide admin stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: Get all users with their stores and plans
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of admin users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /admin/users/{userId}/plan:
+    patch:
+      operationId: changeUserPlan
+      tags: [admin]
+      summary: Change a user's plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUserPlanBody"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  # Growth endpoints
+  /growth/share-message:
+    get:
+      operationId: getShareMessage
+      tags: [growth]
+      summary: Get WhatsApp share message for the store
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Share message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareMessage"
+
+  /growth/qr-code:
+    get:
+      operationId: getQrCode
+      tags: [growth]
+      summary: Get QR code PNG for the store URL
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: QR code image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
 
 components:
   securitySchemes:
@@ -446,6 +739,22 @@ components:
         error:
           type: string
       required: [error]
+
+    LimitReachedError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [PRODUCT_LIMIT_REACHED, ORDER_LIMIT_REACHED]
+        limit:
+          type: integer
+        current:
+          type: integer
+        planName:
+          type: string
+      required: [error, code, limit, current, planName]
 
     Store:
       type: object
@@ -850,6 +1159,55 @@ components:
           nullable: true
       required: [name, description, categories, products]
 
+    GenerateDescriptionBody:
+      type: object
+      properties:
+        productName:
+          type: string
+        category:
+          type: string
+          nullable: true
+        price:
+          type: number
+          nullable: true
+      required: [productName]
+
+    GenerateDescriptionResponse:
+      type: object
+      properties:
+        description:
+          type: string
+      required: [description]
+
+    SuggestPriceBody:
+      type: object
+      properties:
+        productName:
+          type: string
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+      required: [productName]
+
+    SuggestPriceResponse:
+      type: object
+      properties:
+        suggestedPrice:
+          type: number
+        minPrice:
+          type: number
+        maxPrice:
+          type: number
+        reasoning:
+          type: string
+      required: [suggestedPrice, minPrice, maxPrice, reasoning]
+
     AnalyticsSummary:
       type: object
       properties:
@@ -878,3 +1236,183 @@ components:
         - activeProducts
         - revenueThisMonth
         - ordersThisMonth
+
+    OrdersPerDayItem:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        orders:
+          type: integer
+        revenue:
+          type: number
+      required: [date, orders, revenue]
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        displayName:
+          type: string
+        priceMonthly:
+          type: number
+        maxProducts:
+          type: integer
+        maxOrdersPerMonth:
+          type: integer
+        isUnlimited:
+          type: boolean
+        features:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - displayName
+        - priceMonthly
+        - maxProducts
+        - maxOrdersPerMonth
+        - isUnlimited
+        - features
+
+    BillingStatus:
+      type: object
+      properties:
+        plan:
+          $ref: "#/components/schemas/Plan"
+        status:
+          type: string
+        ordersUsed:
+          type: integer
+        ordersLimit:
+          type: integer
+        productsUsed:
+          type: integer
+        productsLimit:
+          type: integer
+        usagePercent:
+          type: number
+        isNearLimit:
+          type: boolean
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - plan
+        - status
+        - ordersUsed
+        - ordersLimit
+        - productsUsed
+        - productsLimit
+        - usagePercent
+        - isNearLimit
+
+    CreateCheckoutBody:
+      type: object
+      properties:
+        planName:
+          type: string
+          enum: [pro, business]
+      required: [planName]
+
+    CheckoutSession:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
+
+    ReferralInfo:
+      type: object
+      properties:
+        referralCode:
+          type: string
+        referralLink:
+          type: string
+        referredCount:
+          type: integer
+        bonusOrdersEarned:
+          type: integer
+      required: [referralCode, referralLink, referredCount, bonusOrdersEarned]
+
+    ApplyReferralBody:
+      type: object
+      properties:
+        code:
+          type: string
+      required: [code]
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalStores:
+          type: integer
+        totalOrders:
+          type: integer
+        totalRevenue:
+          type: number
+        planBreakdown:
+          type: object
+          additionalProperties:
+            type: integer
+      required: [totalUsers, totalStores, totalOrders, totalRevenue, planBreakdown]
+
+    AdminUser:
+      type: object
+      properties:
+        userId:
+          type: string
+        storeName:
+          type: string
+          nullable: true
+        storeSlug:
+          type: string
+          nullable: true
+        planName:
+          type: string
+        planDisplayName:
+          type: string
+        subscriptionStatus:
+          type: string
+        ordersThisMonth:
+          type: integer
+        totalOrders:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - userId
+        - planName
+        - planDisplayName
+        - subscriptionStatus
+        - ordersThisMonth
+        - totalOrders
+        - createdAt
+
+    ChangeUserPlanBody:
+      type: object
+      properties:
+        planName:
+          type: string
+          enum: [free, pro, business]
+      required: [planName]
+
+    ShareMessage:
+      type: object
+      properties:
+        message:
+          type: string
+        whatsappUrl:
+          type: string
+        storeUrl:
+          type: string
+      required: [message, whatsappUrl, storeUrl]

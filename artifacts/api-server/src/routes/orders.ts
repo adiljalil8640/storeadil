@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { storesTable, ordersTable, productsTable } from "@workspace/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { storesTable, ordersTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
+import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.get("/orders", requireAuth, async (req: any, res) => {
     if (!storeId) return res.status(404).json({ error: "No store found" });
 
     const { status, limit } = req.query;
-    let conditions = [eq(ordersTable.storeId, storeId)];
+    const conditions: any[] = [eq(ordersTable.storeId, storeId)];
     if (status) conditions.push(eq(ordersTable.status, status as string));
 
     const orders = await db
@@ -68,7 +69,7 @@ router.get("/orders", requireAuth, async (req: any, res) => {
   }
 });
 
-// POST /orders (public - from storefront)
+// POST /orders (public - from storefront, tracks usage per store owner)
 router.post("/orders", async (req: any, res) => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
@@ -78,6 +79,18 @@ router.post("/orders", async (req: any, res) => {
 
     const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
     if (!store) return res.status(404).json({ error: "Store not found" });
+
+    const limitCheck = await checkOrderLimit(store.userId);
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        error: `This store has reached its monthly order limit`,
+        code: "ORDER_LIMIT_REACHED",
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+        planName: limitCheck.planName,
+        planDisplayName: limitCheck.planDisplayName,
+      });
+    }
 
     const total = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
 
@@ -94,6 +107,8 @@ router.post("/orders", async (req: any, res) => {
         deliveryType: deliveryType ?? null,
       })
       .returning();
+
+    await incrementOrderUsage(store.userId);
 
     const whatsappUrl = store.whatsappNumber
       ? buildWhatsAppUrl(store.whatsappNumber, items, total, store.currency, customerName, customerNote)

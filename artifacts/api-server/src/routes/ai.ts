@@ -25,7 +25,7 @@ router.post("/ai/generate-store", requireAuth, async (req: any, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -60,6 +60,71 @@ router.post("/ai/generate-store", requireAuth, async (req: any, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "AI generation failed" });
+  }
+});
+
+// POST /ai/generate-description
+router.post("/ai/generate-description", requireAuth, async (req: any, res) => {
+  const { productName, category, price } = req.body;
+  if (!productName) return res.status(400).json({ error: "productName is required" });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a copywriter for WhatsApp stores. Write short, compelling product descriptions (2-3 sentences max). Be specific, friendly, and focus on benefits. No markdown, plain text only.",
+        },
+        {
+          role: "user",
+          content: `Write a product description for: "${productName}"${category ? ` (category: ${category})` : ""}${price ? ` (price: ${price})` : ""}.`,
+        },
+      ],
+    });
+
+    const description = completion.choices[0]?.message?.content?.trim() ?? "";
+    res.json({ description });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "AI description generation failed" });
+  }
+});
+
+// POST /ai/suggest-price
+router.post("/ai/suggest-price", requireAuth, async (req: any, res) => {
+  const { productName, description, category, currency } = req.body;
+  if (!productName) return res.status(400).json({ error: "productName is required" });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a pricing advisor for small WhatsApp stores. Suggest fair market prices for products. Return only valid JSON with: suggestedPrice (number), minPrice (number), maxPrice (number), reasoning (string, 1 sentence). No markdown.`,
+        },
+        {
+          role: "user",
+          content: `Suggest a price for: "${productName}"${description ? ` — ${description}` : ""}${category ? ` (${category})` : ""}. Currency: ${currency ?? "USD"}.`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) return res.status(500).json({ error: "AI suggestion failed" });
+
+    const result = JSON.parse(content);
+    res.json({
+      suggestedPrice: Number(result.suggestedPrice ?? result.suggested_price ?? 0),
+      minPrice: Number(result.minPrice ?? result.min_price ?? 0),
+      maxPrice: Number(result.maxPrice ?? result.max_price ?? 0),
+      reasoning: result.reasoning ?? "",
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "AI price suggestion failed" });
   }
 });
 

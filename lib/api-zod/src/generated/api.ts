@@ -416,7 +416,37 @@ export const GenerateStoreResponse = zod.object({
 });
 
 /**
- * @summary Get store analytics summary (revenue, orders, top products)
+ * @summary AI-generate a product description
+ */
+export const GenerateProductDescriptionBody = zod.object({
+  productName: zod.string(),
+  category: zod.string().nullish(),
+  price: zod.number().nullish(),
+});
+
+export const GenerateProductDescriptionResponse = zod.object({
+  description: zod.string(),
+});
+
+/**
+ * @summary AI-suggest a price for a product
+ */
+export const SuggestProductPriceBody = zod.object({
+  productName: zod.string(),
+  description: zod.string().nullish(),
+  category: zod.string().nullish(),
+  currency: zod.string().nullish(),
+});
+
+export const SuggestProductPriceResponse = zod.object({
+  suggestedPrice: zod.number(),
+  minPrice: zod.number(),
+  maxPrice: zod.number(),
+  reasoning: zod.string(),
+});
+
+/**
+ * @summary Get store analytics summary
  */
 export const GetAnalyticsSummaryResponse = zod.object({
   totalRevenue: zod.number(),
@@ -430,7 +460,7 @@ export const GetAnalyticsSummaryResponse = zod.object({
 });
 
 /**
- * @summary Get recent orders for dashboard activity feed
+ * @summary Get recent orders for dashboard
  */
 export const getRecentOrdersQueryLimitDefault = 10;
 
@@ -461,7 +491,7 @@ export const GetRecentOrdersResponseItem = zod.object({
 export const GetRecentOrdersResponse = zod.array(GetRecentOrdersResponseItem);
 
 /**
- * @summary Get best-performing products by order count
+ * @summary Get best-performing products
  */
 export const getTopProductsQueryLimitDefault = 5;
 
@@ -479,3 +509,168 @@ export const GetTopProductsResponseItem = zod.object({
   totalRevenue: zod.number(),
 });
 export const GetTopProductsResponse = zod.array(GetTopProductsResponseItem);
+
+/**
+ * @summary Get orders and revenue per day (last 30 days)
+ */
+export const GetOrdersPerDayResponseItem = zod.object({
+  date: zod.coerce.date(),
+  orders: zod.number(),
+  revenue: zod.number(),
+});
+export const GetOrdersPerDayResponse = zod.array(GetOrdersPerDayResponseItem);
+
+/**
+ * @summary Get all available plans
+ */
+export const GetBillingPlansResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  displayName: zod.string(),
+  priceMonthly: zod.number(),
+  maxProducts: zod.number(),
+  maxOrdersPerMonth: zod.number(),
+  isUnlimited: zod.boolean(),
+  features: zod.array(zod.string()),
+});
+export const GetBillingPlansResponse = zod.array(GetBillingPlansResponseItem);
+
+/**
+ * @summary Get the current user's billing status
+ */
+export const GetBillingStatusResponse = zod.object({
+  plan: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    displayName: zod.string(),
+    priceMonthly: zod.number(),
+    maxProducts: zod.number(),
+    maxOrdersPerMonth: zod.number(),
+    isUnlimited: zod.boolean(),
+    features: zod.array(zod.string()),
+  }),
+  status: zod.string(),
+  ordersUsed: zod.number(),
+  ordersLimit: zod.number(),
+  productsUsed: zod.number(),
+  productsLimit: zod.number(),
+  usagePercent: zod.number(),
+  isNearLimit: zod.boolean(),
+  currentPeriodEnd: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary Create a Stripe checkout session
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  planName: zod.enum(["pro", "business"]),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
+ * @summary Create a Stripe customer portal session
+ */
+export const CreateBillingPortalResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
+ * @summary Stripe webhook handler
+ */
+export const HandleBillingWebhookResponse = zod.object({
+  status: zod.string(),
+});
+
+/**
+ * @summary Get the current user's referral info
+ */
+export const GetMyReferralResponse = zod.object({
+  referralCode: zod.string(),
+  referralLink: zod.string(),
+  referredCount: zod.number(),
+  bonusOrdersEarned: zod.number(),
+});
+
+/**
+ * @summary Apply a referral code
+ */
+export const ApplyReferralCodeBody = zod.object({
+  code: zod.string(),
+});
+
+export const ApplyReferralCodeResponse = zod.object({
+  referralCode: zod.string(),
+  referralLink: zod.string(),
+  referredCount: zod.number(),
+  bonusOrdersEarned: zod.number(),
+});
+
+/**
+ * @summary Get platform-wide admin stats
+ */
+export const GetAdminStatsResponse = zod.object({
+  totalUsers: zod.number(),
+  totalStores: zod.number(),
+  totalOrders: zod.number(),
+  totalRevenue: zod.number(),
+  planBreakdown: zod.record(zod.string(), zod.number()),
+});
+
+/**
+ * @summary Get all users with their stores and plans
+ */
+export const getAdminUsersQueryLimitDefault = 50;
+export const getAdminUsersQueryOffsetDefault = 0;
+
+export const GetAdminUsersQueryParams = zod.object({
+  limit: zod.coerce.number().default(getAdminUsersQueryLimitDefault),
+  offset: zod.coerce.number().default(getAdminUsersQueryOffsetDefault),
+});
+
+export const GetAdminUsersResponseItem = zod.object({
+  userId: zod.string(),
+  storeName: zod.string().nullish(),
+  storeSlug: zod.string().nullish(),
+  planName: zod.string(),
+  planDisplayName: zod.string(),
+  subscriptionStatus: zod.string(),
+  ordersThisMonth: zod.number(),
+  totalOrders: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+export const GetAdminUsersResponse = zod.array(GetAdminUsersResponseItem);
+
+/**
+ * @summary Change a user's plan
+ */
+export const ChangeUserPlanParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const ChangeUserPlanBody = zod.object({
+  planName: zod.enum(["free", "pro", "business"]),
+});
+
+export const ChangeUserPlanResponse = zod.object({
+  userId: zod.string(),
+  storeName: zod.string().nullish(),
+  storeSlug: zod.string().nullish(),
+  planName: zod.string(),
+  planDisplayName: zod.string(),
+  subscriptionStatus: zod.string(),
+  ordersThisMonth: zod.number(),
+  totalOrders: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Get WhatsApp share message for the store
+ */
+export const GetShareMessageResponse = zod.object({
+  message: zod.string(),
+  whatsappUrl: zod.string(),
+  storeUrl: zod.string(),
+});

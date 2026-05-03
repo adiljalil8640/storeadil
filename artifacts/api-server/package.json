@@ -21,7 +21,9 @@
     "http-proxy-middleware": "^3.0.5",
     "openai": "^6.35.0",
     "pino": "^9",
-    "pino-http": "^10"
+    "pino-http": "^10",
+    "qrcode": "^1.5.4",
+    "stripe": "^22.1.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

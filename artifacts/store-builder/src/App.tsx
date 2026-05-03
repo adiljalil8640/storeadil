@@ -1,12 +1,13 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ClerkProvider, Show, useClerk } from "@clerk/react";
+import { ClerkProvider, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
+import { useClerk } from "@clerk/react";
 
 // Pages
 import LandingPage from "@/pages/landing";
@@ -17,6 +18,9 @@ import ProductsPage from "@/pages/products";
 import OrdersPage from "@/pages/orders";
 import SettingsPage from "@/pages/settings";
 import StorefrontPage from "@/pages/storefront";
+import BillingPage from "@/pages/billing";
+import AnalyticsPage from "@/pages/analytics";
+import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -27,7 +31,7 @@ const clerkPubKey = publishableKeyFromHost(
 );
 
 if (!clerkPubKey) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
 }
 
 const clerkAppearance = {
@@ -39,7 +43,7 @@ const clerkAppearance = {
     logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
   },
   variables: {
-    colorPrimary: "#25D366", // WhatsApp green
+    colorPrimary: "#25D366",
     colorForeground: "#111827",
     colorMutedForeground: "#6B7280",
     colorDanger: "#EF4444",
@@ -84,10 +88,7 @@ function ClerkQueryClientCacheInvalidator() {
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
         queryClient.clear();
       }
       prevUserIdRef.current = userId;
@@ -98,44 +99,39 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-// Redirect helpers
 function HomeRedirect() {
   const [, setLocation] = useLocation();
-  return (
-    <>
-      <Show when="signed-in">
-        {() => {
-          setLocation(`${basePath}/dashboard`);
-          return null;
-        }}
-      </Show>
-      <Show when="signed-out">
-        <LandingPage />
-      </Show>
-    </>
-  );
+  const { isSignedIn, isLoaded } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setLocation(`${basePath}/dashboard`);
+    }
+  }, [isLoaded, isSignedIn]);
+
+  if (!isLoaded) return null;
+  if (isSignedIn) return null;
+  return <LandingPage />;
 }
 
-function ProtectedRoute({ component: Component }: { component: any }) {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const [, setLocation] = useLocation();
-  return (
-    <>
-      <Show when="signed-in">
-        <Component />
-      </Show>
-      <Show when="signed-out">
-        {() => {
-          setLocation(`${basePath}/`);
-          return null;
-        }}
-      </Show>
-    </>
-  );
+  const { isSignedIn, isLoaded } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      setLocation(`${basePath}/`);
+    }
+  }, [isLoaded, isSignedIn]);
+
+  if (!isLoaded) return null;
+  if (!isSignedIn) return null;
+  return <Component />;
 }
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
-  
+
   function stripBase(path: string): string {
     return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
   }
@@ -147,9 +143,9 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
-      localization={{ 
-        signIn: { start: { title: "Welcome back", subtitle: "Sign in to manage your store" } }, 
-        signUp: { start: { title: "Create your store", subtitle: "Start selling on WhatsApp today" } } 
+      localization={{
+        signIn: { start: { title: "Welcome back", subtitle: "Sign in to manage your store" } },
+        signUp: { start: { title: "Create your store", subtitle: "Start selling on WhatsApp today" } },
       }}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
@@ -160,26 +156,19 @@ function ClerkProviderWithRoutes() {
           <Route path="/" component={HomeRedirect} />
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
-          
-          {/* Public Storefront */}
+
+          {/* Public storefront */}
           <Route path="/store/:slug" component={StorefrontPage} />
 
-          {/* Protected Routes */}
-          <Route path="/onboarding">
-            <ProtectedRoute component={OnboardingPage} />
-          </Route>
-          <Route path="/dashboard">
-            <ProtectedRoute component={DashboardPage} />
-          </Route>
-          <Route path="/products">
-            <ProtectedRoute component={ProductsPage} />
-          </Route>
-          <Route path="/orders">
-            <ProtectedRoute component={OrdersPage} />
-          </Route>
-          <Route path="/settings">
-            <ProtectedRoute component={SettingsPage} />
-          </Route>
+          {/* Protected */}
+          <Route path="/onboarding"><ProtectedRoute component={OnboardingPage} /></Route>
+          <Route path="/dashboard"><ProtectedRoute component={DashboardPage} /></Route>
+          <Route path="/products"><ProtectedRoute component={ProductsPage} /></Route>
+          <Route path="/orders"><ProtectedRoute component={OrdersPage} /></Route>
+          <Route path="/analytics"><ProtectedRoute component={AnalyticsPage} /></Route>
+          <Route path="/billing"><ProtectedRoute component={BillingPage} /></Route>
+          <Route path="/settings"><ProtectedRoute component={SettingsPage} /></Route>
+          <Route path="/admin"><ProtectedRoute component={AdminPage} /></Route>
 
           <Route component={NotFound} />
         </Switch>

@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { storesTable, productsTable } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
+import { checkProductLimit } from "../services/usage";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.get("/products", requireAuth, async (req: any, res) => {
     if (!storeId) return res.status(404).json({ error: "No store found" });
 
     const { category, search } = req.query;
-    let conditions = [eq(productsTable.storeId, storeId)];
+    const conditions: any[] = [eq(productsTable.storeId, storeId)];
     if (category) conditions.push(eq(productsTable.category, category as string));
     if (search) conditions.push(ilike(productsTable.name, `%${search}%`));
 
@@ -53,6 +54,18 @@ router.post("/products", requireAuth, async (req: any, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   try {
+    const limitCheck = await checkProductLimit(req.userId);
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        error: `Product limit reached for ${limitCheck.planDisplayName} plan`,
+        code: "PRODUCT_LIMIT_REACHED",
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+        planName: limitCheck.planName,
+        planDisplayName: limitCheck.planDisplayName,
+      });
+    }
+
     const storeId = await getStoreId(req.userId);
     if (!storeId) return res.status(404).json({ error: "No store found" });
 

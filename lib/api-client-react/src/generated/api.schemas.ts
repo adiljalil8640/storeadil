@@ -13,6 +13,22 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type LimitReachedErrorCode =
+  (typeof LimitReachedErrorCode)[keyof typeof LimitReachedErrorCode];
+
+export const LimitReachedErrorCode = {
+  PRODUCT_LIMIT_REACHED: "PRODUCT_LIMIT_REACHED",
+  ORDER_LIMIT_REACHED: "ORDER_LIMIT_REACHED",
+} as const;
+
+export interface LimitReachedError {
+  error: string;
+  code: LimitReachedErrorCode;
+  limit: number;
+  current: number;
+  planName: string;
+}
+
 export type StoreTheme = (typeof StoreTheme)[keyof typeof StoreTheme];
 
 export const StoreTheme = {
@@ -236,6 +252,30 @@ export interface GeneratedStore {
   whatsappNumber?: string | null;
 }
 
+export interface GenerateDescriptionBody {
+  productName: string;
+  category?: string | null;
+  price?: number | null;
+}
+
+export interface GenerateDescriptionResponse {
+  description: string;
+}
+
+export interface SuggestPriceBody {
+  productName: string;
+  description?: string | null;
+  category?: string | null;
+  currency?: string | null;
+}
+
+export interface SuggestPriceResponse {
+  suggestedPrice: number;
+  minPrice: number;
+  maxPrice: number;
+  reasoning: string;
+}
+
 export interface AnalyticsSummary {
   totalRevenue: number;
   totalOrders: number;
@@ -245,6 +285,103 @@ export interface AnalyticsSummary {
   activeProducts: number;
   revenueThisMonth: number;
   ordersThisMonth: number;
+}
+
+export interface OrdersPerDayItem {
+  date: string;
+  orders: number;
+  revenue: number;
+}
+
+export interface Plan {
+  id: number;
+  name: string;
+  displayName: string;
+  priceMonthly: number;
+  maxProducts: number;
+  maxOrdersPerMonth: number;
+  isUnlimited: boolean;
+  features: string[];
+}
+
+export interface BillingStatus {
+  plan: Plan;
+  status: string;
+  ordersUsed: number;
+  ordersLimit: number;
+  productsUsed: number;
+  productsLimit: number;
+  usagePercent: number;
+  isNearLimit: boolean;
+  currentPeriodEnd?: string | null;
+}
+
+export type CreateCheckoutBodyPlanName =
+  (typeof CreateCheckoutBodyPlanName)[keyof typeof CreateCheckoutBodyPlanName];
+
+export const CreateCheckoutBodyPlanName = {
+  pro: "pro",
+  business: "business",
+} as const;
+
+export interface CreateCheckoutBody {
+  planName: CreateCheckoutBodyPlanName;
+}
+
+export interface CheckoutSession {
+  url: string;
+}
+
+export interface ReferralInfo {
+  referralCode: string;
+  referralLink: string;
+  referredCount: number;
+  bonusOrdersEarned: number;
+}
+
+export interface ApplyReferralBody {
+  code: string;
+}
+
+export type AdminStatsPlanBreakdown = { [key: string]: number };
+
+export interface AdminStats {
+  totalUsers: number;
+  totalStores: number;
+  totalOrders: number;
+  totalRevenue: number;
+  planBreakdown: AdminStatsPlanBreakdown;
+}
+
+export interface AdminUser {
+  userId: string;
+  storeName?: string | null;
+  storeSlug?: string | null;
+  planName: string;
+  planDisplayName: string;
+  subscriptionStatus: string;
+  ordersThisMonth: number;
+  totalOrders: number;
+  createdAt: string;
+}
+
+export type ChangeUserPlanBodyPlanName =
+  (typeof ChangeUserPlanBodyPlanName)[keyof typeof ChangeUserPlanBodyPlanName];
+
+export const ChangeUserPlanBodyPlanName = {
+  free: "free",
+  pro: "pro",
+  business: "business",
+} as const;
+
+export interface ChangeUserPlanBody {
+  planName: ChangeUserPlanBodyPlanName;
+}
+
+export interface ShareMessage {
+  message: string;
+  whatsappUrl: string;
+  storeUrl: string;
 }
 
 export type ListProductsParams = {
@@ -274,4 +411,9 @@ export type GetRecentOrdersParams = {
 
 export type GetTopProductsParams = {
   limit?: number;
+};
+
+export type GetAdminUsersParams = {
+  limit?: number;
+  offset?: number;
 };
