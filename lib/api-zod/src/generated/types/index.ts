@@ -79,6 +79,7 @@ export * from "./topStore";
 export * from "./updateCouponBody";
 export * from "./updateCouponBodyType";
 export * from "./updateMyStoreHolidaysBody";
+export * from "./updateMyStoreTempClosedBody";
 export * from "./updateOrderStatusBody";
 export * from "./updateOrderStatusBodyStatus";
 export * from "./updateProductBody";

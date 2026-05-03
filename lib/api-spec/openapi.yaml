@@ -111,6 +111,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /stores/me/temporarily-closed:
+    patch:
+      operationId: updateMyStoreTempClosed
+      tags: [stores]
+      summary: Toggle the temporarily closed flag
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                closed:
+                  type: boolean
+                message:
+                  type: string
+                  nullable: true
+                  description: Optional message shown to customers.
+              required: [closed]
+      responses:
+        "200":
+          description: Updated store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
   /stores/me/holidays:
     patch:
       operationId: updateMyStoreHolidays
@@ -1436,6 +1465,13 @@ components:
             type: string
           nullable: true
           description: List of YYYY-MM-DD dates on which the store is closed regardless of regular hours.
+        temporarilyClosed:
+          type: boolean
+          description: When true the store is instantly closed regardless of hours or holiday settings.
+        temporaryClosedMessage:
+          type: string
+          nullable: true
+          description: Optional message shown to customers when temporarily closed (e.g. "Back Monday at 9 AM").
         createdAt:
           type: string
           format: date-time
@@ -1493,6 +1529,13 @@ components:
             type: string
           nullable: true
           description: List of YYYY-MM-DD dates on which the store is closed regardless of regular hours.
+        temporarilyClosed:
+          type: boolean
+          description: When true the store is instantly closed.
+        temporaryClosedMessage:
+          type: string
+          nullable: true
+          description: Optional message shown to customers when temporarily closed.
         products:
           type: array
           items:

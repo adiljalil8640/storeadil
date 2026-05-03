@@ -211,6 +211,10 @@ export interface Store {
   storeHours?: StoreHoursMap | null;
   /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
   holidayClosures?: string[] | null;
+  /** When true the store is instantly closed regardless of hours or holiday settings. */
+  temporarilyClosed?: boolean;
+  /** Optional message shown to customers when temporarily closed (e.g. "Back Monday at 9 AM"). */
+  temporaryClosedMessage?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -251,6 +255,10 @@ export interface PublicStore {
   storeHours?: StoreHoursMap | null;
   /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
   holidayClosures?: string[] | null;
+  /** When true the store is instantly closed. */
+  temporarilyClosed?: boolean;
+  /** Optional message shown to customers when temporarily closed. */
+  temporaryClosedMessage?: string | null;
   products: Product[];
 }
 
@@ -665,6 +673,12 @@ export interface ShareMessage {
   /** URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo. */
   ogUrl: string;
 }
+
+export type UpdateMyStoreTempClosedBody = {
+  closed: boolean;
+  /** Optional message shown to customers. */
+  message?: string | null;
+};
 
 export type UpdateMyStoreHolidaysBody = {
   /** List of YYYY-MM-DD dates the store will be closed. */

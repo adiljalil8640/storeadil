@@ -23,6 +23,8 @@ export const storesTable = pgTable("stores", {
   customDomain: text("custom_domain"),
   storeHours: jsonb("store_hours"),
   holidayClosures: jsonb("holiday_closures"),
+  temporarilyClosed: boolean("temporarily_closed").default(false),
+  temporaryClosedMessage: text("temporarily_closed_message"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

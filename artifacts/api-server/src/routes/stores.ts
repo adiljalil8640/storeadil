@@ -202,6 +202,30 @@ router.patch("/stores/me/hours", requireAuth, async (req: any, res) => {
   }
 });
 
+// PATCH /stores/me/temporarily-closed — instantly close or reopen the store
+router.patch("/stores/me/temporarily-closed", requireAuth, async (req: any, res) => {
+  const { closed, message } = req.body ?? {};
+  if (typeof closed !== "boolean") {
+    return res.status(400).json({ error: "closed must be a boolean" });
+  }
+  try {
+    const [store] = await db
+      .update(storesTable)
+      .set({
+        temporarilyClosed: closed,
+        temporaryClosedMessage: message ? String(message).slice(0, 200) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(storesTable.userId, req.userId))
+      .returning();
+    if (!store) return res.status(404).json({ error: "No store found" });
+    return res.json(store);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /stores/me/holidays — update holiday closure dates
 router.patch("/stores/me/holidays", requireAuth, async (req: any, res) => {
   const { dates } = req.body ?? {};

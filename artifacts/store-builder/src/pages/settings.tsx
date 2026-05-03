@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X, AlertTriangle } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -594,6 +594,37 @@ export default function SettingsPage() {
       }
     } catch { toast.error("Failed to save closures"); }
     finally { setHolidaysSaving(false); }
+  };
+
+  // --- Temporarily Closed ---
+  const [tempClosed, setTempClosed] = useState(false);
+  const [tempMessage, setTempMessage] = useState("");
+  const [tempClosedSaving, setTempClosedSaving] = useState(false);
+  const [tempClosedInitialized, setTempClosedInitialized] = useState(false);
+
+  useEffect(() => {
+    if (store && !tempClosedInitialized) {
+      setTempClosed(!!store.temporarilyClosed);
+      setTempMessage((store.temporaryClosedMessage as string | null) ?? "");
+      setTempClosedInitialized(true);
+    }
+  }, [store, tempClosedInitialized]);
+
+  const handleSaveTempClosed = async (closed: boolean, msg: string) => {
+    setTempClosedSaving(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/temporarily-closed`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ closed, message: msg.trim() || null }),
+      });
+      if (!r.ok) { toast.error((await r.json()).error ?? "Failed to update status"); }
+      else {
+        toast.success(closed ? "Store marked as temporarily closed." : "Store is now open!");
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+      }
+    } catch { toast.error("Failed to update status"); }
+    finally { setTempClosedSaving(false); }
   };
 
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
@@ -1743,6 +1774,74 @@ export default function SettingsPage() {
                   ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   : <Save className="w-3.5 h-3.5" />}
                 {holidaysSaving ? "Saving…" : "Save Closures"}
+              </Button>
+
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Temporarily Closed card */}
+        {store && (
+          <Card className={tempClosed ? "border-amber-400 dark:border-amber-600" : ""}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className={`w-4 h-4 ${tempClosed ? "text-amber-500" : "text-muted-foreground"}`} />
+                Temporarily Closed
+              </CardTitle>
+              <CardDescription>
+                Instantly pause your store for a lunch break, maintenance, or vacation. Customers will see a notice and the Open/Closed badge will reflect your message.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={tempClosed}
+                  onCheckedChange={(v) => setTempClosed(v)}
+                  id="temp-closed-toggle"
+                />
+                <label
+                  htmlFor="temp-closed-toggle"
+                  className={`text-sm font-medium cursor-pointer ${
+                    tempClosed ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+                  }`}
+                >
+                  {tempClosed ? "Store is temporarily closed" : "Store is open (normal schedule)"}
+                </label>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  Message for customers{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <Input
+                  value={tempMessage}
+                  onChange={(e) => setTempMessage(e.target.value)}
+                  placeholder="e.g. Back on Monday at 9 AM"
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown in the Open/Closed badge and as a banner on your storefront.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                className={`gap-2 ${tempClosed ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""}`}
+                variant={tempClosed ? "default" : "outline"}
+                disabled={tempClosedSaving}
+                onClick={() => handleSaveTempClosed(tempClosed, tempMessage)}
+              >
+                {tempClosedSaving
+                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  : <AlertTriangle className="w-3.5 h-3.5" />}
+                {tempClosedSaving
+                  ? "Saving…"
+                  : tempClosed
+                    ? "Mark as Temporarily Closed"
+                    : "Save (Store is Open)"}
               </Button>
 
             </CardContent>

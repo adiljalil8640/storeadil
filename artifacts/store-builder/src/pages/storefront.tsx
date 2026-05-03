@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X, Clock } from "lucide-react";
+import { Store, ShoppingCart, Plus, Minus, Send, Info, Package, CheckCircle, ExternalLink, Copy, Bell, Tag, X, Clock, AlertTriangle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -150,13 +150,18 @@ export default function StorefrontPage() {
     query: { enabled: !!slug, retry: false }
   });
 
-  const openStatus = useMemo(
-    () => store?.storeHours
-      ? getStoreOpenStatus(store.storeHours as any, store.holidayClosures as string[] | null)
-      : null,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store?.storeHours, store?.holidayClosures]
-  );
+  const openStatus = useMemo(() => {
+    if (!store) return null;
+    if (store.temporarilyClosed) {
+      return {
+        open: false,
+        label: (store.temporaryClosedMessage as string | null)?.trim() || "Temporarily Closed",
+      };
+    }
+    if (!store.storeHours) return null;
+    return getStoreOpenStatus(store.storeHours as any, store.holidayClosures as string[] | null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.storeHours, store?.holidayClosures, store?.temporarilyClosed, store?.temporaryClosedMessage]);
 
   const createOrder = useCreateOrder();
   const validateCoupon = useValidateCoupon();
@@ -633,6 +638,20 @@ export default function StorefrontPage() {
           </Dialog>
         </div>
       </header>
+
+      {/* Temporarily Closed Banner */}
+      {store.temporarilyClosed && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              {(store.temporaryClosedMessage as string | null)?.trim()
+                ? store.temporaryClosedMessage as string
+                : "We're temporarily closed and not accepting orders right now."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Store Info Banner */}
       <div className="bg-primary/10 border-b border-primary/10">

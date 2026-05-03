@@ -35,6 +35,10 @@ export interface Store {
   storeHours?: StoreHoursMap | null;
   /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
   holidayClosures?: string[] | null;
+  /** When true the store is instantly closed regardless of hours or holiday settings. */
+  temporarilyClosed?: boolean;
+  /** Optional message shown to customers when temporarily closed (e.g. "Back Monday at 9 AM"). */
+  temporaryClosedMessage?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

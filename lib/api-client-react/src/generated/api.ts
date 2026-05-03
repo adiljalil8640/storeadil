@@ -70,6 +70,7 @@ import type {
   TopStore,
   UpdateCouponBody,
   UpdateMyStoreHolidaysBody,
+  UpdateMyStoreTempClosedBody,
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdateStoreBody,
@@ -408,6 +409,93 @@ export const useUpdateMyStoreSlug = <
   TContext
 > => {
   return useMutation(getUpdateMyStoreSlugMutationOptions(options));
+};
+
+/**
+ * @summary Toggle the temporarily closed flag
+ */
+export const getUpdateMyStoreTempClosedUrl = () => {
+  return `/api/stores/me/temporarily-closed`;
+};
+
+export const updateMyStoreTempClosed = async (
+  updateMyStoreTempClosedBody: UpdateMyStoreTempClosedBody,
+  options?: RequestInit,
+): Promise<Store> => {
+  return customFetch<Store>(getUpdateMyStoreTempClosedUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateMyStoreTempClosedBody),
+  });
+};
+
+export const getUpdateMyStoreTempClosedMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreTempClosed>>,
+    TError,
+    { data: BodyType<UpdateMyStoreTempClosedBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyStoreTempClosed>>,
+  TError,
+  { data: BodyType<UpdateMyStoreTempClosedBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMyStoreTempClosed"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyStoreTempClosed>>,
+    { data: BodyType<UpdateMyStoreTempClosedBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyStoreTempClosed(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyStoreTempClosedMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyStoreTempClosed>>
+>;
+export type UpdateMyStoreTempClosedMutationBody =
+  BodyType<UpdateMyStoreTempClosedBody>;
+export type UpdateMyStoreTempClosedMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Toggle the temporarily closed flag
+ */
+export const useUpdateMyStoreTempClosed = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreTempClosed>>,
+    TError,
+    { data: BodyType<UpdateMyStoreTempClosedBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyStoreTempClosed>>,
+  TError,
+  { data: BodyType<UpdateMyStoreTempClosedBody> },
+  TContext
+> => {
+  return useMutation(getUpdateMyStoreTempClosedMutationOptions(options));
 };
 
 /**
