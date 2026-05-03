@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 
@@ -450,9 +450,22 @@ export default function SettingsPage() {
                       <span>
                         {Object.values(verifyResult.tags).filter(v => v !== null && v !== "").length} of {Object.keys(verifyResult.tags).length} tags present
                       </span>
-                      <button type="button" onClick={handleVerify} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                        <RefreshCw className="w-2.5 h-2.5" /> Re-check
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const phone = (store?.whatsappNumber ?? "").replace(/\D/g, "");
+                            const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
+                            window.open(`${base}?text=${encodeURIComponent(ogPreviewUrl)}`, "_blank");
+                          }}
+                          className="flex items-center gap-1 hover:text-foreground transition-colors text-[#25D366]"
+                        >
+                          <Smartphone className="w-2.5 h-2.5" /> Test on phone
+                        </button>
+                        <button type="button" onClick={handleVerify} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                          <RefreshCw className="w-2.5 h-2.5" /> Re-check
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -505,6 +518,21 @@ export default function SettingsPage() {
                   Share on WhatsApp
                 </Button>
               </div>
+
+              {/* Send to myself — opens a chat with their own WhatsApp number */}
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/5 hover:border-[#25D366]"
+                onClick={() => {
+                  const phone = (store.whatsappNumber ?? "").replace(/\D/g, "");
+                  const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
+                  window.open(`${base}?text=${encodeURIComponent(ogPreviewUrl)}`, "_blank");
+                }}
+              >
+                <Smartphone className="w-4 h-4" />
+                Send to Myself — see the preview card on my phone
+              </Button>
+
               <p className="text-xs text-muted-foreground flex items-start gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
                 WhatsApp, iMessage, and Slack will show a preview card. Telegram and Discord see it too — even without running JavaScript.
