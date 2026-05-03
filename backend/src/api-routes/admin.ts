@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
+import { checkDb, getPoolStats } from "../lib/health";
 import { storesTable, ordersTable, plansTable, subscriptionsTable, usageTrackingTable, aiProvidersTable } from "@workspace/db";
 import { eq, sql, count, desc, and } from "drizzle-orm";
 import { getPlanByName } from "../services/billing";
@@ -261,6 +262,14 @@ router.post("/admin/ai-providers/test", requireAdmin, async (req: any, res) => {
   } catch (err: any) {
     res.json({ success: false, message: err?.message ?? "Connection failed" });
   }
+});
+
+// GET /admin/health — DB liveness + connection pool stats
+router.get("/admin/health", requireAdmin, async (_req, res) => {
+  const db = await checkDb();
+  const pool = getPoolStats();
+  const status = db === "ok" ? "ok" : "degraded";
+  res.status(db === "ok" ? 200 : 503).json({ status, db, pool });
 });
 
 export default router;

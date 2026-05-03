@@ -8,3 +8,11 @@ export async function checkDb(): Promise<"ok" | "error"> {
     return "error";
   }
 }
+
+export function getPoolStats() {
+  return {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+  };
+}
