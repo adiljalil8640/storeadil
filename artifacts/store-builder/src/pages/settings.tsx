@@ -100,6 +100,12 @@ export default function SettingsPage() {
   const publicUrl = store ? `${window.location.origin}${basePath}/store/${store.slug}` : "";
   const ogPreviewUrl = store ? `${window.location.origin}${basePath}/api/og/${store.slug}` : "";
 
+  const [previewPlatform, setPreviewPlatform] = useState<"whatsapp" | "slack" | "twitter">("whatsapp");
+  const previewName = form.watch("name") || store?.name || "Your Store";
+  const previewDesc = form.watch("description") || store?.description || "";
+  const previewLogo = store?.logoUrl ?? null;
+  const previewDomain = store ? window.location.hostname : "zappstore.app";
+
   const copyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
     toast.success("Store link copied to clipboard");
@@ -215,6 +221,125 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Link Preview Simulator */}
+        {store && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                Link Preview Simulator
+              </CardTitle>
+              <CardDescription>
+                See exactly how your store looks when someone pastes your link. Updates live as you edit your name and description below.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Platform tabs */}
+              <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+                {(["whatsapp", "slack", "twitter"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPreviewPlatform(p)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      previewPlatform === p
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {p === "whatsapp" ? "WhatsApp" : p === "slack" ? "Slack" : "Twitter / X"}
+                  </button>
+                ))}
+              </div>
+
+              {/* WhatsApp Preview */}
+              {previewPlatform === "whatsapp" && (
+                <div className="flex justify-center">
+                  <div className="w-full max-w-[340px] bg-[#DCF8C6] rounded-2xl rounded-tl-sm shadow-sm p-0 overflow-hidden">
+                    {previewLogo ? (
+                      <div className="w-full h-40 bg-muted overflow-hidden">
+                        <img src={previewLogo} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-32 bg-[#25D366]/10 flex items-center justify-center">
+                        <Store className="w-12 h-12 text-[#25D366]/40" />
+                      </div>
+                    )}
+                    <div className="px-3 py-2 space-y-0.5 border-l-4 border-[#25D366] bg-[#F0FBF4] mx-2 my-2 rounded">
+                      <p className="text-[10px] font-semibold text-[#25D366] uppercase tracking-wide">{previewDomain}</p>
+                      <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-1">{previewName}</p>
+                      {previewDesc && (
+                        <p className="text-xs text-gray-600 leading-snug line-clamp-2">{previewDesc}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Slack Preview */}
+              {previewPlatform === "slack" && (
+                <div className="flex justify-center">
+                  <div className="w-full max-w-[420px] bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <div className="flex">
+                      <div className="w-1 bg-[#25D366] shrink-0" />
+                      <div className="flex-1 p-3 space-y-1">
+                        <div className="flex items-center gap-2">
+                          {previewLogo ? (
+                            <img src={previewLogo} alt="" className="w-4 h-4 rounded object-cover" />
+                          ) : (
+                            <div className="w-4 h-4 bg-[#25D366]/20 rounded flex items-center justify-center">
+                              <Store className="w-2.5 h-2.5 text-[#25D366]" />
+                            </div>
+                          )}
+                          <span className="text-xs font-semibold text-gray-800">Zapp Store</span>
+                        </div>
+                        <p className="text-sm font-bold text-[#1264A3] hover:underline cursor-pointer line-clamp-1">{previewName}</p>
+                        {previewDesc && (
+                          <p className="text-xs text-gray-700 leading-snug line-clamp-3">{previewDesc}</p>
+                        )}
+                        <p className="text-[10px] text-gray-400 pt-0.5">{previewDomain}</p>
+                      </div>
+                      {previewLogo && (
+                        <div className="w-20 h-20 shrink-0 overflow-hidden m-3 rounded">
+                          <img src={previewLogo} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Twitter / X Preview */}
+              {previewPlatform === "twitter" && (
+                <div className="flex justify-center">
+                  <div className="w-full max-w-[400px] border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+                    {previewLogo ? (
+                      <div className="w-full h-44 overflow-hidden bg-muted">
+                        <img src={previewLogo} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-36 bg-muted flex items-center justify-center">
+                        <Store className="w-10 h-10 text-muted-foreground/30" />
+                      </div>
+                    )}
+                    <div className="px-3 py-2.5 space-y-0.5 bg-white">
+                      <p className="text-[11px] text-gray-500">{previewDomain}</p>
+                      <p className="text-sm font-bold text-gray-900 line-clamp-1">{previewName}</p>
+                      {previewDesc && (
+                        <p className="text-xs text-gray-500 line-clamp-2 leading-snug">{previewDesc}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground text-center">
+                Preview updates as you type — save your settings to publish changes.
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Social Preview Link */}
