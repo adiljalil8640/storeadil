@@ -193,6 +193,11 @@ export default function StorefrontPage() {
     return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [storeReviews, reviewSort]);
 
+  const storeAvgRating = useMemo(() => {
+    if (!storeReviews.length) return null;
+    return storeReviews.reduce((s, r) => s + r.rating, 0) / storeReviews.length;
+  }, [storeReviews]);
+
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
@@ -406,7 +411,21 @@ export default function StorefrontPage() {
                 <Store className="w-5 h-5 text-primary" />
               </div>
             )}
-            <h1 className="font-bold text-xl">{store.name}</h1>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <h1 className="font-bold text-xl leading-tight truncate">{store.name}</h1>
+              {storeAvgRating !== null && (
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`w-3 h-3 shrink-0 ${n <= Math.round(storeAvgRating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`}
+                    />
+                  ))}
+                  <span className="text-xs font-semibold text-foreground/80 ml-0.5">{storeAvgRating.toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground">({storeReviews.length})</span>
+                </div>
+              )}
+            </div>
             {openStatus && (
               <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${
                 openStatus.open
