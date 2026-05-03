@@ -63,8 +63,14 @@ app.get("/api/healthz", async (_req, res) => {
   res.status(httpStatus).json({ ...body, db: dbStatus });
 });
 
-app.get("/api/version", (_req, res) => {
-  res.json({ commit: COMMIT_SHA, env: process.env.NODE_ENV ?? "unknown" });
+app.get("/api/version", async (_req, res) => {
+  let db: "ok" | "error" = "ok";
+  try {
+    await pool.query("SELECT 1");
+  } catch {
+    db = "error";
+  }
+  res.json({ commit: COMMIT_SHA, env: process.env.NODE_ENV ?? "unknown", db });
 });
 
 // Raw body for Stripe webhooks
