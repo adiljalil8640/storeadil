@@ -180,6 +180,21 @@ export default function StorefrontPage() {
     return map;
   }, [storeReviews]);
 
+  const productNameById = useMemo(() => {
+    const m: Record<number, string> = {};
+    for (const p of store?.products ?? []) m[p.id] = p.name;
+    return m;
+  }, [store?.products]);
+
+  const sortedReviews = useMemo(
+    () => [...storeReviews].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [storeReviews]
+  );
+
+  function fmtDate(iso: string) {
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
   const createOrder = useCreateOrder();
   const validateCoupon = useValidateCoupon();
 
@@ -730,7 +745,7 @@ export default function StorefrontPage() {
               <div className="p-4 flex flex-col flex-1">
                 <h3 className="font-semibold text-base leading-tight mb-1 line-clamp-2">{product.name}</h3>
                 {ratingsByProduct[product.id] && (
-                  <div className="flex items-center gap-1 mb-1">
+                  <a href="#reviews" className="flex items-center gap-1 mb-1 w-fit">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                     <span className="text-xs font-medium text-amber-600">
                       {ratingsByProduct[product.id].avg.toFixed(1)}
@@ -738,7 +753,7 @@ export default function StorefrontPage() {
                     <span className="text-xs text-muted-foreground">
                       ({ratingsByProduct[product.id].count})
                     </span>
-                  </div>
+                  </a>
                 )}
                 {product.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">{product.description}</p>
@@ -767,6 +782,56 @@ export default function StorefrontPage() {
             </div>
           )}
         </div>
+
+        {/* Customer Reviews Section */}
+        {sortedReviews.length > 0 && (
+          <section id="reviews" className="mt-12 pt-8 border-t space-y-5">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-xl font-bold">Customer Reviews</h2>
+              <span className="text-sm text-muted-foreground">
+                {sortedReviews.length} review{sortedReviews.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {sortedReviews.map((review) => (
+                <div key={review.id} className="bg-card rounded-xl border p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div className="space-y-1">
+                      {productNameById[review.productId] && (
+                        <span className="inline-block text-xs bg-muted px-2 py-0.5 rounded-full font-medium">
+                          {productNameById[review.productId]}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            className={`w-3.5 h-3.5 ${n <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {review.customerName || "Anonymous"} · {fmtDate(review.createdAt as unknown as string)}
+                    </span>
+                  </div>
+
+                  {review.comment && (
+                    <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+                  )}
+
+                  {review.merchantReply && (
+                    <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2.5 space-y-0.5">
+                      <p className="text-xs font-semibold text-primary">Reply from {store?.name}</p>
+                      <p className="text-sm text-foreground/80">{review.merchantReply}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
