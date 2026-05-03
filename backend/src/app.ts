@@ -15,6 +15,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { injectReqId } from "./middlewares/injectReqId";
 import { seedPlans } from "./services/billing";
 import { HealthCheckResponse } from "@workspace/api-zod";
+import { pool } from "@workspace/db";
 
 const COMMIT_SHA = (() => {
   try {
@@ -48,8 +49,18 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
 
 // Health check and version — registered before Clerk so they are always reachable
-app.get("/api/healthz", (_req, res) => {
-  res.json(HealthCheckResponse.parse({ status: "ok" }));
+app.get("/api/healthz", async (_req, res) => {
+  let dbStatus: "ok" | "error" = "ok";
+  try {
+    await pool.query("SELECT 1");
+  } catch {
+    dbStatus = "error";
+  }
+
+  const status = dbStatus === "ok" ? "ok" : "degraded";
+  const body = HealthCheckResponse.parse({ status });
+  const httpStatus = status === "ok" ? 200 : 503;
+  res.status(httpStatus).json({ ...body, db: dbStatus });
 });
 
 app.get("/api/version", (_req, res) => {
