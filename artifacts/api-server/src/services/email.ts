@@ -82,6 +82,68 @@ function baseTemplate(content: string, storeName: string): string {
 </html>`;
 }
 
+export async function sendNewOrderNotification(params: {
+  to: string;
+  orderId: number;
+  trackingToken: string;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  items: any[];
+  total: number;
+  currency: string;
+  storeName: string;
+  deliveryType: string | null;
+  customerNote: string | null;
+  appBaseUrl: string;
+}): Promise<void> {
+  const { to, orderId, trackingToken, customerName, customerEmail, customerPhone, items, total, currency, storeName, deliveryType, customerNote, appBaseUrl } = params;
+  const trackingUrl = `${appBaseUrl}/track/${trackingToken}`;
+
+  const deliveryBadge = deliveryType === "delivery"
+    ? `<span style="background:#3b82f6;color:#fff;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;">🚚 Delivery</span>`
+    : `<span style="background:#8b5cf6;color:#fff;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;">🏪 Pickup</span>`;
+
+  const contactLines = [
+    customerName ? `<tr><td style="color:#6b7280;padding:4px 0;font-size:13px;">Name</td><td style="padding:4px 0;font-size:13px;font-weight:600;">${customerName}</td></tr>` : "",
+    customerEmail ? `<tr><td style="color:#6b7280;padding:4px 0;font-size:13px;">Email</td><td style="padding:4px 0;font-size:13px;">${customerEmail}</td></tr>` : "",
+    customerPhone ? `<tr><td style="color:#6b7280;padding:4px 0;font-size:13px;">Phone</td><td style="padding:4px 0;font-size:13px;">${customerPhone}</td></tr>` : "",
+    customerNote ? `<tr><td style="color:#6b7280;padding:4px 0;font-size:13px;vertical-align:top;">Note</td><td style="padding:4px 0;font-size:13px;">${customerNote}</td></tr>` : "",
+  ].filter(Boolean).join("");
+
+  const content = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <h2 style="margin:0;font-size:22px;color:#111827;">New Order #${orderId} 🎉</h2>
+    </div>
+    <p style="color:#6b7280;margin:0 0 20px;font-size:14px;">A new order just arrived at <strong>${storeName}</strong>. ${deliveryBadge}</p>
+
+    ${contactLines ? `
+    <div style="margin-bottom:20px;padding:14px;background:#f9fafb;border-radius:8px;">
+      <table style="border-collapse:collapse;width:100%;">
+        ${contactLines}
+      </table>
+    </div>` : ""}
+
+    ${itemsTable(items, currency)}
+
+    <div style="margin-top:16px;text-align:right;font-size:16px;font-weight:700;color:#111827;">
+      Total: ${currency} ${total.toFixed(2)}
+    </div>
+
+    ${customerNote ? `<div style="margin-top:16px;padding:12px;background:#fef9c3;border-radius:8px;border-left:4px solid #f59e0b;font-size:13px;color:#78350f;"><strong>Customer note:</strong> ${customerNote}</div>` : ""}
+
+    <div style="margin-top:28px;display:flex;gap:12px;">
+      <a href="${trackingUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;font-size:14px;">
+        View Order →
+      </a>
+      ${customerPhone ? `<a href="https://wa.me/${customerPhone.replace(/\D/g,'')}" style="display:inline-block;background:#fff;border:2px solid #25D366;color:#25D366;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;font-size:14px;">
+        Message Customer →
+      </a>` : ""}
+    </div>`;
+
+  await sendEmail(to, `New order #${orderId} at ${storeName}`, baseTemplate(content, storeName));
+}
+
 export async function sendOrderConfirmation(params: {
   to: string;
   customerName: string | null;

@@ -5,7 +5,7 @@ import { storesTable, ordersTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
-import { sendOrderConfirmation, sendStatusUpdateEmail } from "../services/email";
+import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification } from "../services/email";
 
 const router = Router();
 
@@ -116,9 +116,29 @@ router.post("/orders", async (req: any, res) => {
       ? buildWhatsAppUrl(store.whatsappNumber, items, total, store.currency, customerName, customerNote)
       : "";
 
-    // Send confirmation email (fire-and-forget; no key = no-op)
+    const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+
+    // Merchant new-order notification (fire-and-forget)
+    if (store.notificationEmail) {
+      sendNewOrderNotification({
+        to: store.notificationEmail,
+        orderId: order.id,
+        trackingToken: order.trackingToken,
+        customerName: customerName ?? null,
+        customerEmail: customerEmail ?? null,
+        customerPhone: customerPhone ?? null,
+        items,
+        total,
+        currency: store.currency,
+        storeName: store.name,
+        deliveryType: deliveryType ?? null,
+        customerNote: customerNote ?? null,
+        appBaseUrl,
+      }).catch(() => {});
+    }
+
+    // Customer confirmation email (fire-and-forget; no key = no-op)
     if (customerEmail) {
-      const appBaseUrl = `${req.protocol}://${req.get("host")}`;
       sendOrderConfirmation({
         to: customerEmail,
         customerName: customerName ?? null,

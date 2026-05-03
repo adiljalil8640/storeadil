@@ -50,6 +50,7 @@ export interface Store {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   shippingNote?: string | null;
+  notificationEmail?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,6 +129,7 @@ export interface UpdateStoreBody {
   deliveryEnabled?: boolean;
   pickupEnabled?: boolean;
   shippingNote?: string | null;
+  notificationEmail?: string | null;
 }
 
 export interface CreateProductBody {

@@ -15,6 +15,7 @@ export const storesTable = pgTable("stores", {
   deliveryEnabled: boolean("delivery_enabled").notNull().default(true),
   pickupEnabled: boolean("pickup_enabled").notNull().default(false),
   shippingNote: text("shipping_note"),
+  notificationEmail: text("notification_email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -17,4 +17,5 @@ export interface UpdateStoreBody {
   deliveryEnabled?: boolean;
   pickupEnabled?: boolean;
   shippingNote?: string | null;
+  notificationEmail?: string | null;
 }

@@ -813,6 +813,9 @@ components:
         shippingNote:
           type: string
           nullable: true
+        notificationEmail:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -929,6 +932,9 @@ components:
         pickupEnabled:
           type: boolean
         shippingNote:
+          type: string
+          nullable: true
+        notificationEmail:
           type: string
           nullable: true
 

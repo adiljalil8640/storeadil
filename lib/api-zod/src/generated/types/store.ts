@@ -20,6 +20,7 @@ export interface Store {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   shippingNote?: string | null;
+  notificationEmail?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

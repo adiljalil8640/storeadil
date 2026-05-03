@@ -30,6 +30,7 @@ export const GetMyStoreResponse = zod.object({
   deliveryEnabled: zod.boolean(),
   pickupEnabled: zod.boolean(),
   shippingNote: zod.string().nullish(),
+  notificationEmail: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -47,6 +48,7 @@ export const UpdateMyStoreBody = zod.object({
   deliveryEnabled: zod.boolean().optional(),
   pickupEnabled: zod.boolean().optional(),
   shippingNote: zod.string().nullish(),
+  notificationEmail: zod.string().nullish(),
 });
 
 export const UpdateMyStoreResponse = zod.object({
@@ -62,6 +64,7 @@ export const UpdateMyStoreResponse = zod.object({
   deliveryEnabled: zod.boolean(),
   pickupEnabled: zod.boolean(),
   shippingNote: zod.string().nullish(),
+  notificationEmail: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

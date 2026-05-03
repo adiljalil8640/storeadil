@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell } from "lucide-react";
 import { toast } from "sonner";
 
 const settingsSchema = z.object({
@@ -24,6 +24,7 @@ const settingsSchema = z.object({
   deliveryEnabled: z.boolean(),
   pickupEnabled: z.boolean(),
   shippingNote: z.string().optional().nullable(),
+  notificationEmail: z.string().email("Must be a valid email").optional().nullable().or(z.literal("")),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -56,6 +57,7 @@ export default function SettingsPage() {
       deliveryEnabled: true,
       pickupEnabled: true,
       shippingNote: "",
+      notificationEmail: "",
     },
   });
 
@@ -70,6 +72,7 @@ export default function SettingsPage() {
         deliveryEnabled: store.deliveryEnabled,
         pickupEnabled: store.pickupEnabled,
         shippingNote: store.shippingNote,
+        notificationEmail: store.notificationEmail || "",
       });
     }
   }, [store, form]);
@@ -337,6 +340,39 @@ export default function SettingsPage() {
                           value={field.value || ""}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-primary" />
+                  Order Notifications
+                </CardTitle>
+                <CardDescription>Get an email alert every time a customer places a new order.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="notificationEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notification Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="you@example.com"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Leave blank to disable email notifications. Requires <code className="text-xs bg-muted px-1 py-0.5 rounded">RESEND_API_KEY</code> to be set on the server.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
