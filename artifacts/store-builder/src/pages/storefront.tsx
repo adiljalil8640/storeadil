@@ -836,9 +836,15 @@ export default function StorefrontPage() {
                         ))}
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {review.customerName || "Anonymous"} · {fmtDate(review.createdAt as unknown as string)}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs text-muted-foreground">
+                        {review.customerName || "Anonymous"} · {fmtDate(review.createdAt as unknown as string)}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        Verified Purchase
+                      </span>
+                    </div>
                   </div>
 
                   {review.comment && (
@@ -943,15 +949,21 @@ export default function StorefrontPage() {
                     <div className="space-y-4">
                       {pReviews.map(review => (
                         <div key={review.id} className="space-y-2 pb-4 border-b last:border-0 last:pb-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex gap-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex gap-0.5 mt-0.5">
                               {[1, 2, 3, 4, 5].map(n => (
                                 <Star key={n} className={`w-3.5 h-3.5 ${n <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
                               ))}
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {review.customerName || "Anonymous"} · {fmtDate(review.createdAt as unknown as string)}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="text-xs text-muted-foreground">
+                                {review.customerName || "Anonymous"} · {fmtDate(review.createdAt as unknown as string)}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                                <CheckCircle className="w-3 h-3" />
+                                Verified Purchase
+                              </span>
+                            </div>
                           </div>
                           {review.comment && (
                             <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
