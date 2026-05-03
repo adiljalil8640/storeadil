@@ -514,6 +514,12 @@ export interface ReferralInfo {
   bonusOrdersEarned: number;
 }
 
+export interface ReferralPreview {
+  referralCode: string;
+  referrerStoreName?: string | null;
+  bonusOrders: number;
+}
+
 export interface ApplyReferralBody {
   code: string;
 }

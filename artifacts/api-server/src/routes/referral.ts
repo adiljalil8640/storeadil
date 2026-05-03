@@ -40,6 +40,37 @@ async function getOrCreateReferral(userId: string) {
   return created;
 }
 
+// GET /referral/preview/:code — public, returns just enough info to show invitation banner
+router.get("/referral/preview/:code", async (req: any, res) => {
+  try {
+    const code = req.params.code?.trim().toUpperCase();
+    if (!code) return res.status(400).json({ error: "Code required" });
+
+    const [referral] = await db
+      .select({ referrerId: referralsTable.referrerId, referralCode: referralsTable.referralCode })
+      .from(referralsTable)
+      .where(eq(referralsTable.referralCode, code));
+
+    if (!referral) return res.status(404).json({ error: "Referral code not found" });
+
+    // Look up the referrer's store name
+    const { storesTable } = await import("@workspace/db");
+    const [store] = await db
+      .select({ name: storesTable.name })
+      .from(storesTable)
+      .where(eq(storesTable.userId, referral.referrerId));
+
+    res.json({
+      referralCode: referral.referralCode,
+      referrerStoreName: store?.name ?? null,
+      bonusOrders: REFERRAL_BONUS_ORDERS,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /referral/me
 router.get("/referral/me", requireAuth, async (req: any, res) => {
   try {

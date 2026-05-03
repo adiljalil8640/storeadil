@@ -56,6 +56,7 @@ import type {
   ProductWithStats,
   PublicStore,
   ReferralInfo,
+  ReferralPreview,
   ShareMessage,
   Store,
   SuggestPriceBody,
@@ -3258,6 +3259,94 @@ export const useHandleBillingWebhook = <
 > => {
   return useMutation(getHandleBillingWebhookMutationOptions(options));
 };
+
+/**
+ * @summary Get public referral preview info by code (no auth required)
+ */
+export const getGetReferralPreviewUrl = (code: string) => {
+  return `/api/referral/preview/${code}`;
+};
+
+export const getReferralPreview = async (
+  code: string,
+  options?: RequestInit,
+): Promise<ReferralPreview> => {
+  return customFetch<ReferralPreview>(getGetReferralPreviewUrl(code), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetReferralPreviewQueryKey = (code: string) => {
+  return [`/api/referral/preview/${code}`] as const;
+};
+
+export const getGetReferralPreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReferralPreview>>,
+  TError = ErrorType<void>,
+>(
+  code: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getReferralPreview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetReferralPreviewQueryKey(code);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getReferralPreview>>
+  > = ({ signal }) => getReferralPreview(code, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!code,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReferralPreview>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetReferralPreviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getReferralPreview>>
+>;
+export type GetReferralPreviewQueryError = ErrorType<void>;
+
+/**
+ * @summary Get public referral preview info by code (no auth required)
+ */
+
+export function useGetReferralPreview<
+  TData = Awaited<ReturnType<typeof getReferralPreview>>,
+  TError = ErrorType<void>,
+>(
+  code: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getReferralPreview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetReferralPreviewQueryOptions(code, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get the current user's referral info

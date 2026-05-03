@@ -60,6 +60,7 @@ export * from "./productVariant";
 export * from "./productWithStats";
 export * from "./publicStore";
 export * from "./referralInfo";
+export * from "./referralPreview";
 export * from "./shareMessage";
 export * from "./store";
 export * from "./storeDigestFrequency";

@@ -784,6 +784,19 @@ export const HandleBillingWebhookResponse = zod.object({
 });
 
 /**
+ * @summary Get public referral preview info by code (no auth required)
+ */
+export const GetReferralPreviewParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const GetReferralPreviewResponse = zod.object({
+  referralCode: zod.string(),
+  referrerStoreName: zod.string().nullish(),
+  bonusOrders: zod.number(),
+});
+
+/**
  * @summary Get the current user's referral info
  */
 export const GetMyReferralResponse = zod.object({

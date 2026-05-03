@@ -811,6 +811,27 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 
   # Referral endpoints
+  /referral/preview/{code}:
+    get:
+      operationId: getReferralPreview
+      tags: [referral]
+      summary: Get public referral preview info by code (no auth required)
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Referral preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralPreview"
+        "404":
+          description: Not found
+
   /referral/me:
     get:
       operationId: getMyReferral
@@ -1833,6 +1854,18 @@ components:
         bonusOrdersEarned:
           type: integer
       required: [referralCode, referralLink, referredCount, bonusOrdersEarned]
+
+    ReferralPreview:
+      type: object
+      properties:
+        referralCode:
+          type: string
+        referrerStoreName:
+          type: string
+          nullable: true
+        bonusOrders:
+          type: integer
+      required: [referralCode, bonusOrders]
 
     ApplyReferralBody:
       type: object
