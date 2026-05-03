@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, useGetCustomerHistory, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
+import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, useUpdateOrderNote, useGetCustomerHistory, useGetMyStore, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download, StickyNote, User, Phone, TrendingUp, ShoppingBag } from "lucide-react";
+import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download, StickyNote, User, Phone, TrendingUp, ShoppingBag, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -138,6 +138,8 @@ export default function OrdersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<{ name: string | null; phone: string | null; email: string | null } | null>(null);
   const queryClient = useQueryClient();
 
+  const { data: store } = useGetMyStore();
+
   const { data: rawOrders, isLoading } = useListOrders({
     status: statusFilter !== "all" ? statusFilter as any : undefined,
   });
@@ -191,6 +193,134 @@ export default function OrdersPage() {
     },
     { query: { enabled: !!selectedCustomer } }
   );
+
+  const printReceipt = (order: any) => {
+    const currency = store?.currency ?? "USD";
+    const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n);
+    const statusLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+    const itemRows = (order.items as any[]).map((i) => {
+      const variants = i.selectedVariants
+        ? Object.entries(i.selectedVariants).map(([k, v]) => `<br><small style="color:#6b7280">${k}: ${v}</small>`).join("")
+        : "";
+      return `
+        <tr>
+          <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6">${i.productName}${variants}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6;text-align:center">${i.quantity}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(i.price)}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(i.price * i.quantity)}</td>
+        </tr>`;
+    }).join("");
+
+    const statusColor: Record<string, string> = {
+      pending: "#f59e0b", confirmed: "#3b82f6", completed: "#22c55e", cancelled: "#ef4444",
+    };
+    const sColor = statusColor[order.status] ?? "#6b7280";
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Receipt — Order #${order.id}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111; background: #fff; padding: 40px; max-width: 680px; margin: auto; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none !important; }
+    }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #f3f4f6; }
+    .store-name { font-size: 22px; font-weight: 700; color: #111; }
+    .store-meta { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; background: ${sColor}; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 8px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .info-block p { font-size: 14px; color: #374151; margin-top: 2px; }
+    .info-block strong { font-size: 13px; color: #9ca3af; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead th { padding: 8px; background: #f9fafb; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    thead th:last-child, thead th:nth-child(3) { text-align: right; }
+    thead th:nth-child(2) { text-align: center; }
+    .totals { margin-top: 4px; display: flex; justify-content: flex-end; }
+    .totals-box { width: 220px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+    .totals-row.grand { font-weight: 700; font-size: 16px; border-top: 2px solid #111; margin-top: 4px; padding-top: 8px; }
+    .footer { margin-top: 40px; text-align: center; font-size: 13px; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 20px; }
+    .print-btn { display: block; margin: 0 auto 28px; padding: 10px 28px; background: #25D366; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <button class="no-print print-btn" onclick="window.print()">Print / Save as PDF</button>
+
+  <div class="header">
+    <div>
+      ${store?.logoUrl ? `<img src="${store.logoUrl}" alt="logo" style="height:48px;object-fit:contain;margin-bottom:8px;display:block" />` : ""}
+      <div class="store-name">${store?.name ?? "Store"}</div>
+      ${store?.whatsappNumber ? `<div class="store-meta">WhatsApp: ${store.whatsappNumber}</div>` : ""}
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:13px;color:#6b7280;margin-bottom:6px">ORDER RECEIPT</div>
+      <div style="font-size:20px;font-weight:700">#${order.id}</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px">${new Date(order.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+      <div style="margin-top:8px"><span class="badge">${statusLabel(order.status)}</span></div>
+    </div>
+  </div>
+
+  <div class="info-grid section">
+    <div class="info-block">
+      <div class="section-title">Customer</div>
+      <p><strong>Name</strong><br>${order.customerName ?? "Guest"}</p>
+      ${order.customerPhone ? `<p style="margin-top:6px"><strong>Phone</strong><br>${order.customerPhone}</p>` : ""}
+      ${order.customerEmail ? `<p style="margin-top:6px"><strong>Email</strong><br>${order.customerEmail}</p>` : ""}
+    </div>
+    <div class="info-block">
+      <div class="section-title">Delivery</div>
+      <p><strong>Type</strong><br>${order.deliveryType ? statusLabel(order.deliveryType) : "—"}</p>
+      ${order.customerNote ? `<p style="margin-top:6px"><strong>Customer note</strong><br>${order.customerNote}</p>` : ""}
+      ${order.ownerNote ? `<p style="margin-top:6px"><strong>Internal note</strong><br><em>${order.ownerNote}</em></p>` : ""}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Items</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Unit price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+  </div>
+
+  <div class="totals">
+    <div class="totals-box">
+      <div class="totals-row grand">
+        <span>Total</span>
+        <span>${fmt(Number(order.total))}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Thank you for your order! Questions? Contact us on WhatsApp${store?.whatsappNumber ? ` at ${store.whatsappNumber}` : ""}.
+    <br><small>Tracking token: ${order.trackingToken}</small>
+  </div>
+
+  <script>window.addEventListener("load", () => setTimeout(() => window.print(), 300));<\/script>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  };
 
   const openNoteEditor = (order: any) => {
     setNoteText(order.ownerNote ?? "");
@@ -492,6 +622,9 @@ export default function OrdersPage() {
                                 </DropdownMenuItem>
 
                                 <div className="h-px bg-border my-1" />
+                                <DropdownMenuItem onClick={() => printReceipt(order)}>
+                                  <Printer className="w-4 h-4 mr-2" /> Print receipt
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openNoteEditor(order)}>
                                   <StickyNote className="w-4 h-4 mr-2" />
                                   {order.ownerNote ? "Edit note" : "Add note"}
