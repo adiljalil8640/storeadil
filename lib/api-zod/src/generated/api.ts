@@ -2204,6 +2204,28 @@ export const GetAnalyticsRevenueTrendResponse = zod.array(
 );
 
 /**
+ * @summary Get new vs returning customers, avg frequency, and top customers by LTV
+ */
+export const GetCustomerInsightsResponse = zod.object({
+  newCustomers: zod.number().describe("Customers with exactly 1 order"),
+  returningCustomers: zod.number().describe("Customers with 2 or more orders"),
+  totalUniqueCustomers: zod.number(),
+  avgOrderFrequency: zod
+    .number()
+    .describe("Average orders per unique customer"),
+  topCustomers: zod.array(
+    zod.object({
+      name: zod.string().nullish(),
+      email: zod.string().nullish(),
+      phone: zod.string().nullish(),
+      orderCount: zod.number(),
+      totalSpend: zod.number(),
+      avgOrderValue: zod.number(),
+    }),
+  ),
+});
+
+/**
  * @summary Get total revenue and order count grouped by day of week
  */
 export const GetRevenueByDayResponseItem = zod.object({

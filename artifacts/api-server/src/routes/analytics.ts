@@ -194,6 +194,71 @@ router.get("/analytics/order-heatmap", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /analytics/customer-insights
+router.get("/analytics/customer-insights", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const orders = await db
+      .select({
+        customerName: ordersTable.customerName,
+        customerEmail: ordersTable.customerEmail,
+        customerPhone: ordersTable.customerPhone,
+        total: ordersTable.total,
+      })
+      .from(ordersTable)
+      .where(eq(ordersTable.storeId, storeId));
+
+    // Group by best identifier: email > phone > name > "__guest__"
+    const map: Record<string, {
+      name: string | null; email: string | null; phone: string | null;
+      orderCount: number; totalSpend: number;
+    }> = {};
+
+    for (const order of orders) {
+      const key = order.customerEmail?.trim().toLowerCase()
+        ?? order.customerPhone?.trim()
+        ?? order.customerName?.trim()
+        ?? "__guest__";
+
+      if (!map[key]) {
+        map[key] = { name: order.customerName ?? null, email: order.customerEmail ?? null, phone: order.customerPhone ?? null, orderCount: 0, totalSpend: 0 };
+      }
+      map[key].orderCount += 1;
+      map[key].totalSpend += Number(order.total);
+      if (!map[key].name && order.customerName) map[key].name = order.customerName;
+      if (!map[key].email && order.customerEmail) map[key].email = order.customerEmail;
+      if (!map[key].phone && order.customerPhone) map[key].phone = order.customerPhone;
+    }
+
+    const customers = Object.values(map);
+    const newCustomers       = customers.filter(c => c.orderCount === 1).length;
+    const returningCustomers = customers.filter(c => c.orderCount >= 2).length;
+    const totalUniqueCustomers = customers.length;
+    const avgOrderFrequency = totalUniqueCustomers > 0
+      ? Math.round((orders.length / totalUniqueCustomers) * 10) / 10
+      : 0;
+
+    const topCustomers = customers
+      .sort((a, b) => b.totalSpend - a.totalSpend)
+      .slice(0, 8)
+      .map(c => ({
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        orderCount: c.orderCount,
+        totalSpend: Math.round(c.totalSpend * 100) / 100,
+        avgOrderValue: c.orderCount > 0 ? Math.round((c.totalSpend / c.orderCount) * 100) / 100 : 0,
+      }));
+
+    res.json({ newCustomers, returningCustomers, totalUniqueCustomers, avgOrderFrequency, topCustomers });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /analytics/top-customers
 router.get("/analytics/top-customers", requireAuth, async (req: any, res) => {
   try {

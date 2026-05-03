@@ -38,6 +38,7 @@ import type {
   CreateReviewBody,
   CreateStoreBody,
   CustomerHistory,
+  CustomerInsights,
   DigestPreview,
   DomainStatusResult,
   ErrorResponse,
@@ -4490,6 +4491,81 @@ export function useGetAnalyticsRevenueTrend<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAnalyticsRevenueTrendQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get new vs returning customers, avg frequency, and top customers by LTV
+ */
+export const getGetCustomerInsightsUrl = () => {
+  return `/api/analytics/customer-insights`;
+};
+
+export const getCustomerInsights = async (
+  options?: RequestInit,
+): Promise<CustomerInsights> => {
+  return customFetch<CustomerInsights>(getGetCustomerInsightsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCustomerInsightsQueryKey = () => {
+  return [`/api/analytics/customer-insights`] as const;
+};
+
+export const getGetCustomerInsightsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerInsights>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerInsights>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCustomerInsightsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerInsights>>
+  > = ({ signal }) => getCustomerInsights({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerInsights>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerInsightsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerInsights>>
+>;
+export type GetCustomerInsightsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get new vs returning customers, avg frequency, and top customers by LTV
+ */
+
+export function useGetCustomerInsights<
+  TData = Awaited<ReturnType<typeof getCustomerInsights>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerInsights>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerInsightsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap, useGetCouponPerformance, useGetRevenueByDay } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap, useGetCouponPerformance, useGetRevenueByDay, useGetCustomerInsights } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ export default function AnalyticsPage() {
   const { data: heatmapData = [], isLoading: heatmapLoading } = useGetOrderHeatmap();
   const { data: couponPerf = [], isLoading: couponLoading } = useGetCouponPerformance();
   const { data: revenueByDay = [], isLoading: revByDayLoading } = useGetRevenueByDay();
+  const { data: customerInsights, isLoading: customerLoading } = useGetCustomerInsights();
 
   const chartData = (ordersPerDay ?? []).map((d) => ({
     aov: d.orders > 0 ? Math.round((Number(d.revenue) / d.orders) * 100) / 100 : 0,
@@ -851,6 +852,167 @@ export default function AnalyticsPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Customer Insights */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              Customer Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {customerLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading…</div>
+            ) : !customerInsights || customerInsights.totalUniqueCustomers === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Users className="w-10 h-10 mx-auto mb-3 opacity-25" />
+                <p className="text-sm">No customer data yet — check back once orders come in.</p>
+              </div>
+            ) : (() => {
+              const { newCustomers, returningCustomers, totalUniqueCustomers, avgOrderFrequency, topCustomers } = customerInsights;
+              const newPct       = Math.round((newCustomers / totalUniqueCustomers) * 100);
+              const returningPct = 100 - newPct;
+              const maxSpend     = Math.max(...topCustomers.map(c => c.totalSpend), 1);
+
+              const initials = (c: typeof topCustomers[0]) => {
+                const src = c.name ?? c.email ?? c.phone ?? "?";
+                return src === "?" ? "?" : src.split(/[\s@]/)[0].slice(0, 2).toUpperCase();
+              };
+
+              const displayName = (c: typeof topCustomers[0]) =>
+                c.name ?? c.email ?? c.phone ?? "Guest";
+
+              const avatarColor = (i: number) => {
+                const colors = [
+                  "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+                  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+                  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                  "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+                  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+                  "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+                  "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
+                  "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+                ];
+                return colors[i % colors.length];
+              };
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI row */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      {
+                        label: "New Customers",
+                        value: newCustomers,
+                        sub: `${newPct}% of total`,
+                        color: "text-primary",
+                        bg: "bg-primary/8",
+                        icon: <Users className="w-4 h-4 text-primary" />,
+                      },
+                      {
+                        label: "Returning",
+                        value: returningCustomers,
+                        sub: `${returningPct}% of total`,
+                        color: "text-violet-600 dark:text-violet-400",
+                        bg: "bg-violet-50 dark:bg-violet-950/30",
+                        icon: <TrendingUp className="w-4 h-4 text-violet-500" />,
+                      },
+                      {
+                        label: "Avg Frequency",
+                        value: `${avgOrderFrequency}×`,
+                        sub: "orders per customer",
+                        color: "text-amber-600 dark:text-amber-400",
+                        bg: "bg-amber-50 dark:bg-amber-950/30",
+                        icon: <ShoppingCart className="w-4 h-4 text-amber-500" />,
+                      },
+                    ].map(stat => (
+                      <div key={stat.label} className={`rounded-xl p-4 ${stat.bg}`}>
+                        <div className="flex items-center gap-1.5 mb-2">{stat.icon}<span className="text-xs text-muted-foreground">{stat.label}</span></div>
+                        <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">{stat.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* New vs Returning stacked bar */}
+                  <div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-primary/70" />New ({newPct}%)</span>
+                      <span className="font-medium text-foreground">{totalUniqueCustomers} unique customers</span>
+                      <span className="flex items-center gap-1.5">Returning ({returningPct}%)<span className="inline-block w-2.5 h-2.5 rounded-sm bg-violet-500/70" /></span>
+                    </div>
+                    <div className="h-3 rounded-full overflow-hidden bg-muted flex">
+                      <div
+                        className="h-full bg-primary/70 transition-all duration-700 rounded-l-full"
+                        style={{ width: `${newPct}%` }}
+                      />
+                      <div
+                        className="h-full bg-violet-500/70 transition-all duration-700 rounded-r-full"
+                        style={{ width: `${returningPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Top customers by LTV */}
+                  {topCustomers.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Top Customers by Lifetime Value
+                      </h4>
+                      <div className="space-y-2">
+                        {topCustomers.map((c, i) => {
+                          const spendPct = Math.round((c.totalSpend / maxSpend) * 100);
+                          return (
+                            <div key={i} className="flex items-center gap-3 group">
+                              {/* Avatar */}
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor(i)}`}>
+                                {initials(c)}
+                              </div>
+
+                              {/* Name + contact */}
+                              <div className="w-36 shrink-0 min-w-0">
+                                <p className="text-sm font-medium truncate text-foreground">{displayName(c)}</p>
+                                {c.name && (c.email ?? c.phone) && (
+                                  <p className="text-[11px] text-muted-foreground truncate">{c.email ?? c.phone}</p>
+                                )}
+                              </div>
+
+                              {/* LTV bar */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {c.orderCount} order{c.orderCount !== 1 ? "s" : ""}
+                                    {c.orderCount >= 2 && <span className="ml-1 text-violet-500 font-medium">↩ returning</span>}
+                                  </span>
+                                  <span className="text-xs font-bold text-foreground">{formatCurrency(c.totalSpend)}</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-primary transition-all duration-500"
+                                    style={{ width: `${spendPct}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* AOV */}
+                              <div className="text-right shrink-0 w-16 hidden sm:block">
+                                <div className="text-[10px] text-muted-foreground">AOV</div>
+                                <div className="text-xs font-semibold text-foreground">{formatCurrency(c.avgOrderValue)}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

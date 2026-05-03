@@ -1155,6 +1155,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/RevenueTrendItem"
 
+  /analytics/customer-insights:
+    get:
+      operationId: getCustomerInsights
+      tags: [analytics]
+      summary: Get new vs returning customers, avg frequency, and top customers by LTV
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Customer insights data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerInsights"
+
   /analytics/revenue-by-day:
     get:
       operationId: getRevenueByDay
@@ -2713,6 +2728,46 @@ components:
           type: number
           description: Total revenue for that day
       required: [date, revenue]
+
+    TopCustomer:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        orderCount:
+          type: integer
+        totalSpend:
+          type: number
+        avgOrderValue:
+          type: number
+      required: [orderCount, totalSpend, avgOrderValue]
+
+    CustomerInsights:
+      type: object
+      properties:
+        newCustomers:
+          type: integer
+          description: Customers with exactly 1 order
+        returningCustomers:
+          type: integer
+          description: Customers with 2 or more orders
+        totalUniqueCustomers:
+          type: integer
+        avgOrderFrequency:
+          type: number
+          description: Average orders per unique customer
+        topCustomers:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopCustomer"
+      required: [newCustomers, returningCustomers, totalUniqueCustomers, avgOrderFrequency, topCustomers]
 
     RevenueByDayItem:
       type: object

@@ -705,6 +705,26 @@ export interface RevenueTrendItem {
   revenue: number;
 }
 
+export interface TopCustomer {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  orderCount: number;
+  totalSpend: number;
+  avgOrderValue: number;
+}
+
+export interface CustomerInsights {
+  /** Customers with exactly 1 order */
+  newCustomers: number;
+  /** Customers with 2 or more orders */
+  returningCustomers: number;
+  totalUniqueCustomers: number;
+  /** Average orders per unique customer */
+  avgOrderFrequency: number;
+  topCustomers: TopCustomer[];
+}
+
 export interface RevenueByDayItem {
   /** 0 = Sunday … 6 = Saturday */
   dayOfWeek: number;
