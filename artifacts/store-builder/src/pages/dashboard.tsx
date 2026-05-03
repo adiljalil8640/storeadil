@@ -1,6 +1,6 @@
-import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews, useListCoupons } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star } from "lucide-react";
+import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star, Tag } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
@@ -12,6 +12,7 @@ export default function Dashboard() {
   const { data: recentOrders, isLoading: ordersLoading } = useGetRecentOrders({ limit: 5 });
   const { data: topProducts, isLoading: productsLoading } = useGetTopProducts({ limit: 5 });
   const { data: reviews = [], isLoading: reviewsLoading } = useListMerchantReviews();
+  const { data: coupons = [], isLoading: couponsLoading } = useListCoupons();
 
   const totalReviews = reviews.length;
   const avgRating = totalReviews
@@ -205,6 +206,94 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" />
+                Coupon Performance
+              </CardTitle>
+              <Link href="/coupons" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Manage →
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {couponsLoading ? (
+                <div className="text-center text-muted-foreground py-6">Loading...</div>
+              ) : coupons.length === 0 ? (
+                <div className="text-center text-muted-foreground py-6 space-y-1">
+                  <p className="text-sm">No coupons created yet.</p>
+                  <Link href="/coupons" className="text-xs text-primary hover:underline">Create your first coupon →</Link>
+                </div>
+              ) : (() => {
+                const sorted = [...coupons].sort((a, b) => (b.usedCount ?? 0) - (a.usedCount ?? 0));
+                const top = sorted.slice(0, 5);
+                const maxUses = top[0]?.usedCount ?? 1;
+                const totalRedemptions = coupons.reduce((s, c) => s + (c.usedCount ?? 0), 0);
+                const activeCoupons = coupons.filter(c => c.isActive).length;
+                return (
+                  <div className="space-y-4">
+                    {/* Summary row */}
+                    <div className="flex items-center gap-6 pb-3 border-b">
+                      <div>
+                        <p className="text-2xl font-bold">{totalRedemptions}</p>
+                        <p className="text-xs text-muted-foreground">total redemptions</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{activeCoupons}</p>
+                        <p className="text-xs text-muted-foreground">active coupons</p>
+                      </div>
+                    </div>
+
+                    {/* Per-coupon rows */}
+                    {totalRedemptions === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-2">No redemptions yet — share your coupon codes!</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {top.filter(c => (c.usedCount ?? 0) > 0).map(coupon => {
+                          const uses = coupon.usedCount ?? 0;
+                          const pct = maxUses > 0 ? (uses / maxUses) * 100 : 0;
+                          const discountLabel = coupon.type === "percentage"
+                            ? `${Number(coupon.value).toFixed(0)}% off`
+                            : `${formatCurrency(Number(coupon.value))} off`;
+                          return (
+                            <div key={coupon.id} className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-mono font-semibold text-sm tracking-wide truncate">{coupon.code}</span>
+                                  <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${
+                                    coupon.type === "percentage"
+                                      ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                                      : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                  }`}>
+                                    {discountLabel}
+                                  </span>
+                                  {!coupon.isActive && (
+                                    <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">inactive</span>
+                                  )}
+                                </div>
+                                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                                  {uses} use{uses !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         <Card>
           <CardHeader>
