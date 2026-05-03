@@ -1,15 +1,22 @@
-import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetRecentOrders, useGetTopProducts, useListMerchantReviews } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock } from "lucide-react";
+import { DollarSign, ShoppingBag, ShoppingCart, Activity, Package, Clock, Star } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsSummary();
   const { data: recentOrders, isLoading: ordersLoading } = useGetRecentOrders({ limit: 5 });
   const { data: topProducts, isLoading: productsLoading } = useGetTopProducts({ limit: 5 });
+  const { data: reviews = [], isLoading: reviewsLoading } = useListMerchantReviews();
+
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews
+    ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / totalReviews
+    : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -95,6 +102,44 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <Link href="/reviews">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
+                  <Star className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {reviewsLoading ? (
+                    <div className="text-2xl font-bold">...</div>
+                  ) : avgRating === null ? (
+                    <>
+                      <div className="text-2xl font-bold text-muted-foreground">—</div>
+                      <p className="text-xs text-muted-foreground">No reviews yet</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-1.5">
+                        <div className="text-2xl font-bold">{avgRating.toFixed(1)}</div>
+                        <div className="flex gap-px mb-0.5">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`w-3 h-3 ${n <= Math.round(avgRating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/25"}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {totalReviews} review{totalReviews !== 1 ? "s" : ""} · View all →
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           </motion.div>
         </div>
 
