@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare } from "lucide-react";
+import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
@@ -203,6 +203,37 @@ export default function OrdersPage() {
     bulkUpdate.mutate({ data: { orderIds: Array.from(selectedIds), status: bulkStatus } });
   };
 
+  const downloadCsv = () => {
+    const escape = (v: string | null | undefined) => {
+      const s = v ?? "";
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows: string[] = [
+      ["Order #", "Date", "Customer", "Phone", "Email", "Items", "Total", "Status", "Delivery", "Note"].join(","),
+      ...orders.map((o) => [
+        o.id,
+        format(new Date(o.createdAt), "yyyy-MM-dd HH:mm"),
+        escape(o.customerName),
+        escape(o.customerPhone),
+        escape(o.customerEmail),
+        escape(o.items.map((i: any) => `${i.productName ?? i.productId} x${i.quantity}`).join("; ")),
+        Number(o.total).toFixed(2),
+        o.status,
+        escape(o.deliveryType),
+        escape(o.customerNote),
+      ].join(",")),
+    ];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const label = search || statusFilter !== "all" ? `orders-filtered` : `orders-all`;
+    a.href = url;
+    a.download = `${label}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
@@ -298,6 +329,19 @@ export default function OrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Export */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadCsv}
+                disabled={orders.length === 0}
+                className="shrink-0 h-10 gap-2"
+                title="Download visible orders as CSV"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </Button>
             </div>
 
             {/* Result count */}
