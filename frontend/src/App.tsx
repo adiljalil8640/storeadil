@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useClerk } from "@clerk/react";
+import { useGetMyStore } from "@workspace/api-client-react";
 
 // Pages
 import LandingPage from "@/pages/landing";
@@ -111,12 +112,19 @@ function ClerkQueryClientCacheInvalidator() {
 function HomeRedirect() {
   const [, setLocation] = useLocation();
   const { isSignedIn, isLoaded } = useAuth();
+  const { data: store, isLoading: storeLoading, error: storeError } = useGetMyStore({
+    query: { enabled: !!isSignedIn && isLoaded, retry: false },
+  });
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
+    if (!isLoaded || !isSignedIn) return;
+    if (storeLoading) return;
+    if (store) {
       setLocation(`${basePath}/dashboard`);
+    } else {
+      setLocation(`${basePath}/onboarding`);
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, store, storeLoading, storeError]);
 
   if (!isLoaded) return null;
   if (isSignedIn) return null;
@@ -135,6 +143,37 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!isLoaded) return null;
   if (!isSignedIn) return null;
+  return <Component />;
+}
+
+// Wraps dashboard pages: redirects unauthenticated users to "/", and signed-in users
+// without a store to "/onboarding". Only renders the page once a store is confirmed.
+function StoreGuard({ component: Component }: { component: React.ComponentType }) {
+  const [, setLocation] = useLocation();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { data: store, isLoading: storeLoading, error: storeError } = useGetMyStore({
+    query: { enabled: !!isSignedIn && isLoaded, retry: false },
+  });
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setLocation(`${basePath}/`);
+      return;
+    }
+    if (storeLoading) return;
+    const httpStatus = storeError && (storeError as any)?.status;
+    if (httpStatus === 401) {
+      setLocation(`${basePath}/`);
+      return;
+    }
+    if (!store || httpStatus === 404) {
+      setLocation(`${basePath}/onboarding`);
+    }
+  }, [isLoaded, isSignedIn, store, storeLoading, storeError]);
+
+  if (!isLoaded || storeLoading) return null;
+  if (!store) return null;
   return <Component />;
 }
 
@@ -171,18 +210,20 @@ function ClerkProviderWithRoutes() {
           <Route path="/store/:slug" component={StorefrontPage} />
           <Route path="/track/:token" component={TrackPage} />
 
-          {/* Protected */}
+          {/* Protected — onboarding only needs auth, not a store */}
           <Route path="/onboarding"><ProtectedRoute component={OnboardingPage} /></Route>
-          <Route path="/dashboard"><ProtectedRoute component={DashboardPage} /></Route>
-          <Route path="/products"><ProtectedRoute component={ProductsPage} /></Route>
-          <Route path="/orders"><ProtectedRoute component={OrdersPage} /></Route>
-          <Route path="/coupons"><ProtectedRoute component={CouponsPage} /></Route>
-          <Route path="/reviews"><ProtectedRoute component={ReviewsPage} /></Route>
-          <Route path="/waitlist"><ProtectedRoute component={WaitlistPage} /></Route>
-          <Route path="/referrals"><ProtectedRoute component={ReferralsPage} /></Route>
-          <Route path="/analytics"><ProtectedRoute component={AnalyticsPage} /></Route>
-          <Route path="/billing"><ProtectedRoute component={BillingPage} /></Route>
-          <Route path="/settings"><ProtectedRoute component={SettingsPage} /></Route>
+
+          {/* Protected + requires a store — redirects to /onboarding if none exists */}
+          <Route path="/dashboard"><StoreGuard component={DashboardPage} /></Route>
+          <Route path="/products"><StoreGuard component={ProductsPage} /></Route>
+          <Route path="/orders"><StoreGuard component={OrdersPage} /></Route>
+          <Route path="/coupons"><StoreGuard component={CouponsPage} /></Route>
+          <Route path="/reviews"><StoreGuard component={ReviewsPage} /></Route>
+          <Route path="/waitlist"><StoreGuard component={WaitlistPage} /></Route>
+          <Route path="/referrals"><StoreGuard component={ReferralsPage} /></Route>
+          <Route path="/analytics"><StoreGuard component={AnalyticsPage} /></Route>
+          <Route path="/billing"><StoreGuard component={BillingPage} /></Route>
+          <Route path="/settings"><StoreGuard component={SettingsPage} /></Route>
           <Route path="/admin"><ProtectedRoute component={AdminPage} /></Route>
 
           <Route component={NotFound} />
