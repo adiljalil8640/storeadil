@@ -1825,6 +1825,19 @@ export const GetOrdersPerDayResponseItem = zod.object({
 export const GetOrdersPerDayResponse = zod.array(GetOrdersPerDayResponseItem);
 
 /**
+ * @summary Get per-product order counts for the last 14 days
+ */
+export const GetProductVelocityResponseItem = zod.object({
+  productId: zod.number(),
+  counts: zod
+    .array(zod.number())
+    .describe("Daily order counts for the last 14 days, oldest first"),
+});
+export const GetProductVelocityResponse = zod.array(
+  GetProductVelocityResponseItem,
+);
+
+/**
  * @summary Get all available plans
  */
 export const GetBillingPlansResponseItem = zod.object({

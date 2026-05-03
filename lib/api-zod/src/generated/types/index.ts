@@ -67,6 +67,7 @@ export * from "./orderWithWhatsApp";
 export * from "./plan";
 export * from "./product";
 export * from "./productVariant";
+export * from "./productVelocityItem";
 export * from "./productWithStats";
 export * from "./publicStore";
 export * from "./referralInfo";

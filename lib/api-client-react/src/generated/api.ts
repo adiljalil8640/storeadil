@@ -61,6 +61,7 @@ import type {
   OrdersPerDayItem,
   Plan,
   Product,
+  ProductVelocityItem,
   ProductWithStats,
   PublicStore,
   ReferralInfo,
@@ -3648,6 +3649,81 @@ export function useGetOrdersPerDay<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetOrdersPerDayQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get per-product order counts for the last 14 days
+ */
+export const getGetProductVelocityUrl = () => {
+  return `/api/analytics/product-velocity`;
+};
+
+export const getProductVelocity = async (
+  options?: RequestInit,
+): Promise<ProductVelocityItem[]> => {
+  return customFetch<ProductVelocityItem[]>(getGetProductVelocityUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProductVelocityQueryKey = () => {
+  return [`/api/analytics/product-velocity`] as const;
+};
+
+export const getGetProductVelocityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProductVelocity>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProductVelocity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProductVelocityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProductVelocity>>
+  > = ({ signal }) => getProductVelocity({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProductVelocity>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProductVelocityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProductVelocity>>
+>;
+export type GetProductVelocityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get per-product order counts for the last 14 days
+ */
+
+export function useGetProductVelocity<
+  TData = Awaited<ReturnType<typeof getProductVelocity>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProductVelocity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProductVelocityQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

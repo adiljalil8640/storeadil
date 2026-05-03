@@ -620,6 +620,12 @@ export interface OrdersPerDayItem {
   revenue: number;
 }
 
+export interface ProductVelocityItem {
+  productId: number;
+  /** Daily order counts for the last 14 days, oldest first */
+  counts: number[];
+}
+
 export interface Plan {
   id: number;
   name: string;

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts, useImportProducts, useNotifyWaitlist, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
+import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, useGenerateProductDescription, useSuggestProductPrice, useGetWaitlistCounts, useImportProducts, useNotifyWaitlist, getGetWaitlistCountsQueryKey, useGetProductVelocity } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -316,6 +316,39 @@ function AiButtons({ form, nameField, descriptionField, priceField }: { form: an
   );
 }
 
+function Sparkline({ counts }: { counts: number[] }) {
+  const max = Math.max(...counts, 1);
+  const h = 22;
+  const barW = 3;
+  const gap = 1;
+  const total = counts.reduce((s, v) => s + v, 0);
+  const hasActivity = total > 0;
+
+  return (
+    <svg
+      width={counts.length * (barW + gap)}
+      height={h}
+      className="overflow-visible"
+      aria-label={`${total} orders in last 14 days`}
+    >
+      {counts.map((v, i) => {
+        const barH = v > 0 ? Math.max(Math.round((v / max) * h), 3) : 1;
+        return (
+          <rect
+            key={i}
+            x={i * (barW + gap)}
+            y={h - barH}
+            width={barW}
+            height={barH}
+            rx={1}
+            className={v > 0 ? "fill-primary" : "fill-muted-foreground/20"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -328,6 +361,10 @@ export default function ProductsPage() {
   const { data: products, isLoading } = useListProducts({ search: searchTerm || undefined });
   const { data: waitlistData } = useGetWaitlistCounts();
   const waitlistCounts: Record<number, number> = waitlistData?.counts ?? {};
+  const { data: velocityData = [] } = useGetProductVelocity();
+  const velocityMap: Record<number, number[]> = Object.fromEntries(
+    velocityData.map((v) => [v.productId, v.counts])
+  );
 
   const createProduct = useCreateProduct({
     mutation: {
@@ -650,6 +687,35 @@ export default function ProductsPage() {
                         </span>
                       ) : null}
                     </div>
+                    {(() => {
+                      const counts = velocityMap[product.id];
+                      if (!counts) return null;
+                      const total = counts.reduce((s, v) => s + v, 0);
+                      return (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex items-end justify-between gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="cursor-default">
+                                  <Sparkline counts={counts} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                {total === 0
+                                  ? "No orders in the last 14 days"
+                                  : `${total} unit${total !== 1 ? "s" : ""} ordered in the last 14 days`}
+                              </TooltipContent>
+                            </Tooltip>
+                            <span className="text-xs text-muted-foreground shrink-0">
+                              {total > 0 ? (
+                                <span className="text-primary font-medium">{total}</span>
+                              ) : "0"}{" "}
+                              <span>14d</span>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               </motion.div>

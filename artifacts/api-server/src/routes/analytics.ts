@@ -168,4 +168,51 @@ router.get("/analytics/orders-per-day", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /analytics/product-velocity
+router.get("/analytics/product-velocity", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+    // Build the date axis (oldest → newest)
+    const dates: string[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+
+    const orders = await db
+      .select({ items: ordersTable.items, createdAt: ordersTable.createdAt })
+      .from(ordersTable)
+      .where(and(eq(ordersTable.storeId, storeId), gte(ordersTable.createdAt, fourteenDaysAgo)));
+
+    // Tally per-product per-day
+    const velocity: Record<number, Record<string, number>> = {};
+
+    for (const order of orders) {
+      const dateStr = order.createdAt.toISOString().slice(0, 10);
+      for (const item of (order.items as any[])) {
+        const pid: number = item.productId;
+        if (!velocity[pid]) velocity[pid] = {};
+        velocity[pid][dateStr] = (velocity[pid][dateStr] ?? 0) + (item.quantity ?? 1);
+      }
+    }
+
+    const result = Object.entries(velocity).map(([productId, dayCounts]) => ({
+      productId: Number(productId),
+      counts: dates.map(d => dayCounts[d] ?? 0),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

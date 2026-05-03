@@ -938,6 +938,23 @@ paths:
                 items:
                   $ref: "#/components/schemas/OrdersPerDayItem"
 
+  /analytics/product-velocity:
+    get:
+      operationId: getProductVelocity
+      tags: [analytics]
+      summary: Get per-product order counts for the last 14 days
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Per-product daily order velocity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductVelocityItem"
+
   # Billing endpoints
   /billing/plans:
     get:
@@ -2340,6 +2357,18 @@ components:
         revenue:
           type: number
       required: [date, orders, revenue]
+
+    ProductVelocityItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        counts:
+          type: array
+          items:
+            type: integer
+          description: Daily order counts for the last 14 days, oldest first
+      required: [productId, counts]
 
     Plan:
       type: object
