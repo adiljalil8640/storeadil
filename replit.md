@@ -58,7 +58,9 @@ A multi-tenant SaaS platform where merchants create online stores and customers 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes to `db/` (dev only)
+- `pnpm --filter @workspace/db run generate` — generate a new Drizzle migration SQL file from schema changes
+- `pnpm --filter @workspace/db run migrate` — apply pending migrations to the database
+- `pnpm --filter @workspace/db run check` — validate migration consistency
 
 ## Features
 

@@ -13,9 +13,11 @@ import couponsRouter from "./coupons";
 import reviewsRouter from "./reviews";
 import ogRouter from "./og";
 import whatsappRouter from "./whatsapp";
+import devSeedRouter from "./dev-seed";
 
 const router: IRouter = Router();
 
+router.use(devSeedRouter);
 router.use(ogRouter);
 router.use(storesRouter);
 router.use(couponsRouter);
