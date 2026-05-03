@@ -705,6 +705,17 @@ export interface RevenueTrendItem {
   revenue: number;
 }
 
+export interface RevenueByDayItem {
+  /** 0 = Sunday … 6 = Saturday */
+  dayOfWeek: number;
+  /** Short day name e.g. Mon, Tue */
+  day: string;
+  /** Total revenue for orders placed on that day of week */
+  revenue: number;
+  /** Number of orders placed on that day of week */
+  orderCount: number;
+}
+
 export interface OrdersPerDayItem {
   date: string;
   orders: number;

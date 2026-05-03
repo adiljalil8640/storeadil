@@ -2204,6 +2204,21 @@ export const GetAnalyticsRevenueTrendResponse = zod.array(
 );
 
 /**
+ * @summary Get total revenue and order count grouped by day of week
+ */
+export const GetRevenueByDayResponseItem = zod.object({
+  dayOfWeek: zod.number().describe("0 = Sunday … 6 = Saturday"),
+  day: zod.string().describe("Short day name e.g. Mon, Tue"),
+  revenue: zod
+    .number()
+    .describe("Total revenue for orders placed on that day of week"),
+  orderCount: zod
+    .number()
+    .describe("Number of orders placed on that day of week"),
+});
+export const GetRevenueByDayResponse = zod.array(GetRevenueByDayResponseItem);
+
+/**
  * @summary Get all available plans
  */
 export const GetBillingPlansResponseItem = zod.object({

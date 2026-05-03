@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap, useGetCouponPerformance } from "@workspace/api-client-react";
+import { useGetAnalyticsSummary, useGetOrdersPerDay, useGetTopProducts, useGetMyReferral, useGetOrderHeatmap, useGetCouponPerformance, useGetRevenueByDay } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock, Tag, Percent, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, TrendingUp, Download, Share2, Users, Zap, ChevronRight, Clock, Tag, Percent, CheckCircle2, XCircle, AlertCircle, CalendarDays } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import {
@@ -46,6 +46,7 @@ export default function AnalyticsPage() {
   const { data: referral, isLoading: referralLoading } = useGetMyReferral();
   const { data: heatmapData = [], isLoading: heatmapLoading } = useGetOrderHeatmap();
   const { data: couponPerf = [], isLoading: couponLoading } = useGetCouponPerformance();
+  const { data: revenueByDay = [], isLoading: revByDayLoading } = useGetRevenueByDay();
 
   const chartData = (ordersPerDay ?? []).map((d) => ({
     date: format(new Date(d.date + "T00:00:00"), "MMM d"),
@@ -596,6 +597,123 @@ export default function AnalyticsPage() {
                 })()}
               </div>
             )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Revenue by Day of Week */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary" />
+              Revenue by Day of Week
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">All-time, Mon – Sun</span>
+          </CardHeader>
+          <CardContent>
+            {revByDayLoading ? (
+              <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            ) : (() => {
+              const totalRevenue = revenueByDay.reduce((s, d) => s + d.revenue, 0);
+              const hasData = totalRevenue > 0;
+
+              if (!hasData) {
+                return (
+                  <div className="h-[220px] flex flex-col items-center justify-center text-muted-foreground">
+                    <CalendarDays className="w-10 h-10 mb-3 opacity-25" />
+                    <p className="text-sm">No orders yet — check back once sales come in.</p>
+                  </div>
+                );
+              }
+
+              const maxRevenue = Math.max(...revenueByDay.map((d) => d.revenue), 1);
+              const bestDay = revenueByDay.reduce((best, d) => d.revenue > best.revenue ? d : best, revenueByDay[0]);
+              const avgRevenue = totalRevenue / revenueByDay.filter((d) => d.revenue > 0).length;
+
+              const DayTooltip = ({ active, payload, label }: any) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload;
+                return (
+                  <div className="bg-card border rounded-lg px-3 py-2 shadow-md text-sm">
+                    <p className="font-semibold mb-1">{label}</p>
+                    <p className="text-primary font-medium">{formatCurrency(d.revenue)}</p>
+                    <p className="text-muted-foreground text-xs">{d.orderCount} order{d.orderCount !== 1 ? "s" : ""}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {totalRevenue > 0 ? ((d.revenue / totalRevenue) * 100).toFixed(1) : "0"}% of total
+                    </p>
+                  </div>
+                );
+              };
+
+              return (
+                <div className="space-y-4">
+                  {/* Insight strip */}
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-4 py-2 flex flex-wrap gap-x-6 gap-y-1">
+                    <span>Best day: <span className="font-semibold text-foreground">{bestDay.day} — {formatCurrency(bestDay.revenue)}</span></span>
+                    <span>Avg (active days): <span className="font-semibold text-foreground">{formatCurrency(avgRevenue)}</span></span>
+                    <span>Total: <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span></span>
+                  </div>
+
+                  {/* Bar chart */}
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={revenueByDay} margin={{ top: 4, right: 8, left: 8, bottom: 0 }} barCategoryGap="30%">
+                      <defs>
+                        <linearGradient id="dayBarGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                      <XAxis
+                        dataKey="day"
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tickFormatter={(v) => v === 0 ? "$0" : `$${(v / 1000).toFixed(v >= 1000 ? 1 : 0)}${v >= 1000 ? "k" : ""}`}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={42}
+                      />
+                      <Tooltip content={<DayTooltip />} cursor={{ fill: "hsl(var(--muted))", radius: 4 }} />
+                      <Bar dataKey="revenue" radius={[5, 5, 0, 0]} maxBarSize={52}>
+                        {revenueByDay.map((entry, i) => (
+                          <Cell
+                            key={i}
+                            fill={entry.day === bestDay.day ? "url(#dayBarGrad)" : "hsl(var(--primary) / 0.35)"}
+                            stroke={entry.day === bestDay.day ? "hsl(var(--primary))" : "transparent"}
+                            strokeWidth={entry.day === bestDay.day ? 1 : 0}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  {/* Per-day mini summary */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px]">
+                    {revenueByDay.map((d) => (
+                      <div key={d.day} className={`rounded-md py-1.5 px-0.5 ${d.day === bestDay.day ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground"}`}>
+                        <div className="font-medium">{d.day}</div>
+                        <div>{d.orderCount} ord</div>
+                        <div
+                          className="mt-1 mx-auto rounded-full"
+                          style={{
+                            width: 24,
+                            height: 3,
+                            backgroundColor: d.revenue > 0
+                              ? `rgba(37,211,102,${0.2 + (d.revenue / maxRevenue) * 0.8})`
+                              : "hsl(var(--muted))",
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </motion.div>

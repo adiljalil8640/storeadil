@@ -1155,6 +1155,23 @@ paths:
                 items:
                   $ref: "#/components/schemas/RevenueTrendItem"
 
+  /analytics/revenue-by-day:
+    get:
+      operationId: getRevenueByDay
+      tags: [analytics]
+      summary: Get total revenue and order count grouped by day of week
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Revenue aggregated by day of week (Mon–Sun)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueByDayItem"
+
   # Billing endpoints
   /billing/plans:
     get:
@@ -2696,6 +2713,23 @@ components:
           type: number
           description: Total revenue for that day
       required: [date, revenue]
+
+    RevenueByDayItem:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+          description: 0 = Sunday … 6 = Saturday
+        day:
+          type: string
+          description: Short day name e.g. Mon, Tue
+        revenue:
+          type: number
+          description: Total revenue for orders placed on that day of week
+        orderCount:
+          type: integer
+          description: Number of orders placed on that day of week
+      required: [dayOfWeek, day, revenue, orderCount]
 
     OrdersPerDayItem:
       type: object

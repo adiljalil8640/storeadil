@@ -75,6 +75,7 @@ import type {
   ReferralInfo,
   ReferralPreview,
   ReplyToReviewBody,
+  RevenueByDayItem,
   RevenueTrendItem,
   Review,
   ShareMessage,
@@ -4489,6 +4490,81 @@ export function useGetAnalyticsRevenueTrend<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAnalyticsRevenueTrendQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get total revenue and order count grouped by day of week
+ */
+export const getGetRevenueByDayUrl = () => {
+  return `/api/analytics/revenue-by-day`;
+};
+
+export const getRevenueByDay = async (
+  options?: RequestInit,
+): Promise<RevenueByDayItem[]> => {
+  return customFetch<RevenueByDayItem[]>(getGetRevenueByDayUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRevenueByDayQueryKey = () => {
+  return [`/api/analytics/revenue-by-day`] as const;
+};
+
+export const getGetRevenueByDayQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRevenueByDay>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRevenueByDay>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRevenueByDayQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRevenueByDay>>> = ({
+    signal,
+  }) => getRevenueByDay({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRevenueByDay>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRevenueByDayQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRevenueByDay>>
+>;
+export type GetRevenueByDayQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get total revenue and order count grouped by day of week
+ */
+
+export function useGetRevenueByDay<
+  TData = Awaited<ReturnType<typeof getRevenueByDay>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRevenueByDay>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRevenueByDayQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

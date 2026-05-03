@@ -381,4 +381,41 @@ router.get("/analytics/revenue-trend", requireAuth, async (req: any, res) => {
   }
 });
 
+// GET /analytics/revenue-by-day
+router.get("/analytics/revenue-by-day", requireAuth, async (req: any, res) => {
+  try {
+    const storeId = await getStoreId(req.userId);
+    if (!storeId) return res.status(404).json({ error: "No store found" });
+
+    const rows = await db
+      .select({
+        dayOfWeek: sql<number>`EXTRACT(DOW FROM ${ordersTable.createdAt})::int`,
+        revenue: sql<number>`COALESCE(SUM(CAST(${ordersTable.total} AS DECIMAL)), 0)`,
+        orderCount: sql<number>`COUNT(*)::int`,
+      })
+      .from(ordersTable)
+      .where(eq(ordersTable.storeId, storeId))
+      .groupBy(sql`EXTRACT(DOW FROM ${ordersTable.createdAt})`)
+      .orderBy(sql`EXTRACT(DOW FROM ${ordersTable.createdAt})`);
+
+    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const map = new Map(
+      rows.map((r) => [r.dayOfWeek, { revenue: Number(r.revenue), orderCount: Number(r.orderCount) }])
+    );
+
+    // Return Mon → Sun order
+    const result = [1, 2, 3, 4, 5, 6, 0].map((dow) => ({
+      dayOfWeek: dow,
+      day: DAY_NAMES[dow],
+      revenue: map.get(dow)?.revenue ?? 0,
+      orderCount: map.get(dow)?.orderCount ?? 0,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
