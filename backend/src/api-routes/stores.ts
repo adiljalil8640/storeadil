@@ -2,7 +2,8 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, productsTable } from "@workspace/db";
 import { eq, sql, desc, and, gte } from "drizzle-orm";
-import { CreateStoreBody, UpdateMyStoreBody } from "@workspace/api-zod";
+import { CreateStoreBody, UpdateMyStoreBody, UpdateRevenueGoalBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 import { publicStoreLimiter } from "../middlewares/rateLimiter";
 import { requireAuth } from "../middlewares/auth";
 
@@ -369,9 +370,9 @@ router.patch("/stores/me/slug", requireAuth, async (req: any, res) => {
 });
 
 // PATCH /stores/me/revenue-goal — set or clear the monthly revenue goal
-router.patch("/stores/me/revenue-goal", requireAuth, async (req: any, res) => {
+router.patch("/stores/me/revenue-goal", requireAuth, validate(UpdateRevenueGoalBody), async (req: any, res) => {
   const { goal } = req.body;
-  if (goal !== null && goal !== undefined && (typeof goal !== "number" || goal < 0)) {
+  if (goal != null && goal < 0) {
     return res.status(400).json({ error: "goal must be a non-negative number or null" });
   }
   try {

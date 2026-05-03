@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { getOrCreateSubscription, getPlanByName, getStripeClient } from "../services/billing";
 import { getUserUsageSummary } from "../services/usage";
 import { requireAuth } from "../middlewares/auth";
+import { CreateCheckoutSessionBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -46,9 +48,9 @@ router.get("/billing/status", requireAuth, async (req: any, res) => {
 });
 
 // POST /billing/checkout
-router.post("/billing/checkout", requireAuth, async (req: any, res) => {
+router.post("/billing/checkout", requireAuth, validate(CreateCheckoutSessionBody), async (req: any, res) => {
   const { planName } = req.body;
-  if (!planName || !["pro", "business"].includes(planName)) {
+  if (!["pro", "business"].includes(planName)) {
     return res.status(400).json({ error: "Invalid plan" });
   }
 

@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import { storesTable, couponsTable } from "@workspace/db";
 import { eq, and, ilike } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { ValidateCouponBody, CreateCouponBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -15,11 +17,8 @@ async function getStoreForUser(userId: string) {
 }
 
 // POST /coupons/validate — public, no auth
-router.post("/coupons/validate", async (req: any, res) => {
-  const { storeId, code, orderAmount } = req.body ?? {};
-  if (!storeId || !code || typeof orderAmount !== "number") {
-    return res.status(400).json({ valid: false, error: "storeId, code, and orderAmount are required" });
-  }
+router.post("/coupons/validate", validate(ValidateCouponBody), async (req: any, res) => {
+  const { storeId, code, orderAmount } = req.body;
 
   try {
     const [coupon] = await db
@@ -91,18 +90,15 @@ router.get("/coupons", requireAuth, async (req: any, res) => {
 });
 
 // POST /coupons
-router.post("/coupons", requireAuth, async (req: any, res) => {
+router.post("/coupons", requireAuth, validate(CreateCouponBody), async (req: any, res) => {
   const store = await getStoreForUser(req.userId);
   if (!store) return res.status(404).json({ error: "Store not found" });
 
-  const { code, type, value, minOrderAmount, maxUses, expiresAt, isActive } = req.body ?? {};
-  if (!code || !type || value === undefined) {
-    return res.status(400).json({ error: "code, type, and value are required" });
-  }
+  const { code, type, value, minOrderAmount, maxUses, expiresAt, isActive } = req.body;
   if (!["percentage", "fixed"].includes(type)) {
     return res.status(400).json({ error: "type must be percentage or fixed" });
   }
-  if (typeof value !== "number" || value <= 0) {
+  if (value <= 0) {
     return res.status(400).json({ error: "value must be a positive number" });
   }
   if (type === "percentage" && value > 100) {

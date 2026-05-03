@@ -4,6 +4,8 @@ import { referralsTable, usageTrackingTable } from "@workspace/db";
 import { eq, and, count, sql } from "drizzle-orm";
 import { getCurrentMonth } from "../services/usage";
 import { requireAuth } from "../middlewares/auth";
+import { ApplyReferralCodeBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -95,11 +97,8 @@ router.get("/referral/me", requireAuth, async (req: any, res) => {
 });
 
 // POST /referral/apply
-router.post("/referral/apply", requireAuth, async (req: any, res) => {
+router.post("/referral/apply", requireAuth, validate(ApplyReferralCodeBody), async (req: any, res) => {
   const { code } = req.body;
-  if (!code || typeof code !== "string") {
-    return res.status(400).json({ error: "Referral code is required" });
-  }
 
   try {
     const [referral] = await db

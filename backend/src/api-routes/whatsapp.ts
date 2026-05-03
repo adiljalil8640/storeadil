@@ -10,6 +10,8 @@ import {
   generateAutoReply,
 } from "../services/whatsapp";
 import { requireAuth } from "../middlewares/auth";
+import { UpdateWhatsappConfigBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -82,7 +84,7 @@ router.get("/stores/me/whatsapp-config", requireAuth, async (req: any, res) => {
   });
 });
 
-router.put("/stores/me/whatsapp-config", requireAuth, async (req: any, res) => {
+router.put("/stores/me/whatsapp-config", requireAuth, validate(UpdateWhatsappConfigBody), async (req: any, res) => {
   const store = await getStore(req.userId);
   if (!store) return res.status(404).json({ error: "Store not found" });
   const { waMode, waBizPhoneId, waBizAccessToken, waBizVerifyToken, waAutoReply, waReplyPrompt } = req.body;

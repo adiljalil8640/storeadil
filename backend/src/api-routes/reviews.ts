@@ -5,6 +5,8 @@ import { eq, and, desc } from "drizzle-orm";
 import { sendNewReviewNotification } from "../services/email";
 import { publicStoreLimiter, publicWriteLimiter } from "../middlewares/rateLimiter";
 import { requireAuth, requireStore } from "../middlewares/auth";
+import { SubmitReviewBody, ReplyToReviewBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -45,14 +47,14 @@ router.get("/reviews", requireAuth, requireStore, async (req: any, res) => {
 });
 
 // PATCH /reviews/:id/reply — authenticated merchant, add/update/remove their reply
-router.patch("/reviews/:id/reply", requireAuth, requireStore, async (req: any, res) => {
+router.patch("/reviews/:id/reply", requireAuth, requireStore, validate(ReplyToReviewBody), async (req: any, res) => {
   try {
     const storeId = req.storeId;
 
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid review id" });
 
-    const { reply } = req.body ?? {};
+    const { reply } = req.body;
 
     const [existing] = await db
       .select({ id: reviewsTable.id })
@@ -80,12 +82,9 @@ router.patch("/reviews/:id/reply", requireAuth, requireStore, async (req: any, r
 });
 
 // POST /reviews — public, submit a product review using order tracking token
-router.post("/reviews", publicWriteLimiter, async (req: any, res) => {
-  const { trackingToken, productId, rating, comment } = req.body ?? {};
+router.post("/reviews", publicWriteLimiter, validate(SubmitReviewBody), async (req: any, res) => {
+  const { trackingToken, productId, rating, comment } = req.body;
 
-  if (!trackingToken || !productId || typeof rating !== "number") {
-    return res.status(400).json({ error: "trackingToken, productId, and rating are required" });
-  }
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     return res.status(400).json({ error: "rating must be an integer between 1 and 5" });
   }

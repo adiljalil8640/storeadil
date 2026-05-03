@@ -2,7 +2,8 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { storesTable, productsTable, stockWaitlistTable } from "@workspace/db";
 import { eq, and, ilike, sql, isNull } from "drizzle-orm";
-import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
+import { CreateProductBody, UpdateProductBody, ImportProductsBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 import { checkProductLimit } from "../services/usage";
 import { sendBackInStockEmail } from "../services/email";
 import { requireAuth, requireStore } from "../middlewares/auth";
@@ -88,9 +89,9 @@ router.get("/products/categories", async (req: any, res) => {
 });
 
 // POST /products/import — bulk CSV import
-router.post("/products/import", async (req: any, res) => {
-  const { csv } = req.body ?? {};
-  if (typeof csv !== "string" || !csv.trim()) {
+router.post("/products/import", validate(ImportProductsBody), async (req: any, res) => {
+  const { csv } = req.body;
+  if (!csv.trim()) {
     return res.status(400).json({ error: "csv field is required" });
   }
 

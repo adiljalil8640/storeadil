@@ -1,6 +1,7 @@
 import { Router } from "express";
 import OpenAI from "openai";
-import { GenerateStoreBody } from "@workspace/api-zod";
+import { GenerateStoreBody, GenerateProductDescriptionBody, SuggestProductPriceBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 import { db } from "@workspace/db";
 import { aiProvidersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -76,9 +77,8 @@ router.post("/ai/generate-store", requireAuth, async (req: any, res) => {
 });
 
 // POST /ai/generate-description
-router.post("/ai/generate-description", requireAuth, async (req: any, res) => {
+router.post("/ai/generate-description", requireAuth, validate(GenerateProductDescriptionBody), async (req: any, res) => {
   const { productName, category, price } = req.body;
-  if (!productName) return res.status(400).json({ error: "productName is required" });
 
   try {
     const { client, model } = await getAiClient();
@@ -105,9 +105,8 @@ router.post("/ai/generate-description", requireAuth, async (req: any, res) => {
 });
 
 // POST /ai/suggest-price
-router.post("/ai/suggest-price", requireAuth, async (req: any, res) => {
+router.post("/ai/suggest-price", requireAuth, validate(SuggestProductPriceBody), async (req: any, res) => {
   const { productName, description, category, currency } = req.body;
-  if (!productName) return res.status(400).json({ error: "productName is required" });
 
   try {
     const { client, model } = await getAiClient();

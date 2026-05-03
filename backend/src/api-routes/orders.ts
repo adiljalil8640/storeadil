@@ -2,7 +2,8 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, couponsTable } from "@workspace/db";
 import { eq, and, desc, sql, ilike, gte, lte, inArray } from "drizzle-orm";
-import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
+import { CreateOrderBody, UpdateOrderStatusBody, UpdateOrderNoteBody, BulkUpdateOrderStatusBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
 import { productsTable } from "@workspace/db";
@@ -479,7 +480,7 @@ router.get("/orders/customer-history", requireAuth, requireStore, async (req: an
 });
 
 // PATCH /orders/:id/note — set or clear the owner-only internal note
-router.patch("/orders/:id/note", requireAuth, requireStore, async (req: any, res) => {
+router.patch("/orders/:id/note", requireAuth, requireStore, validate(UpdateOrderNoteBody), async (req: any, res) => {
   const orderId = Number(req.params.id);
   const { ownerNote } = req.body;
 
@@ -503,11 +504,11 @@ router.patch("/orders/:id/note", requireAuth, requireStore, async (req: any, res
 });
 
 // POST /orders/bulk-status — update status for multiple orders at once
-router.post("/orders/bulk-status", requireAuth, requireStore, async (req: any, res) => {
+router.post("/orders/bulk-status", requireAuth, requireStore, validate(BulkUpdateOrderStatusBody), async (req: any, res) => {
   const { orderIds, status } = req.body;
   const VALID = ["pending", "confirmed", "completed", "cancelled"];
 
-  if (!Array.isArray(orderIds) || orderIds.length === 0) {
+  if (orderIds.length === 0) {
     return res.status(400).json({ error: "orderIds must be a non-empty array" });
   }
   if (!VALID.includes(status)) {
