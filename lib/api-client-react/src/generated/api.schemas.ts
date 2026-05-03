@@ -80,6 +80,7 @@ export interface Product {
   imageUrl?: string | null;
   category?: string | null;
   stock?: number | null;
+  lowStockThreshold?: number | null;
   variants: ProductVariant[];
   isActive: boolean;
   createdAt: string;
@@ -161,6 +162,7 @@ export interface CreateProductBody {
   imageUrl?: string | null;
   category?: string | null;
   stock?: number | null;
+  lowStockThreshold?: number | null;
   variants?: ProductVariant[];
   isActive?: boolean;
 }
@@ -172,6 +174,7 @@ export interface UpdateProductBody {
   imageUrl?: string | null;
   category?: string | null;
   stock?: number | null;
+  lowStockThreshold?: number | null;
   variants?: ProductVariant[];
   isActive?: boolean;
 }

@@ -24,7 +24,8 @@ const productSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be positive"),
   category: z.string().optional(),
-  stock: z.coerce.number().min(0).optional().nullable(),
+  stock: z.coerce.number().int().min(0).optional().nullable(),
+  lowStockThreshold: z.coerce.number().int().min(0).optional().nullable(),
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 });
 
@@ -135,7 +136,7 @@ export default function ProductsPage() {
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: "", description: "", price: 0, category: "", stock: null, imageUrl: "" },
+    defaultValues: { name: "", description: "", price: 0, category: "", stock: null, lowStockThreshold: null, imageUrl: "" },
   });
 
   const editForm = useForm<ProductFormValues>({
@@ -158,6 +159,7 @@ export default function ProductsPage() {
       price: product.price,
       category: product.category || "",
       stock: product.stock,
+      lowStockThreshold: product.lowStockThreshold,
       imageUrl: product.imageUrl || "",
     });
     setEditingProduct(product);
@@ -198,12 +200,35 @@ export default function ProductsPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Stock (Optional)</FormLabel>
-                <FormControl><Input type="number" {...field} value={field.value || ""} /></FormControl>
+                <FormControl><Input type="number" {...field} value={field.value ?? ""} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+        <FormField
+          control={formObj.control}
+          name="lowStockThreshold"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Low Stock Alert Threshold</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 5 — leave blank to disable"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={e => field.onChange(e.target.value === "" ? null : e.target.valueAsNumber)}
+                />
+              </FormControl>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Get an email alert when stock drops to this number or below. Requires notification email to be set.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={formObj.control}
           name="category"
@@ -334,11 +359,21 @@ export default function ProductsPage() {
                     </div>
                     <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
                       <span>{product.category || "Uncategorized"}</span>
-                      {product.stock !== null && product.stock !== undefined && (
-                        <span className={product.stock <= 5 ? "text-destructive font-medium" : ""}>
-                          {product.stock} in stock
+                      {product.stock !== null && product.stock !== undefined ? (
+                        <span className={
+                          product.lowStockThreshold !== null &&
+                          product.lowStockThreshold !== undefined &&
+                          product.stock <= product.lowStockThreshold
+                            ? "text-destructive font-semibold"
+                            : ""
+                        }>
+                          {product.lowStockThreshold !== null &&
+                           product.lowStockThreshold !== undefined &&
+                           product.stock <= product.lowStockThreshold
+                            ? `⚠ ${product.stock} left`
+                            : `${product.stock} in stock`}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </CardContent>
                 </Card>

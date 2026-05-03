@@ -969,6 +969,9 @@ components:
         stock:
           type: integer
           nullable: true
+        lowStockThreshold:
+          type: integer
+          nullable: true
         variants:
           type: array
           items:
@@ -1017,6 +1020,9 @@ components:
         stock:
           type: integer
           nullable: true
+        lowStockThreshold:
+          type: integer
+          nullable: true
         variants:
           type: array
           items:
@@ -1043,6 +1049,9 @@ components:
           type: string
           nullable: true
         stock:
+          type: integer
+          nullable: true
+        lowStockThreshold:
           type: integer
           nullable: true
         variants:

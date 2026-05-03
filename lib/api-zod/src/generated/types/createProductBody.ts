@@ -14,6 +14,7 @@ export interface CreateProductBody {
   imageUrl?: string | null;
   category?: string | null;
   stock?: number | null;
+  lowStockThreshold?: number | null;
   variants?: ProductVariant[];
   isActive?: boolean;
 }

@@ -12,6 +12,7 @@ export const productsTable = pgTable("products", {
   imageUrl: text("image_url"),
   category: text("category"),
   stock: integer("stock"),
+  lowStockThreshold: integer("low_stock_threshold"),
   variants: jsonb("variants").notNull().default([]),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

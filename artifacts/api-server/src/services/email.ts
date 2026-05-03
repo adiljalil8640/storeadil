@@ -154,6 +154,56 @@ export async function sendDigestEmail(params: {
   await sendEmail(to, subject, baseTemplate(content, storeName));
 }
 
+export async function sendLowStockAlert(params: {
+  to: string;
+  storeName: string;
+  products: { name: string; stock: number; threshold: number; category: string | null }[];
+  appBaseUrl: string;
+}): Promise<void> {
+  const { to, storeName, products, appBaseUrl } = params;
+
+  const rows = products.map(p => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
+        <div style="font-weight:600;font-size:14px;color:#111827;">${p.name}</div>
+        ${p.category ? `<div style="font-size:12px;color:#9ca3af;">${p.category}</div>` : ""}
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:center;">
+        <span style="background:#fef2f2;color:#ef4444;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;">${p.stock} left</span>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:13px;color:#6b7280;">
+        alert at ≤ ${p.threshold}
+      </td>
+    </tr>`).join("");
+
+  const content = `
+    <h2 style="margin:0 0 8px;font-size:22px;color:#111827;">⚠️ Low Stock Alert</h2>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:14px;">
+      ${products.length === 1 ? "1 product is" : `${products.length} products are`} running low at <strong>${storeName}</strong>. Restock soon to keep orders flowing.
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="color:#6b7280;font-size:12px;">
+          <th style="text-align:left;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Product</th>
+          <th style="text-align:center;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Stock</th>
+          <th style="text-align:right;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">Threshold</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <a href="${appBaseUrl}/products" style="display:inline-block;margin-top:28px;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;">
+      Manage Inventory →
+    </a>`;
+
+  const subject = products.length === 1
+    ? `Low stock: "${products[0].name}" at ${storeName}`
+    : `${products.length} products running low at ${storeName}`;
+
+  await sendEmail(to, subject, baseTemplate(content, storeName));
+}
+
 export async function sendNewOrderNotification(params: {
   to: string;
   orderId: number;

@@ -123,6 +123,7 @@ export const GetPublicStoreResponse = zod.object({
       imageUrl: zod.string().nullish(),
       category: zod.string().nullish(),
       stock: zod.number().nullish(),
+      lowStockThreshold: zod.number().nullish(),
       variants: zod.array(
         zod.object({
           name: zod.string(),
@@ -153,6 +154,7 @@ export const ListProductsResponseItem = zod.object({
   imageUrl: zod.string().nullish(),
   category: zod.string().nullish(),
   stock: zod.number().nullish(),
+  lowStockThreshold: zod.number().nullish(),
   variants: zod.array(
     zod.object({
       name: zod.string(),
@@ -176,6 +178,7 @@ export const CreateProductBody = zod.object({
   imageUrl: zod.string().nullish(),
   category: zod.string().nullish(),
   stock: zod.number().nullish(),
+  lowStockThreshold: zod.number().nullish(),
   variants: zod
     .array(
       zod.object({
@@ -203,6 +206,7 @@ export const GetProductResponse = zod.object({
   imageUrl: zod.string().nullish(),
   category: zod.string().nullish(),
   stock: zod.number().nullish(),
+  lowStockThreshold: zod.number().nullish(),
   variants: zod.array(
     zod.object({
       name: zod.string(),
@@ -227,6 +231,7 @@ export const UpdateProductBody = zod.object({
   imageUrl: zod.string().nullish(),
   category: zod.string().nullish(),
   stock: zod.number().nullish(),
+  lowStockThreshold: zod.number().nullish(),
   variants: zod
     .array(
       zod.object({
@@ -247,6 +252,7 @@ export const UpdateProductResponse = zod.object({
   imageUrl: zod.string().nullish(),
   category: zod.string().nullish(),
   stock: zod.number().nullish(),
+  lowStockThreshold: zod.number().nullish(),
   variants: zod.array(
     zod.object({
       name: zod.string(),
@@ -441,6 +447,7 @@ export const GenerateStoreResponse = zod.object({
       imageUrl: zod.string().nullish(),
       category: zod.string().nullish(),
       stock: zod.number().nullish(),
+      lowStockThreshold: zod.number().nullish(),
       variants: zod
         .array(
           zod.object({

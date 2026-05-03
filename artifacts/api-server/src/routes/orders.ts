@@ -2,10 +2,11 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
-import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification } from "../services/email";
+import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
+import { productsTable } from "@workspace/db";
 
 const router = Router();
 
@@ -111,6 +112,67 @@ router.post("/orders", async (req: any, res) => {
       .returning();
 
     await incrementOrderUsage(store.userId);
+
+    // Decrement stock for each ordered product (fire-and-forget; errors don't block the response)
+    (async () => {
+      try {
+        const productIds = items
+          .map((item: any) => item.productId)
+          .filter((id: any) => typeof id === "number");
+        if (productIds.length === 0) return;
+
+        // Decrement stock for each product
+        for (const item of items as any[]) {
+          if (typeof item.productId !== "number") continue;
+          await db
+            .update(productsTable)
+            .set({ stock: sql`GREATEST(0, COALESCE(${productsTable.stock}, 0) - ${item.quantity})` })
+            .where(
+              and(
+                eq(productsTable.id, item.productId),
+                eq(productsTable.storeId, storeId),
+                sql`${productsTable.stock} IS NOT NULL`
+              )
+            );
+        }
+
+        // Check for products that have fallen at or below their threshold
+        if (store.notificationEmail) {
+          const updatedProducts = await db
+            .select({
+              name: productsTable.name,
+              stock: productsTable.stock,
+              lowStockThreshold: productsTable.lowStockThreshold,
+              category: productsTable.category,
+            })
+            .from(productsTable)
+            .where(
+              and(
+                eq(productsTable.storeId, storeId),
+                sql`${productsTable.id} = ANY(ARRAY[${sql.join(productIds.map((id: number) => sql`${id}`), sql`, `)}]::int[])`,
+                sql`${productsTable.lowStockThreshold} IS NOT NULL`,
+                sql`${productsTable.stock} IS NOT NULL`,
+                sql`${productsTable.stock} <= ${productsTable.lowStockThreshold}`
+              )
+            );
+
+          if (updatedProducts.length > 0) {
+            const appBaseUrl = `${req.protocol}://${req.get("host")}`;
+            sendLowStockAlert({
+              to: store.notificationEmail,
+              storeName: store.name,
+              products: updatedProducts.map(p => ({
+                name: p.name,
+                stock: p.stock!,
+                threshold: p.lowStockThreshold!,
+                category: p.category,
+              })),
+              appBaseUrl,
+            }).catch(() => {});
+          }
+        }
+      } catch {}
+    })();
 
     const whatsappUrl = store.whatsappNumber
       ? buildWhatsAppUrl(store.whatsappNumber, items, total, store.currency, customerName, customerNote)
