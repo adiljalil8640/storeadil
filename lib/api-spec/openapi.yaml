@@ -821,6 +821,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /orders/bulk-status:
+    post:
+      operationId: bulkUpdateOrderStatus
+      tags: [orders]
+      summary: Update status for multiple orders at once
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderIds:
+                  type: array
+                  items:
+                    type: integer
+                status:
+                  type: string
+                  enum: [pending, confirmed, completed, cancelled]
+              required: [orderIds, status]
+      responses:
+        "200":
+          description: Number of orders updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+                required: [updated]
+
   # AI endpoints
   /ai/generate-store:
     post:

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListOrders, useUpdateOrderStatus, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
+import { useListOrders, useUpdateOrderStatus, useBulkUpdateOrderStatus, getListOrdersQueryKey, useListWaitlistEntries, useNotifyWaitlist, getListWaitlistEntriesQueryKey, getGetWaitlistCountsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, ExternalLink, Package, Bell, Mail, Send, Search, X, ArrowUpDown, CheckSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { motion, AnimatePresence } from "framer-motion";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -126,6 +128,8 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<string>("completed");
   const queryClient = useQueryClient();
 
   const { data: rawOrders, isLoading } = useListOrders({
@@ -162,6 +166,42 @@ export default function OrdersPage() {
       }
     }
   });
+
+  const bulkUpdate = useBulkUpdateOrderStatus({
+    mutation: {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        setSelectedIds(new Set());
+        toast.success(`${data.updated} order${data.updated !== 1 ? "s" : ""} updated to ${bulkStatus}`);
+      },
+      onError: () => toast.error("Bulk update failed"),
+    },
+  });
+
+  const allVisibleIds = orders.map((o) => o.id);
+  const allSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.has(id));
+  const someSelected = allVisibleIds.some((id) => selectedIds.has(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allVisibleIds));
+    }
+  };
+
+  const toggleOne = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const applyBulk = () => {
+    if (selectedIds.size === 0) return;
+    bulkUpdate.mutate({ data: { orderIds: Array.from(selectedIds), status: bulkStatus } });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -288,6 +328,14 @@ export default function OrdersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10 pl-4">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={toggleAll}
+                            aria-label="Select all"
+                            data-state={someSelected && !allSelected ? "indeterminate" : allSelected ? "checked" : "unchecked"}
+                          />
+                        </TableHead>
                         <TableHead>Order</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Customer</TableHead>
@@ -299,7 +347,18 @@ export default function OrdersPage() {
                     </TableHeader>
                     <TableBody>
                       {orders?.map((order) => (
-                        <TableRow key={order.id}>
+                        <TableRow
+                          key={order.id}
+                          data-selected={selectedIds.has(order.id)}
+                          className={selectedIds.has(order.id) ? "bg-primary/5" : ""}
+                        >
+                          <TableCell className="pl-4">
+                            <Checkbox
+                              checked={selectedIds.has(order.id)}
+                              onCheckedChange={() => toggleOne(order.id)}
+                              aria-label={`Select order #${order.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">#{order.id}</TableCell>
                           <TableCell>{format(new Date(order.createdAt), "MMM d, yyyy")}</TableCell>
                           <TableCell>
@@ -369,6 +428,59 @@ export default function OrdersPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Floating bulk action bar */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+          >
+            <div className="flex items-center gap-3 bg-card border shadow-xl rounded-2xl px-5 py-3">
+              {/* Count + icon */}
+              <div className="flex items-center gap-2 text-sm font-medium pr-2 border-r">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <span>{selectedIds.size} selected</span>
+              </div>
+
+              {/* Status picker */}
+              <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                <SelectTrigger className="h-8 w-[140px] text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Apply */}
+              <Button
+                size="sm"
+                onClick={applyBulk}
+                disabled={bulkUpdate.isPending}
+                className="h-8"
+              >
+                {bulkUpdate.isPending ? "Updating…" : "Apply"}
+              </Button>
+
+              {/* Clear */}
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="text-muted-foreground hover:text-foreground transition-colors ml-1"
+                aria-label="Clear selection"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppLayout>
   );
 }

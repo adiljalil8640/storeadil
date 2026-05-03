@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { storesTable, ordersTable, couponsTable } from "@workspace/db";
-import { eq, and, desc, sql, ilike, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, ilike, gte, lte, inArray } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { checkOrderLimit, incrementOrderUsage } from "../services/usage";
 import { sendOrderConfirmation, sendStatusUpdateEmail, sendNewOrderNotification, sendLowStockAlert } from "../services/email";
@@ -445,6 +445,38 @@ router.patch("/orders/:id", requireAuth, async (req: any, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /orders/bulk-status — update status for multiple orders at once
+router.post("/orders/bulk-status", requireAuth, async (req: any, res) => {
+  const { orderIds, status } = req.body;
+  const VALID = ["pending", "confirmed", "completed", "cancelled"];
+
+  if (!Array.isArray(orderIds) || orderIds.length === 0) {
+    return res.status(400).json({ error: "orderIds must be a non-empty array" });
+  }
+  if (!VALID.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${VALID.join(", ")}` });
+  }
+
+  try {
+    const [store] = await db
+      .select({ id: storesTable.id })
+      .from(storesTable)
+      .where(eq(storesTable.userId, req.userId));
+
+    if (!store) return res.status(404).json({ error: "No store found" });
+
+    const result = await db
+      .update(ordersTable)
+      .set({ status, updatedAt: new Date() })
+      .where(and(eq(ordersTable.storeId, store.id), inArray(ordersTable.id, orderIds)));
+
+    return res.json({ updated: orderIds.length });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -803,6 +803,25 @@ export const ListOrdersStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type BulkUpdateOrderStatusBodyStatus =
+  (typeof BulkUpdateOrderStatusBodyStatus)[keyof typeof BulkUpdateOrderStatusBodyStatus];
+
+export const BulkUpdateOrderStatusBodyStatus = {
+  pending: "pending",
+  confirmed: "confirmed",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export type BulkUpdateOrderStatusBody = {
+  orderIds: number[];
+  status: BulkUpdateOrderStatusBodyStatus;
+};
+
+export type BulkUpdateOrderStatus200 = {
+  updated: number;
+};
+
 export type GetRecentOrdersParams = {
   limit?: number;
 };

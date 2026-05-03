@@ -1857,6 +1857,18 @@ export const UpdateOrderStatusResponse = zod.object({
 });
 
 /**
+ * @summary Update status for multiple orders at once
+ */
+export const BulkUpdateOrderStatusBody = zod.object({
+  orderIds: zod.array(zod.number()),
+  status: zod.enum(["pending", "confirmed", "completed", "cancelled"]),
+});
+
+export const BulkUpdateOrderStatusResponse = zod.object({
+  updated: zod.number(),
+});
+
+/**
  * @summary AI-generate a store from a business description
  */
 export const GenerateStoreBody = zod.object({

@@ -24,6 +24,8 @@ import type {
   BillingStatus,
   BrowseStoresParams,
   BrowseStoresResult,
+  BulkUpdateOrderStatus200,
+  BulkUpdateOrderStatusBody,
   ChangeUserPlanBody,
   CheckSlugAvailabilityParams,
   CheckoutSession,
@@ -3145,6 +3147,93 @@ export const useUpdateOrderStatus = <
   TContext
 > => {
   return useMutation(getUpdateOrderStatusMutationOptions(options));
+};
+
+/**
+ * @summary Update status for multiple orders at once
+ */
+export const getBulkUpdateOrderStatusUrl = () => {
+  return `/api/orders/bulk-status`;
+};
+
+export const bulkUpdateOrderStatus = async (
+  bulkUpdateOrderStatusBody: BulkUpdateOrderStatusBody,
+  options?: RequestInit,
+): Promise<BulkUpdateOrderStatus200> => {
+  return customFetch<BulkUpdateOrderStatus200>(getBulkUpdateOrderStatusUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bulkUpdateOrderStatusBody),
+  });
+};
+
+export const getBulkUpdateOrderStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkUpdateOrderStatus>>,
+    TError,
+    { data: BodyType<BulkUpdateOrderStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkUpdateOrderStatus>>,
+  TError,
+  { data: BodyType<BulkUpdateOrderStatusBody> },
+  TContext
+> => {
+  const mutationKey = ["bulkUpdateOrderStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkUpdateOrderStatus>>,
+    { data: BodyType<BulkUpdateOrderStatusBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkUpdateOrderStatus(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkUpdateOrderStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkUpdateOrderStatus>>
+>;
+export type BulkUpdateOrderStatusMutationBody =
+  BodyType<BulkUpdateOrderStatusBody>;
+export type BulkUpdateOrderStatusMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update status for multiple orders at once
+ */
+export const useBulkUpdateOrderStatus = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkUpdateOrderStatus>>,
+    TError,
+    { data: BodyType<BulkUpdateOrderStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bulkUpdateOrderStatus>>,
+  TError,
+  { data: BodyType<BulkUpdateOrderStatusBody> },
+  TContext
+> => {
+  return useMutation(getBulkUpdateOrderStatusMutationOptions(options));
 };
 
 /**
