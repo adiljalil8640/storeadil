@@ -5,5 +5,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export * from "./getWhatsappMessagesParams";
-export * from "./whatsappMessage";
+export type GetWhatsappMessagesParams = {
+  limit?: number;
+};

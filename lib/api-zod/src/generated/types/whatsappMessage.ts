@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+
 export interface WhatsappMessage {
   id: number;
   storeId: number;
@@ -12,9 +13,5 @@ export interface WhatsappMessage {
   customerMessage: string;
   aiReply: string;
   source: string;
-  createdAt: string;
+  createdAt: Date;
 }
-
-export type GetWhatsappMessagesParams = {
-  limit?: number;
-};
