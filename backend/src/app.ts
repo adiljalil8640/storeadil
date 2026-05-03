@@ -12,6 +12,7 @@ import router from "./api-routes";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middlewares/errorHandler";
 import { seedPlans } from "./services/billing";
+import { HealthCheckResponse } from "@workspace/api-zod";
 
 const app: Express = express();
 
@@ -31,6 +32,11 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
+
+// Health check — registered before Clerk so it is always reachable
+app.get("/api/healthz", (_req, res) => {
+  res.json(HealthCheckResponse.parse({ status: "ok" }));
+});
 
 // Raw body for Stripe webhooks
 app.use("/api/billing/webhook", express.raw({ type: "application/json" }));
