@@ -284,6 +284,124 @@ export default function SettingsPage() {
     finally { setDomainChecking(false); }
   };
 
+  // --- Store Badges ---
+  const STORE_BADGES = [
+    {
+      id: "verified",
+      label: "Verified WhatsApp Store",
+      tagline: "Trusted & official",
+      iconPaths: [
+        "M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z",
+        "M9 12l2 2 4-4",
+      ],
+    },
+    {
+      id: "whatsapp",
+      label: "Order on WhatsApp",
+      tagline: "Chat with us to order",
+      iconPaths: [
+        "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+      ],
+    },
+    {
+      id: "secure",
+      label: "Secure Checkout",
+      tagline: "Your data is safe with us",
+      iconPaths: [
+        "M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z",
+        "M7 11V7a5 5 0 0 1 10 0v4",
+      ],
+    },
+    {
+      id: "delivery",
+      label: "Fast Delivery",
+      tagline: "Quick & reliable shipping",
+      iconPaths: [
+        "M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v3M13 9h4l3 3v3h-7V9z",
+        "M1.5 17.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0",
+        "M16.5 17.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0",
+      ],
+    },
+    {
+      id: "authentic",
+      label: "100% Authentic",
+      tagline: "Genuine products guaranteed",
+      iconPaths: [
+        "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+        "M9 12l2 2 4-4",
+      ],
+    },
+  ] as const;
+
+  type BadgeId = typeof STORE_BADGES[number]["id"];
+  type BadgeTheme = "green" | "white" | "dark";
+
+  const [selectedBadgeId, setSelectedBadgeId] = useState<BadgeId>("verified");
+  const [badgeTheme, setBadgeTheme] = useState<BadgeTheme>("green");
+  const [badgeCopied, setBadgeCopied] = useState(false);
+
+  const selectedBadge = STORE_BADGES.find((b) => b.id === selectedBadgeId)!;
+
+  function xmlEsc(s: string) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function makeBadgeSvg(badge: typeof STORE_BADGES[number], theme: BadgeTheme, storeName: string): string {
+    const W = 240, H = 60;
+    const bg = theme === "green" ? "#25D366" : theme === "dark" ? "#111827" : "#ffffff";
+    const textPrimary = theme === "white" ? "#111827" : "#ffffff";
+    const textSecondary = theme === "white" ? "#6b7280" : "rgba(255,255,255,0.72)";
+    const iconStroke = theme === "white" ? "#25D366" : "#ffffff";
+    const border = theme === "white"
+      ? `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="9" fill="none" stroke="#25D366" stroke-width="1.5"/>`
+      : "";
+    const sc = 22 / 24;
+    const iy = (H - 22) / 2;
+    const paths = badge.iconPaths
+      .map((d) => `<path d="${d}" fill="none" stroke="${iconStroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`)
+      .join("");
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" rx="10" fill="${bg}"/>${border}<g transform="translate(13,${iy}) scale(${sc})">${paths}</g><text x="48" y="${H / 2 - 3}" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="${textPrimary}">${xmlEsc(badge.label)}</text><text x="48" y="${H / 2 + 13}" font-family="Arial,Helvetica,sans-serif" font-size="10" fill="${textSecondary}">${xmlEsc(badge.tagline)} · ${xmlEsc(storeName)}</text></svg>`;
+  }
+
+  function makeBadgeHtml(badge: typeof STORE_BADGES[number], theme: BadgeTheme, storeName: string, storeUrl: string): string {
+    const svg = makeBadgeSvg(badge, theme, storeName);
+    const bytes = new TextEncoder().encode(svg);
+    const b64 = btoa(Array.from(bytes).map((b) => String.fromCharCode(b)).join(""));
+    return `<a href="${storeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">\n  <img src="data:image/svg+xml;base64,${b64}" alt="${badge.label}" width="240" height="60" style="display:block;border-radius:10px;"/>\n</a>`;
+  }
+
+  function downloadBadgePng(badge: typeof STORE_BADGES[number], theme: BadgeTheme, storeName: string) {
+    const svg = makeBadgeSvg(badge, theme, storeName);
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 480; canvas.height = 120;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, 480, 120);
+      canvas.toBlob((b) => {
+        if (!b) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = `${badge.id}-badge.png`;
+        a.click();
+      });
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
+  const handleCopyBadgeHtml = () => {
+    const storeUrl = store
+      ? `${window.location.origin}${basePath}/s/${store.slug}`
+      : window.location.origin;
+    const html = makeBadgeHtml(selectedBadge, badgeTheme, store?.name ?? "My Store", storeUrl);
+    navigator.clipboard.writeText(html);
+    setBadgeCopied(true);
+    setTimeout(() => setBadgeCopied(false), 2000);
+  };
+
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
@@ -1034,6 +1152,109 @@ export default function SettingsPage() {
                   Replit custom domain guide
                 </a>
               </div>
+
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Store Badges card */}
+        {store && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Store Badges
+              </CardTitle>
+              <CardDescription>
+                Generate embeddable trust badges for your website, bio links, or email signature — no account required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+
+              {/* Badge type selector */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Badge type</p>
+                <div className="flex flex-wrap gap-2">
+                  {STORE_BADGES.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setSelectedBadgeId(b.id)}
+                      className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                        selectedBadgeId === b.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                      }`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Theme selector */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Colour theme</p>
+                <div className="flex gap-2">
+                  {(["green", "white", "dark"] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setBadgeTheme(t)}
+                      className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors capitalize ${
+                        badgeTheme === t
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                      }`}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                        t === "green" ? "bg-[#25D366]" : t === "dark" ? "bg-gray-900 border border-gray-600" : "bg-white border border-gray-300"
+                      }`} />
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live SVG preview */}
+              <div className={`rounded-xl p-6 flex items-center justify-center ${badgeTheme === "dark" ? "bg-gray-950" : badgeTheme === "green" ? "bg-gray-100" : "bg-gray-100"}`}>
+                <div
+                  style={{ display: "inline-block" }}
+                  dangerouslySetInnerHTML={{
+                    __html: makeBadgeSvg(selectedBadge, badgeTheme, store.name),
+                  }}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleCopyBadgeHtml}
+                >
+                  {badgeCopied
+                    ? <><CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> Copied!</>
+                    : <><Copy className="w-3.5 h-3.5" /> Copy HTML Snippet</>}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => downloadBadgePng(selectedBadge, badgeTheme, store.name)}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download PNG
+                </Button>
+              </div>
+
+              {/* Usage hint */}
+              <p className="text-xs text-muted-foreground">
+                <strong>HTML snippet</strong> works on any website or Linktree-style page. <strong>PNG</strong> works in email signatures, Instagram bios, and print. The badge links back to your store.
+              </p>
 
             </CardContent>
           </Card>
