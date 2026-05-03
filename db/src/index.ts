@@ -16,6 +16,12 @@ export const pool = new Pool({
   idleTimeoutMillis: 30_000,
   max: 10,
 });
+
+// Kill any query that runs longer than 10 s — set once per physical connection
+pool.on("connect", (client) => {
+  client.query("SET statement_timeout = 10000").catch(() => {});
+});
+
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
