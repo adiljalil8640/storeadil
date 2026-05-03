@@ -20,8 +20,14 @@ function fmtTime(t: string): string {
   return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-function getStoreOpenStatus(hours: Record<string, { enabled: boolean; open: string; close: string }>): { open: boolean; label: string } {
+function getStoreOpenStatus(
+  hours: Record<string, { enabled: boolean; open: string; close: string }>,
+  holidays?: string[] | null
+): { open: boolean; label: string } {
   const now = new Date();
+  // Check holiday closures first
+  const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (holidays?.includes(todayISO)) return { open: false, label: "Holiday · Closed" };
   const dayKey = STORE_DAYS[now.getDay()];
   const day = hours[dayKey];
   if (!day?.enabled) return { open: false, label: "Closed today" };
@@ -145,9 +151,11 @@ export default function StorefrontPage() {
   });
 
   const openStatus = useMemo(
-    () => store?.storeHours ? getStoreOpenStatus(store.storeHours as any) : null,
+    () => store?.storeHours
+      ? getStoreOpenStatus(store.storeHours as any, store.holidayClosures as string[] | null)
+      : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store?.storeHours]
+    [store?.storeHours, store?.holidayClosures]
   );
 
   const createOrder = useCreateOrder();

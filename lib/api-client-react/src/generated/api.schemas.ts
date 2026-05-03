@@ -209,6 +209,8 @@ export interface Store {
   customDomain?: string | null;
   /** Per-day opening hours. Null means hours are not configured. */
   storeHours?: StoreHoursMap | null;
+  /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
+  holidayClosures?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -247,6 +249,8 @@ export interface PublicStore {
   shippingNote?: string | null;
   /** Per-day opening hours. Null if not configured. */
   storeHours?: StoreHoursMap | null;
+  /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
+  holidayClosures?: string[] | null;
   products: Product[];
 }
 
@@ -661,6 +665,11 @@ export interface ShareMessage {
   /** URL of the OG preview page for this store. Share this link on social media or WhatsApp to get a rich link preview with title, description, and logo. */
   ogUrl: string;
 }
+
+export type UpdateMyStoreHolidaysBody = {
+  /** List of YYYY-MM-DD dates the store will be closed. */
+  dates: string[];
+};
 
 export type CheckSlugAvailabilityParams = {
   /**

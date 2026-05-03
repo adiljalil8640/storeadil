@@ -33,6 +33,8 @@ export interface Store {
   customDomain?: string | null;
   /** Per-day opening hours. Null means hours are not configured. */
   storeHours?: StoreHoursMap | null;
+  /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
+  holidayClosures?: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }

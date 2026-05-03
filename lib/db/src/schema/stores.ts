@@ -22,6 +22,7 @@ export const storesTable = pgTable("stores", {
   metaDescription: text("meta_description"),
   customDomain: text("custom_domain"),
   storeHours: jsonb("store_hours"),
+  holidayClosures: jsonb("holiday_closures"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

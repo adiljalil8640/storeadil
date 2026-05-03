@@ -22,5 +22,7 @@ export interface PublicStore {
   shippingNote?: string | null;
   /** Per-day opening hours. Null if not configured. */
   storeHours?: StoreHoursMap | null;
+  /** List of YYYY-MM-DD dates on which the store is closed regardless of regular hours. */
+  holidayClosures?: string[] | null;
   products: Product[];
 }

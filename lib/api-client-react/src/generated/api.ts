@@ -69,6 +69,7 @@ import type {
   SuggestPriceResponse,
   TopStore,
   UpdateCouponBody,
+  UpdateMyStoreHolidaysBody,
   UpdateOrderStatusBody,
   UpdateProductBody,
   UpdateStoreBody,
@@ -407,6 +408,93 @@ export const useUpdateMyStoreSlug = <
   TContext
 > => {
   return useMutation(getUpdateMyStoreSlugMutationOptions(options));
+};
+
+/**
+ * @summary Update holiday closure dates
+ */
+export const getUpdateMyStoreHolidaysUrl = () => {
+  return `/api/stores/me/holidays`;
+};
+
+export const updateMyStoreHolidays = async (
+  updateMyStoreHolidaysBody: UpdateMyStoreHolidaysBody,
+  options?: RequestInit,
+): Promise<Store> => {
+  return customFetch<Store>(getUpdateMyStoreHolidaysUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateMyStoreHolidaysBody),
+  });
+};
+
+export const getUpdateMyStoreHolidaysMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreHolidays>>,
+    TError,
+    { data: BodyType<UpdateMyStoreHolidaysBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyStoreHolidays>>,
+  TError,
+  { data: BodyType<UpdateMyStoreHolidaysBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMyStoreHolidays"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyStoreHolidays>>,
+    { data: BodyType<UpdateMyStoreHolidaysBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyStoreHolidays(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyStoreHolidaysMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyStoreHolidays>>
+>;
+export type UpdateMyStoreHolidaysMutationBody =
+  BodyType<UpdateMyStoreHolidaysBody>;
+export type UpdateMyStoreHolidaysMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update holiday closure dates
+ */
+export const useUpdateMyStoreHolidays = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyStoreHolidays>>,
+    TError,
+    { data: BodyType<UpdateMyStoreHolidaysBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyStoreHolidays>>,
+  TError,
+  { data: BodyType<UpdateMyStoreHolidaysBody> },
+  TContext
+> => {
+  return useMutation(getUpdateMyStoreHolidaysMutationOptions(options));
 };
 
 /**

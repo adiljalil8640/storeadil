@@ -78,6 +78,7 @@ export * from "./suggestPriceResponse";
 export * from "./topStore";
 export * from "./updateCouponBody";
 export * from "./updateCouponBodyType";
+export * from "./updateMyStoreHolidaysBody";
 export * from "./updateOrderStatusBody";
 export * from "./updateOrderStatusBodyStatus";
 export * from "./updateProductBody";

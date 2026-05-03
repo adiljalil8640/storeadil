@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock } from "lucide-react";
+import { Store, Save, ExternalLink, Copy, QrCode, Share2, MessageCircle, Download, Bell, Tag, Globe, Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Smartphone, Search, Link2, Clock, CalendarDays, X } from "lucide-react";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -551,6 +551,49 @@ export default function SettingsPage() {
       }
     } catch { toast.error("Failed to save hours"); }
     finally { setHoursSaving(false); }
+  };
+
+  // --- Holiday Closures ---
+  const [holidays, setHolidays] = useState<string[]>([]);
+  const [holidayInput, setHolidayInput] = useState("");
+  const [holidaysSaving, setHolidaysSaving] = useState(false);
+  const [holidaysInitialized, setHolidaysInitialized] = useState(false);
+
+  useEffect(() => {
+    if (store && !holidaysInitialized) {
+      if (store.holidayClosures) setHolidays(store.holidayClosures as string[]);
+      setHolidaysInitialized(true);
+    }
+  }, [store, holidaysInitialized]);
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const addHoliday = () => {
+    if (!holidayInput) return;
+    if (!holidays.includes(holidayInput)) {
+      setHolidays((prev) => [...prev, holidayInput].sort());
+    }
+    setHolidayInput("");
+  };
+
+  const removeHoliday = (date: string) =>
+    setHolidays((prev) => prev.filter((d) => d !== date));
+
+  const handleSaveHolidays = async () => {
+    setHolidaysSaving(true);
+    try {
+      const r = await fetch(`${basePath}/api/stores/me/holidays`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dates: holidays }),
+      });
+      if (!r.ok) { toast.error((await r.json()).error ?? "Failed to save closures"); }
+      else {
+        toast.success("Holiday closures saved!");
+        queryClient.invalidateQueries({ queryKey: getGetMyStoreQueryKey() });
+      }
+    } catch { toast.error("Failed to save closures"); }
+    finally { setHolidaysSaving(false); }
   };
 
   type VerifyResult = { tags: Record<string, string | null>; storeUrl: string };
@@ -1614,6 +1657,92 @@ export default function SettingsPage() {
                   ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   : <Save className="w-3.5 h-3.5" />}
                 {hoursSaving ? "Saving…" : "Save Hours"}
+              </Button>
+
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Holiday Closures card */}
+        {store && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-primary" />
+                Holiday Closures
+              </CardTitle>
+              <CardDescription>
+                Mark specific dates — like public holidays or vacation days — when your store is closed. These override your regular hours and show "Holiday · Closed" on your storefront.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              {/* Date picker row */}
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  type="date"
+                  value={holidayInput}
+                  min={todayISO}
+                  onChange={(e) => setHolidayInput(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addHoliday}
+                  disabled={!holidayInput}
+                >
+                  Add Date
+                </Button>
+              </div>
+
+              {/* List of upcoming holidays */}
+              {holidays.filter((d) => d >= todayISO).length > 0 ? (
+                <div className="space-y-1">
+                  {holidays
+                    .filter((d) => d >= todayISO)
+                    .sort()
+                    .map((date) => (
+                      <div
+                        key={date}
+                        className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2"
+                      >
+                        <span className="text-sm font-medium">
+                          {new Date(date + "T12:00:00").toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month:   "short",
+                            day:     "numeric",
+                            year:    "numeric",
+                          })}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeHoliday(date)}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No upcoming holiday closures set.</p>
+              )}
+
+              <Button
+                type="button"
+                size="sm"
+                className="gap-2"
+                disabled={holidaysSaving}
+                onClick={handleSaveHolidays}
+              >
+                {holidaysSaving
+                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  : <Save className="w-3.5 h-3.5" />}
+                {holidaysSaving ? "Saving…" : "Save Closures"}
               </Button>
 
             </CardContent>

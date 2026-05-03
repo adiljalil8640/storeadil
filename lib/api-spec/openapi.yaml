@@ -111,6 +111,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /stores/me/holidays:
+    patch:
+      operationId: updateMyStoreHolidays
+      tags: [stores]
+      summary: Update holiday closure dates
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dates:
+                  type: array
+                  items:
+                    type: string
+                  description: List of YYYY-MM-DD dates the store will be closed.
+              required: [dates]
+      responses:
+        "200":
+          description: Updated store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
   /stores/me/hours:
     patch:
       operationId: updateMyStoreHours
@@ -1402,6 +1430,12 @@ components:
           $ref: '#/components/schemas/StoreHoursMap'
           nullable: true
           description: Per-day opening hours. Null means hours are not configured.
+        holidayClosures:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: List of YYYY-MM-DD dates on which the store is closed regardless of regular hours.
         createdAt:
           type: string
           format: date-time
@@ -1453,6 +1487,12 @@ components:
           $ref: '#/components/schemas/StoreHoursMap'
           nullable: true
           description: Per-day opening hours. Null if not configured.
+        holidayClosures:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: List of YYYY-MM-DD dates on which the store is closed regardless of regular hours.
         products:
           type: array
           items:

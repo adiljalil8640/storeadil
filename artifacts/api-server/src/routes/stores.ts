@@ -202,6 +202,32 @@ router.patch("/stores/me/hours", requireAuth, async (req: any, res) => {
   }
 });
 
+// PATCH /stores/me/holidays — update holiday closure dates
+router.patch("/stores/me/holidays", requireAuth, async (req: any, res) => {
+  const { dates } = req.body ?? {};
+  if (!Array.isArray(dates)) {
+    return res.status(400).json({ error: "dates must be an array" });
+  }
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  for (const d of dates) {
+    if (typeof d !== "string" || !DATE_RE.test(d)) {
+      return res.status(400).json({ error: `Invalid date format: ${d}. Use YYYY-MM-DD.` });
+    }
+  }
+  try {
+    const [store] = await db
+      .update(storesTable)
+      .set({ holidayClosures: dates, updatedAt: new Date() })
+      .where(eq(storesTable.userId, req.userId))
+      .returning();
+    if (!store) return res.status(404).json({ error: "No store found" });
+    return res.json(store);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /stores/me/domain — set or clear custom domain
 router.patch("/stores/me/domain", requireAuth, async (req: any, res) => {
   const raw: unknown = req.body?.domain;
