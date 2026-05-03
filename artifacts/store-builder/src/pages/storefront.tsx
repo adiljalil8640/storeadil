@@ -190,6 +190,11 @@ export default function StorefrontPage() {
     const copy = [...storeReviews];
     if (reviewSort === "highest") return copy.sort((a, b) => b.rating - a.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     if (reviewSort === "lowest")  return copy.sort((a, b) => a.rating - b.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (reviewSort === "helpful") return copy.sort((a, b) => {
+      const aScore = (a.comment ? 2 : 0) + (a.rating >= 4 ? 1 : 0);
+      const bScore = (b.comment ? 2 : 0) + (b.rating >= 4 ? 1 : 0);
+      return bScore - aScore || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
     return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [storeReviews, reviewSort]);
 
@@ -273,7 +278,7 @@ export default function StorefrontPage() {
 
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [reviewSort, setReviewSort] = useState<"recent" | "highest" | "lowest">("recent");
+  const [reviewSort, setReviewSort] = useState<"recent" | "highest" | "lowest" | "helpful">("recent");
 
   const filteredProducts = useMemo(() => {
     if (!store?.products) return [];
@@ -820,17 +825,17 @@ export default function StorefrontPage() {
                 </span>
               </div>
               <div className="flex gap-1.5">
-                {(["recent", "highest", "lowest"] as const).map((opt) => (
+                {(["recent", "helpful", "highest", "lowest"] as const).map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setReviewSort(opt)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors whitespace-nowrap ${
                       reviewSort === opt
                         ? "bg-foreground text-background border-foreground"
                         : "border-border text-muted-foreground hover:border-foreground/50"
                     }`}
                   >
-                    {opt === "recent" ? "Most Recent" : opt === "highest" ? "Highest Rated" : "Lowest Rated"}
+                    {opt === "recent" ? "Most Recent" : opt === "helpful" ? "Most Helpful" : opt === "highest" ? "Highest Rated" : "Lowest Rated"}
                   </button>
                 ))}
               </div>
