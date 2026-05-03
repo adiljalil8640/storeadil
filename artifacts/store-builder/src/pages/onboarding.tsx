@@ -3,13 +3,14 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useGenerateStore, useCreateStore, useGetMyStore } from "@workspace/api-client-react";
+import { useGenerateStore, useCreateStore, useGetMyStore, useApplyReferralCode } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Store, Sparkles, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
+import { Store, Sparkles, CheckCircle2, Loader2, ArrowRight, Gift } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -26,6 +27,9 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [, setLocation] = useLocation();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  // Capture referral code from URL (?ref=CODE)
+  const refCode = new URLSearchParams(window.location.search).get("ref")?.toUpperCase() ?? null;
   
   const { data: existingStore, isLoading: checkingStore } = useGetMyStore({
     query: { retry: false }
@@ -39,6 +43,7 @@ export default function OnboardingPage() {
 
   const generateStore = useGenerateStore();
   const createStore = useCreateStore();
+  const applyReferral = useApplyReferralCode();
 
   const describeForm = useForm<z.infer<typeof describeSchema>>({
     resolver: zodResolver(describeSchema),
@@ -72,6 +77,10 @@ export default function OnboardingPage() {
           description: describeForm.getValues("description")
         } 
       });
+      // Apply referral code silently if one was in the URL
+      if (refCode) {
+        applyReferral.mutate({ data: { code: refCode } });
+      }
       setStep(3);
     } catch (error) {
       toast.error("Failed to create store. Please try again.");
@@ -161,6 +170,14 @@ export default function OnboardingPage() {
                   <CardDescription className="text-base">
                     Review your store name and add the WhatsApp number where you want to receive orders.
                   </CardDescription>
+                  {refCode && (
+                    <div className="flex items-center gap-2 mt-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                      <Gift className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-sm text-primary">
+                        Referral code <Badge variant="outline" className="font-mono text-primary border-primary/30 mx-1">{refCode}</Badge> will be applied automatically.
+                      </span>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <Form {...detailsForm}>
